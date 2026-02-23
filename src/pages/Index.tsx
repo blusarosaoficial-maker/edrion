@@ -98,7 +98,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
-      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} />
+      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => { setShowAuthModal(false); setPendingInputs(null); }} />
 
       <main className="container max-w-4xl py-12 px-4">
         {state === "form" && !showAuthModal && (
