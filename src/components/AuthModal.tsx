@@ -7,9 +7,10 @@ import { Mail, Sparkles, CheckCircle } from "lucide-react";
 interface Props {
   isOpen: boolean;
   onSuccess: () => void;
+  onClose: () => void;
 }
 
-export default function AuthModal({ isOpen, onSuccess }: Props) {
+export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -59,11 +60,9 @@ export default function AuthModal({ isOpen, onSuccess }: Props) {
   }, [isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         className="sm:max-w-md border-border bg-card"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle
