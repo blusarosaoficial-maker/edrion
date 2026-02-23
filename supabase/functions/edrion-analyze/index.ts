@@ -105,6 +105,39 @@ function normalizeProfile(raw: ApifyProfile) {
   };
 }
 
+async function proxyAvatar(
+  handle: string,
+  originalUrl: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<string> {
+  if (!originalUrl) return originalUrl;
+  try {
+    const res = await fetch(originalUrl);
+    if (!res.ok) throw new Error(`fetch avatar ${res.status}`);
+    const blob = await res.blob();
+    const arrayBuf = await blob.arrayBuffer();
+    const filePath = `${handle}.jpg`;
+
+    // Upsert: remove old file first (ignore error if not exists)
+    await supabaseAdmin.storage.from("avatars").remove([filePath]);
+
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from("avatars")
+      .upload(filePath, new Uint8Array(arrayBuf), {
+        contentType: blob.type || "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadErr) throw uploadErr;
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    return `${supabaseUrl}/storage/v1/object/public/avatars/${filePath}`;
+  } catch (err) {
+    console.warn("proxyAvatar fallback to original:", (err as Error).message);
+    return originalUrl;
+  }
+}
+
 function normalizePosts(posts: ApifyPost[]) {
   return posts.slice(0, 9).map((p, i) => {
     const likes = p.likesCount || 0;
@@ -285,6 +318,7 @@ Deno.serve(async (req) => {
       }
 
       const profile = normalizeProfile(rawProfile);
+      profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
       const posts = normalizePosts(rawProfile.latestPosts || []);
       const nichoKey = Object.keys(NICHO_BIOS).includes(nicho) ? nicho : "default";
       const result = buildFreeResult(profile, posts, nichoKey);
@@ -329,6 +363,7 @@ Deno.serve(async (req) => {
 
     // 7. Normalize
     const profile = normalizeProfile(rawProfile);
+    profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
     const posts = normalizePosts(rawProfile.latestPosts || []);
     const nichoKey = Object.keys(NICHO_BIOS).includes(nicho) ? nicho : "default";
 
