@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResponse, AnalysisResult, PostData, PostMetrics } from "@/types/analysis";
+import type { AnalysisResponse, PostData, PostMetrics } from "@/types/analysis";
 
 // ── Real API call ──────────────────────────────────────────────
 
@@ -29,15 +29,12 @@ export async function analyzeProfile(
 
     const responseData = await res.json();
 
-    // Map response codes (works for any HTTP status)
-    if (responseData?.code === "EMAIL_REQUIRED") {
-      return { success: false, error: "email_required", pending_result: responseData.pending_result };
+    // Map response codes
+    if (responseData?.code === "AUTH_REQUIRED") {
+      return { success: false, error: "auth_required" };
     }
     if (responseData?.code === "FREE_LIMIT_REACHED") {
       return { success: false, error: "free_limit" };
-    }
-    if (responseData?.code === "HANDLE_ALREADY_ANALYZED") {
-      return { success: false, error: "handle_taken" };
     }
     if (responseData?.code === "PRIVATE_PROFILE") {
       return { success: false, error: "private" };
@@ -63,23 +60,6 @@ export async function analyzeProfile(
       return analyzeMock(handle, nicho, objetivo);
     }
     return { success: false, error: "timeout" };
-  }
-}
-
-export async function saveAfterSignup(
-  handle: string,
-  nicho: string,
-  objetivo: string,
-  pendingResult: AnalysisResult,
-): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.functions.invoke("edrion-save-after-signup", {
-      body: { handle, nicho, objetivo, pending_result: pendingResult },
-    });
-    if (error) return false;
-    return data?.success === true;
-  } catch {
-    return false;
   }
 }
 

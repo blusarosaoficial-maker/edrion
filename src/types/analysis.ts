@@ -59,20 +59,17 @@ export interface AnalysisResult {
     note: string;
   };
   plan: "free" | "premium";
-  reanalysis_available?: boolean;
 }
 
 export type AnalysisError =
+  | "auth_required"
   | "private"
   | "not_found"
   | "timeout"
-  | "free_limit"
-  | "email_required"
-  | "handle_taken";
+  | "free_limit";
 
 export interface AnalysisResponse {
   success: boolean;
   data?: AnalysisResult;
   error?: AnalysisError;
-  pending_result?: AnalysisResult;
 }

@@ -49,25 +49,25 @@ export type Database = {
           created_at: string
           handle: string
           id: string
-          is_reanalysis: boolean
           request_id: string
           result_json: Json
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           handle: string
           id?: string
-          is_reanalysis?: boolean
           request_id: string
           result_json: Json
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           handle?: string
           id?: string
-          is_reanalysis?: boolean
           request_id?: string
           result_json?: Json
+          user_id?: string | null
         }
         Relationships: [
           {

@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import AnalyzeForm from "@/components/AnalyzeForm";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
-import EmailCaptureModal from "@/components/EmailCaptureModal";
+import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile, saveAfterSignup } from "@/services/analyze";
+import { analyzeProfile } from "@/services/analyze";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
 
 type AppState = "form" | "loading" | "result" | "upgrade";
@@ -14,7 +14,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   private: "Esse perfil é privado. Só conseguimos analisar perfis públicos.",
   not_found: "Não encontramos esse perfil. Verifique o @.",
   timeout: "O Instagram pode estar instável agora. Tente novamente em alguns minutos.",
-  handle_taken: "Esse perfil já foi analisado por outro usuário.",
 };
 
 const Index = () => {
@@ -22,13 +21,12 @@ const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileData | null>(null);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
   const [currentHandle, setCurrentHandle] = useState("");
   const abortRef = useRef(false);
 
-  const handleSubmit = useCallback(async (handle: string, nicho: string, objetivo: string) => {
+  const runAnalysis = useCallback(async (handle: string, nicho: string, objetivo: string) => {
     setState("loading");
     setIsDone(false);
     setProfileSnapshot(null);
@@ -41,20 +39,10 @@ const Index = () => {
       if (abortRef.current) return;
 
       if (!response.success) {
-        if (response.error === "email_required" && response.pending_result) {
-          // Use REAL profile data from API response for the loading animation
-          if (response.pending_result.profile) {
-            setProfileSnapshot(response.pending_result.profile as ProfileData);
-          }
-          setPendingResult(response.pending_result);
+        if (response.error === "auth_required") {
+          setState("form");
           setPendingInputs({ handle, nicho, objetivo });
-          setIsDone(true);
-          setTimeout(() => {
-            if (!abortRef.current) {
-              setState("form");
-              setShowEmailModal(true);
-            }
-          }, 4500); // longer delay so user sees the full loading animation
+          setShowAuthModal(true);
           return;
         }
 
@@ -68,7 +56,7 @@ const Index = () => {
         return;
       }
 
-      // Use real profile data for loading animation
+      // Success — show result
       if (response.data?.profile) {
         setProfileSnapshot(response.data.profile);
       }
@@ -83,17 +71,19 @@ const Index = () => {
     }
   }, []);
 
-  const handleEmailSuccess = useCallback(async () => {
-    if (pendingResult && pendingInputs) {
-      // Try to persist but show result regardless
-      saveAfterSignup(pendingInputs.handle, pendingInputs.nicho, pendingInputs.objetivo, pendingResult).catch(() => {});
-      setResult(pendingResult);
-      setShowEmailModal(false);
-      setState("result");
-      setPendingResult(null);
+  const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
+    runAnalysis(handle, nicho, objetivo);
+  }, [runAnalysis]);
+
+  const handleAuthSuccess = useCallback(() => {
+    setShowAuthModal(false);
+    // Re-submit with same inputs now that user is authenticated
+    if (pendingInputs) {
+      const { handle, nicho, objetivo } = pendingInputs;
       setPendingInputs(null);
+      runAnalysis(handle, nicho, objetivo);
     }
-  }, [pendingResult, pendingInputs]);
+  }, [pendingInputs, runAnalysis]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -101,18 +91,17 @@ const Index = () => {
     setResult(null);
     setIsDone(false);
     setProfileSnapshot(null);
-    setPendingResult(null);
     setPendingInputs(null);
-    setShowEmailModal(false);
+    setShowAuthModal(false);
   }, []);
 
   return (
     <div className="min-h-screen bg-background">
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
-      <EmailCaptureModal isOpen={showEmailModal} onSuccess={handleEmailSuccess} />
+      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} />
 
       <main className="container max-w-4xl py-12 px-4">
-        {state === "form" && !showEmailModal && (
+        {state === "form" && !showAuthModal && (
           <div className="flex flex-col items-center gap-10">
             <div className="text-center space-y-4 max-w-lg">
               <h1
