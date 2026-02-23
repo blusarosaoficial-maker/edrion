@@ -128,61 +128,52 @@ async function callApify(handle: string): Promise<ApifyProfile> {
   const token = Deno.env.get("APIFY_TOKEN");
   const actorId = Deno.env.get("APIFY_ACTOR_ID") || "apify~instagram-scraper";
 
-  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-dataset?token=${token}`;
+  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-dataset?token=${token}&timeout=60`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), 120000);
 
-  let lastError: Error | null = null;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        directUrls: [`https://www.instagram.com/${handle}/`],
+        resultsType: "details",
+        resultsLimit: 12,
+        searchType: "user",
+        searchLimit: 1,
+      }),
+      signal: controller.signal,
+    });
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          directUrls: [`https://www.instagram.com/${handle}/`],
-          resultsType: "details",
-          resultsLimit: 12,
-          searchType: "user",
-          searchLimit: 1,
-        }),
-        signal: controller.signal,
-      });
+    clearTimeout(timeout);
 
-      clearTimeout(timeout);
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Apify ${res.status}: ${text}`);
-      }
-
-      const data = await res.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("NOT_FOUND");
-      }
-
-      const profile = data[0] as ApifyProfile;
-
-      if (profile.isPrivate) {
-        throw new Error("PRIVATE_PROFILE");
-      }
-
-      return profile;
-    } catch (err) {
-      lastError = err as Error;
-      if ((err as Error).name === "AbortError") {
-        throw new Error("TIMEOUT");
-      }
-      if ((err as Error).message === "NOT_FOUND" || (err as Error).message === "PRIVATE_PROFILE") {
-        throw err;
-      }
-      // retry
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Apify ${res.status}: ${text}`);
     }
-  }
 
-  throw lastError || new Error("TIMEOUT");
+    const data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error("NOT_FOUND");
+    }
+
+    const profile = data[0] as ApifyProfile;
+
+    if (profile.isPrivate) {
+      throw new Error("PRIVATE_PROFILE");
+    }
+
+    return profile;
+  } catch (err) {
+    clearTimeout(timeout);
+    if ((err as Error).name === "AbortError") {
+      throw new Error("TIMEOUT");
+    }
+    throw err;
+  }
 }
 
 Deno.serve(async (req) => {
