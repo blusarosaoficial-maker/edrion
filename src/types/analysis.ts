@@ -72,4 +72,5 @@ export interface AnalysisResponse {
   success: boolean;
   data?: AnalysisResult;
   error?: AnalysisError;
+  pendingResult?: AnalysisResult;
 }
