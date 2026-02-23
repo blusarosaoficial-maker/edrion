@@ -5,8 +5,11 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
 import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile } from "@/services/analyze";
+import { analyzeProfile, saveResult } from "@/services/analyze";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
+import { LogIn, LogOut } from "lucide-react";
 
 type AppState = "form" | "loading" | "result" | "upgrade";
 
@@ -17,12 +20,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const Index = () => {
+  const { user } = useAuth();
   const [state, setState] = useState<AppState>("form");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileData | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
+  const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
   const [currentHandle, setCurrentHandle] = useState("");
   const abortRef = useRef(false);
 
@@ -39,6 +44,25 @@ const Index = () => {
       if (abortRef.current) return;
 
       if (!response.success) {
+        // AUTH_REQUIRED with pending result: scraping done, needs login
+        if (response.error === "auth_required" && response.pendingResult) {
+          setPendingResult(response.pendingResult);
+          setPendingInputs({ handle, nicho, objetivo });
+          // Show profile data in loading overlay
+          if (response.pendingResult.profile) {
+            setProfileSnapshot(response.pendingResult.profile);
+          }
+          setIsDone(true);
+          // Small delay then open auth modal
+          setTimeout(() => {
+            if (!abortRef.current) {
+              setShowAuthModal(true);
+            }
+          }, 2000);
+          return;
+        }
+
+        // AUTH_REQUIRED without pending result (shouldn't happen with new flow)
         if (response.error === "auth_required") {
           setState("form");
           setPendingInputs({ handle, nicho, objetivo });
@@ -75,15 +99,38 @@ const Index = () => {
     runAnalysis(handle, nicho, objetivo);
   }, [runAnalysis]);
 
-  const handleAuthSuccess = useCallback(() => {
+  const handleAuthSuccess = useCallback(async () => {
     setShowAuthModal(false);
-    // Re-submit with same inputs now that user is authenticated
+
+    // If we have a pending result from scraping, save it
+    if (pendingResult && pendingInputs) {
+      const { handle, nicho, objetivo } = pendingInputs;
+      const saveResponse = await saveResult(handle, nicho, objetivo, pendingResult);
+
+      if (!saveResponse.success) {
+        if (saveResponse.error === "free_limit") {
+          setState("upgrade");
+          setPendingResult(null);
+          setPendingInputs(null);
+          return;
+        }
+      }
+
+      // Show the result
+      setResult(pendingResult);
+      setPendingResult(null);
+      setPendingInputs(null);
+      setState("result");
+      return;
+    }
+
+    // Fallback: re-run analysis if no pending result
     if (pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
       setPendingInputs(null);
       runAnalysis(handle, nicho, objetivo);
     }
-  }, [pendingInputs, runAnalysis]);
+  }, [pendingResult, pendingInputs, runAnalysis]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -92,15 +139,42 @@ const Index = () => {
     setIsDone(false);
     setProfileSnapshot(null);
     setPendingInputs(null);
+    setPendingResult(null);
     setShowAuthModal(false);
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Você saiu da sua conta");
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
-      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => { setShowAuthModal(false); setPendingInputs(null); }} />
+      {/* Header */}
+      <header className="container max-w-4xl flex justify-end items-center py-4 px-4">
+        {user ? (
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            Entrar
+          </button>
+        )}
+      </header>
 
-      <main className="container max-w-4xl py-12 px-4">
+      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
+      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => { setShowAuthModal(false); setPendingInputs(null); setPendingResult(null); setState("form"); }} />
+
+      <main className="container max-w-4xl py-8 px-4">
         {state === "form" && !showAuthModal && (
           <div className="flex flex-col items-center gap-10">
             <div className="text-center space-y-4 max-w-lg">

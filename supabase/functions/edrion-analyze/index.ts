@@ -298,6 +298,51 @@ function buildPremiumResult(
   };
 }
 
+// ── Auth helper ──────────────────────────────────────────────
+
+interface AuthResult {
+  authenticated: boolean;
+  userId?: string;
+  supabaseAdmin: ReturnType<typeof createClient>;
+}
+
+function getAuth(req: Request): AuthResult {
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "") || "";
+
+  if (!authHeader?.startsWith("Bearer ") || token === anonKey) {
+    return { authenticated: false, supabaseAdmin };
+  }
+
+  return { authenticated: true, supabaseAdmin };
+}
+
+async function resolveUser(req: Request): Promise<string | null> {
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "") || "";
+
+  if (!authHeader?.startsWith("Bearer ") || token === anonKey) {
+    return null;
+  }
+
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    anonKey,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const { data, error } = await userClient.auth.getUser();
+  if (error || !data?.user?.id) return null;
+  return data.user.id;
+}
+
 // ── Main handler ─────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -322,34 +367,48 @@ Deno.serve(async (req) => {
       return json({ code: "VALIDATION_ERROR", message: "Nicho e objetivo são obrigatórios" }, 422);
     }
 
-    // ── [2] Check auth (BEFORE any Apify call) ───────────────
-    const authHeader = req.headers.get("Authorization");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    // ── [2] Check auth + cache ───────────────────────────────
+    const { supabaseAdmin } = getAuth(req);
+    const userId = await resolveUser(req);
 
-    // If token is anon key itself, user is not authenticated
-    const token = authHeader?.replace("Bearer ", "") || "";
-    if (!authHeader?.startsWith("Bearer ") || token === anonKey) {
-      return json({ code: "AUTH_REQUIRED" }, 401);
+    // If authenticated, check cache first
+    if (userId) {
+      const { data: cachedResults } = await supabaseAdmin
+        .from("analysis_result")
+        .select("result_json")
+        .eq("handle", cleanHandle)
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (cachedResults && cachedResults.length > 0) {
+        return json({ success: true, data: cachedResults[0].result_json }, 200);
+      }
     }
 
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      anonKey,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user?.id) {
-      return json({ code: "AUTH_REQUIRED" }, 401);
+    // ── [3] Call Apify (scraping BEFORE auth gate) ───────────
+    let rawProfile: ApifyProfile;
+    try {
+      rawProfile = await callApify(cleanHandle);
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
+      if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
+      return json({ code: "TIMEOUT" }, 504);
     }
-    const userId = user.id;
 
-    // Service role client for DB operations
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    // ── [4] Normalize + proxy avatar ─────────────────────────
+    const profile = normalizeProfile(rawProfile);
+    profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
+    const posts = normalizePosts(rawProfile.latestPosts || []);
+    const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
-    // ── [3] Check plan limits ────────────────────────────────
+    // ── [5] If NOT authenticated → return pending_result ─────
+    if (!userId) {
+      const pendingResult = buildFreeResult(profile, posts, nichoKey);
+      return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
+    }
+
+    // ── [6] Authenticated → check plan limits ────────────────
     const { data: userProfile } = await supabaseAdmin
       .from("users_profiles")
       .select("plan, free_analysis_used")
@@ -357,10 +416,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userProfile) {
-      // Auto-create profile if missing (e.g. magic link first login)
+      // Auto-create profile if missing
       await supabaseAdmin.from("users_profiles").insert({
         id: userId,
-        email: user.email || "",
+        email: "",
         plan: "free",
         free_analysis_used: false,
       });
@@ -372,35 +431,6 @@ Deno.serve(async (req) => {
     if (plan === "free" && freeUsed) {
       return json({ code: "FREE_LIMIT_REACHED" }, 403);
     }
-
-    // ── [4] Check cached result for (handle + user_id) ───────
-    const { data: cachedResults } = await supabaseAdmin
-      .from("analysis_result")
-      .select("result_json")
-      .eq("handle", cleanHandle)
-      .eq("user_id", userId)
-      .limit(1);
-
-    if (cachedResults && cachedResults.length > 0) {
-      return json({ success: true, data: cachedResults[0].result_json }, 200);
-    }
-
-    // ── [5] Call Apify ───────────────────────────────────────
-    let rawProfile: ApifyProfile;
-    try {
-      rawProfile = await callApify(cleanHandle);
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
-      if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
-      return json({ code: "TIMEOUT" }, 504);
-    }
-
-    // ── [6] Normalize + proxy avatar ─────────────────────────
-    const profile = normalizeProfile(rawProfile);
-    profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
-    const posts = normalizePosts(rawProfile.latestPosts || []);
-    const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
     // ── [7] Build result ─────────────────────────────────────
     const result = plan === "premium"
