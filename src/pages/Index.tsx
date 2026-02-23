@@ -85,7 +85,8 @@ const Index = () => {
 
   const handleEmailSuccess = useCallback(async () => {
     if (pendingResult && pendingInputs) {
-      await saveAfterSignup(pendingInputs.handle, pendingInputs.nicho, pendingInputs.objetivo, pendingResult);
+      // Try to persist but show result regardless
+      saveAfterSignup(pendingInputs.handle, pendingInputs.nicho, pendingInputs.objetivo, pendingResult).catch(() => {});
       setResult(pendingResult);
       setShowEmailModal(false);
       setState("result");
