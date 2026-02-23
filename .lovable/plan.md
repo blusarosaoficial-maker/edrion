@@ -1,75 +1,185 @@
 
+# Plano Completo: Nova Arquitetura EDRION — Scraping Antes de Auth + Email/Senha
 
-# Correcoes no AuthModal e Fluxo de Retorno
+## Mudanca Fundamental
 
-## Problema 1: Modal nao fecha
+O fluxo atual exige login ANTES de rodar o Apify. O novo fluxo inverte: roda o Apify primeiro (loading completo com dados do perfil), e so exige login antes de EXIBIR o resultado final. Alem disso, substitui Magic Link por email+senha (signUp / signInWithPassword).
 
-O `AuthModal` atual impede qualquer forma de fechar:
-- `onOpenChange={() => {}}` ignora o X
-- `onPointerDownOutside` bloqueado
-- `onEscapeKeyDown` bloqueado
+## Novo Fluxo Completo
 
-**Correcao**: Permitir fechar o modal via botao X, ESC e click fora. Ao fechar, cancelar o fluxo pendente.
-
-## Problema 2: Ao fechar, limpar estado
-
-Quando o usuario fecha o modal sem completar o login, o sistema deve voltar ao estado `form` e limpar `pendingInputs`.
-
-## Mudancas
-
-### `src/components/AuthModal.tsx`
-
-- Adicionar prop `onClose` para quando o usuario fechar o modal
-- Passar `onClose` para `onOpenChange` do Dialog
-- Remover `preventDefault` de `onPointerDownOutside` e `onEscapeKeyDown`
-
+```text
+Usuario clica "Analisar"
+    |
+    v
+[1] Edge function: Valida handle
+    |
+    v
+[2] Se autenticado: checa cache (handle + user_id)
+    |-- Existe? --> Retorna resultado cacheado (200)
+    |
+    v
+[3] Chama Apify (scraping completo)
+    |   Frontend mostra loading com dados do perfil
+    |
+    v
+[4] Se NAO autenticado:
+    |   --> Retorna { code: "AUTH_REQUIRED", pending_result: {...} }
+    |   Frontend armazena resultado em estado
+    |   Abre modal de login/cadastro (email+senha)
+    |   Apos auth --> chama edrion-save-result para persistir
+    |   --> Exibe resultado
+    |
+    v
+[5] Se autenticado:
+    |   Checa plan (free_analysis_used)
+    |   Se free esgotado --> FREE_LIMIT_REACHED
+    |   Persiste resultado
+    |   Marca free_analysis_used = true
+    |   --> Retorna resultado
 ```
-interface Props {
-  isOpen: boolean;
-  onSuccess: () => void;
-  onClose: () => void;    // NOVO
+
+## Detalhes Tecnicos
+
+### 1. Migration SQL
+
+Nenhuma migration necessaria -- o schema atual ja tem `user_id` em `analysis_result` e o indice `UNIQUE(handle, user_id)` ja foi criado na migration anterior.
+
+### 2. Edge Function `edrion-analyze/index.ts` -- Reescrever
+
+Mudancas principais na ordem de execucao:
+
+1. Validar handle, nicho, objetivo
+2. Checar auth:
+   - Se autenticado: checar cache (handle + user_id). Se existe, retornar resultado cacheado imediatamente
+   - Se nao autenticado: continuar (sem checar cache -- nao tem user_id)
+3. Chamar Apify (scraping)
+4. Normalizar dados + proxy avatar
+5. Build result (free ou premium baseado no plano do usuario, ou free por default se nao autenticado)
+6. Se NAO autenticado:
+   - Retornar `{ code: "AUTH_REQUIRED", pending_result: result }` (status 200)
+   - NAO persistir nada
+7. Se autenticado:
+   - Checar `users_profiles` (plan, free_analysis_used)
+   - Se free e free_analysis_used=true --> `FREE_LIMIT_REACHED`
+   - Persistir em `analysis_request` + `analysis_result`
+   - Marcar `free_analysis_used = true` (se free)
+   - Retornar resultado
+
+### 3. NOVA Edge Function `edrion-save-result/index.ts`
+
+Endpoint chamado pelo frontend APOS o usuario se autenticar, para persistir o resultado que ja foi calculado.
+
+Recebe: `{ handle, nicho, objetivo, result }` (o resultado completo que o frontend guardou)
+
+Fluxo:
+1. Exigir auth (JWT obrigatorio)
+2. Checar cache (handle + user_id) -- se ja existe, retornar sucesso sem duplicar
+3. Checar plan limits (free_analysis_used)
+4. Se free e ja usado --> `FREE_LIMIT_REACHED`
+5. Persistir em `analysis_request` + `analysis_result` (com user_id)
+6. Marcar `free_analysis_used = true` (se free)
+7. Retornar `{ success: true }`
+
+Adicionar ao `supabase/config.toml`:
+```
+[functions.edrion-save-result]
+verify_jwt = false
+```
+
+### 4. Frontend: `src/components/AuthModal.tsx` -- Reescrever com Email+Senha
+
+Substituir Magic Link por formulario com duas abas/modos:
+
+**Modo "Entrar"** (signInWithPassword):
+- Email + Senha
+- Botao "Entrar"
+
+**Modo "Criar conta"** (signUp):
+- Email + Senha + Confirmar senha
+- Botao "Criar conta"
+
+Toggle entre os modos via link "Nao tem conta? Crie agora" / "Ja tem conta? Entre"
+
+Props mantidas: `isOpen`, `onSuccess`, `onClose`
+
+Ao detectar `SIGNED_IN` via `onAuthStateChange` ou apos signIn/signUp bem-sucedido: chamar `onSuccess()`
+
+### 5. Frontend: `src/pages/Index.tsx` -- Novo fluxo
+
+Adicionar estado `pendingResult` para armazenar o resultado quando AUTH_REQUIRED.
+
+Adicionar link "Entrar" no topo direito (usando `useAuth` do contexto).
+
+Fluxo do `runAnalysis`:
+1. Chama `analyzeProfile()` --> loading overlay
+2. Se resposta tem `pending_result` (AUTH_REQUIRED):
+   - Armazenar `pending_result` em estado
+   - Armazenar `pendingInputs` (handle, nicho, objetivo)
+   - Loading overlay continua mostrando dados (isDone=true, profileSnapshot preenchido)
+   - Abrir AuthModal
+3. Se resposta sucesso (autenticado):
+   - Mostrar resultado normalmente
+
+`handleAuthSuccess`:
+1. Fechar modal
+2. Chamar `saveResult(pendingInputs, pendingResult)` -- nova funcao no service
+3. Se sucesso: mostrar resultado (ja armazenado)
+4. Se FREE_LIMIT_REACHED: tela upgrade
+
+### 6. Frontend: Header com "Entrar" / "Sair"
+
+Adicionar no `Index.tsx` (ou criar componente `Header`):
+- Se nao autenticado: link "Entrar" no topo direito (abre AuthModal)
+- Se autenticado: texto discreto com email + link "Sair"
+- `supabase.auth.signOut()` para logout
+
+### 7. Frontend: `src/services/analyze.ts` -- Atualizar
+
+Adicionar mapeamento para `pending_result`:
+- Se `responseData?.code === "AUTH_REQUIRED"` E `responseData?.pending_result`:
+  - Retornar `{ success: false, error: "auth_required", pendingResult: responseData.pending_result }`
+
+Adicionar nova funcao `saveResult()`:
+- Chama edge function `edrion-save-result`
+- Envia JWT + dados pendentes
+- Retorna sucesso ou codigo de erro
+
+### 8. Frontend: `src/types/analysis.ts` -- Atualizar
+
+Adicionar `pendingResult` opcional no `AnalysisResponse`:
+```
+export interface AnalysisResponse {
+  success: boolean;
+  data?: AnalysisResult;
+  error?: AnalysisError;
+  pendingResult?: AnalysisResult;
 }
 ```
 
-- `onOpenChange` passa a chamar `onClose` quando `open` muda para `false`
+### 9. Frontend: `src/contexts/AuthContext.tsx` -- Manter
 
-### `src/pages/Index.tsx`
+Ja funciona corretamente. O `useAuth()` sera usado no header para mostrar estado de login.
 
-- Adicionar handler `handleAuthClose` que:
-  - Fecha o modal (`setShowAuthModal(false)`)
-  - Limpa `pendingInputs`
-  - Mantem estado `form`
-- Passar `onClose={handleAuthClose}` para o `AuthModal`
+## Resumo de Arquivos
 
-## Fluxo Completo Explicado
+| Arquivo | Acao |
+|---------|------|
+| `supabase/functions/edrion-analyze/index.ts` | Reescrever: scraping antes de auth, retornar pending_result se nao autenticado |
+| `supabase/functions/edrion-save-result/index.ts` | CRIAR: persistir resultado apos autenticacao |
+| `supabase/config.toml` | Adicionar entrada edrion-save-result |
+| `src/components/AuthModal.tsx` | Reescrever: email+senha (signUp/signIn) em vez de Magic Link |
+| `src/pages/Index.tsx` | Refatorar: novo fluxo com pendingResult, header com Entrar/Sair |
+| `src/services/analyze.ts` | Adicionar saveResult(), atualizar mapeamento de auth_required |
+| `src/types/analysis.ts` | Adicionar pendingResult ao AnalysisResponse |
 
-### Primeira visita (sem sessao)
-1. Usuario coloca @handle e clica "Analisar"
-2. Backend retorna `AUTH_REQUIRED` (sem gastar Apify)
-3. Frontend abre AuthModal
-4. Usuario digita email e clica "Enviar"
-5. Tela muda para "Verifique seu e-mail"
-6. Usuario pode FECHAR o modal (volta ao form) ou esperar
-7. Usuario clica no link magico no email
-8. Navegador detecta sessao via `onAuthStateChange`
-9. Modal fecha automaticamente e analise re-submete com JWT
+## Regras de Negocio Garantidas
 
-### Proxima visita (sessao ativa)
-1. Usuario ja esta logado (sessao persistida no localStorage)
-2. Coloca @handle e clica "Analisar"
-3. Backend recebe JWT automaticamente
-4. Se handle+user_id ja existe: retorna resultado cacheado
-5. Se nao existe e free_analysis_used=false: roda Apify normalmente
-6. Se free_analysis_used=true: retorna FREE_LIMIT_REACHED
-
-### Se sessao expirou
-1. Mesmo fluxo da primeira visita -- AuthModal aparece novamente
-2. Magic Link renova a sessao
-
-## Arquivos impactados
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/AuthModal.tsx` | Adicionar prop `onClose`, permitir fechar modal |
-| `src/pages/Index.tsx` | Adicionar `handleAuthClose`, passar para AuthModal |
-
+- Scraping roda ANTES de exigir login (UX fluida)
+- Login e por email+senha, NAO Magic Link
+- 1 analise FREE por usuario (free_analysis_used)
+- 1 analise PREMIUM por compra
+- Mesmo handle pode ser analisado por usuarios diferentes
+- Cache por (handle + user_id) -- resultado reutilizado para o mesmo usuario
+- Plano decidido exclusivamente no backend
+- Sem reanalise, sem assinatura mensal
+- Link "Entrar" discreto no topo direito
