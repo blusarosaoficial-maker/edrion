@@ -9,49 +9,57 @@ export async function analyzeProfile(
   objetivo: string,
 ): Promise<AnalysisResponse> {
   try {
-    const { data, error } = await supabase.functions.invoke("edrion-analyze", {
-      body: { handle, nicho, objetivo },
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "glgocjuwmssnaztljdus";
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdsZ29janV3bXNzbmF6dGxqZHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjU4MDIsImV4cCI6MjA4NzEwMTgwMn0.csxQ7SNsjkLEi8ygxj8TP3CzIg-L6An6RVSCwbXay4s";
+    const url = `https://${projectId}.supabase.co/functions/v1/edrion-analyze`;
+
+    // Get current session token if available
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "apikey": anonKey,
+      "Authorization": `Bearer ${session?.access_token || anonKey}`,
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ handle, nicho, objetivo }),
     });
 
-    if (error) {
-      // Network / CORS error — fallback to mock in dev
-      if (import.meta.env.DEV) {
-        console.warn("Edge function error, using mock:", error);
-        return analyzeMock(handle, nicho, objetivo);
-      }
-      return { success: false, error: "timeout" };
-    }
+    const responseData = await res.json();
 
-    // Map response codes
-    if (data?.code === "EMAIL_REQUIRED") {
-      return { success: false, error: "email_required", pending_result: data.pending_result };
+    // Map response codes (works for any HTTP status)
+    if (responseData?.code === "EMAIL_REQUIRED") {
+      return { success: false, error: "email_required", pending_result: responseData.pending_result };
     }
-    if (data?.code === "FREE_LIMIT_REACHED") {
+    if (responseData?.code === "FREE_LIMIT_REACHED") {
       return { success: false, error: "free_limit" };
     }
-    if (data?.code === "HANDLE_ALREADY_ANALYZED") {
+    if (responseData?.code === "HANDLE_ALREADY_ANALYZED") {
       return { success: false, error: "handle_taken" };
     }
-    if (data?.code === "PRIVATE_PROFILE") {
+    if (responseData?.code === "PRIVATE_PROFILE") {
       return { success: false, error: "private" };
     }
-    if (data?.code === "NOT_FOUND") {
+    if (responseData?.code === "NOT_FOUND") {
       return { success: false, error: "not_found" };
     }
-    if (data?.code === "TIMEOUT") {
+    if (responseData?.code === "TIMEOUT") {
       return { success: false, error: "timeout" };
     }
-    if (data?.code === "VALIDATION_ERROR") {
+    if (responseData?.code === "VALIDATION_ERROR") {
       return { success: false, error: "timeout" };
     }
 
-    if (data?.success && data?.data) {
-      return { success: true, data: data.data };
+    if (responseData?.success && responseData?.data) {
+      return { success: true, data: responseData.data };
     }
 
     return { success: false, error: "timeout" };
-  } catch {
+  } catch (err) {
     if (import.meta.env.DEV) {
+      console.warn("Edge function error, using mock:", err);
       return analyzeMock(handle, nicho, objetivo);
     }
     return { success: false, error: "timeout" };
