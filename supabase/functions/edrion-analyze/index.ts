@@ -128,52 +128,84 @@ async function callApify(handle: string): Promise<ApifyProfile> {
   const token = Deno.env.get("APIFY_TOKEN");
   const actorId = Deno.env.get("APIFY_ACTOR_ID") || "apify~instagram-scraper";
 
-  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-dataset?token=${token}&timeout=60`;
+  // Step 1: Start the actor run (async, returns immediately)
+  const startUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
+  const startRes = await fetch(startUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      directUrls: [`https://www.instagram.com/${handle}/`],
+      resultsType: "details",
+      resultsLimit: 9,
+      searchType: "user",
+      searchLimit: 1,
+    }),
+  });
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000);
+  if (!startRes.ok) {
+    const text = await startRes.text();
+    throw new Error(`Apify start failed ${startRes.status}: ${text}`);
+  }
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        directUrls: [`https://www.instagram.com/${handle}/`],
-        resultsType: "details",
-        resultsLimit: 12,
-        searchType: "user",
-        searchLimit: 1,
-      }),
-      signal: controller.signal,
-    });
+  const runInfo = await startRes.json();
+  const runId = runInfo?.data?.id;
+  const datasetId = runInfo?.data?.defaultDatasetId;
 
-    clearTimeout(timeout);
+  if (!runId || !datasetId) {
+    throw new Error("Apify run failed to start");
+  }
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Apify ${res.status}: ${text}`);
+  // Step 2: Poll for run completion (max ~50s to stay within edge function limits)
+  const maxWait = 50000;
+  const pollInterval = 3000;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWait) {
+    await new Promise((r) => setTimeout(r, pollInterval));
+
+    const statusRes = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}?token=${token}`,
+    );
+    if (!statusRes.ok) {
+      await statusRes.text();
+      continue;
     }
 
-    const data = await res.json();
+    const statusData = await statusRes.json();
+    const status = statusData?.data?.status;
 
-    if (!Array.isArray(data) || data.length === 0) {
+    if (status === "SUCCEEDED") {
+      // Step 3: Fetch dataset items
+      const dataRes = await fetch(
+        `https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`,
+      );
+      if (!dataRes.ok) {
+        const text = await dataRes.text();
+        throw new Error(`Apify dataset fetch failed: ${text}`);
+      }
+
+      const data = await dataRes.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("NOT_FOUND");
+      }
+
+      const profile = data[0] as ApifyProfile;
+
+      if (profile.isPrivate) {
+        throw new Error("PRIVATE_PROFILE");
+      }
+
+      return profile;
+    }
+
+    if (status === "FAILED" || status === "ABORTED" || status === "TIMED-OUT") {
       throw new Error("NOT_FOUND");
     }
-
-    const profile = data[0] as ApifyProfile;
-
-    if (profile.isPrivate) {
-      throw new Error("PRIVATE_PROFILE");
-    }
-
-    return profile;
-  } catch (err) {
-    clearTimeout(timeout);
-    if ((err as Error).name === "AbortError") {
-      throw new Error("TIMEOUT");
-    }
-    throw err;
+    // else RUNNING/READY — keep polling
   }
+
+  throw new Error("TIMEOUT");
 }
 
 Deno.serve(async (req) => {
