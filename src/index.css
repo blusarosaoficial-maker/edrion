@@ -152,4 +152,87 @@
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
+
+  /* Scanner lines for Instagram icon */
+  @keyframes scanner-top {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+  @keyframes scanner-right {
+    0% { transform: translateY(-100%); }
+    50% { transform: translateY(100%); }
+    100% { transform: translateY(-100%); }
+  }
+  @keyframes scanner-bottom {
+    0% { transform: translateX(100%); }
+    50% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  @keyframes scanner-left {
+    0% { transform: translateY(100%); }
+    50% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .scanner-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+  }
+
+  .scanner-container::before,
+  .scanner-container::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+  }
+
+  /* Top scanner line */
+  .scanner-line-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #A855F7, #6A5CFF);
+    animation: scanner-top 2.5s ease-in-out infinite;
+    z-index: 1;
+  }
+
+  /* Right scanner line */
+  .scanner-line-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 50%;
+    background: linear-gradient(180deg, transparent, #6A5CFF, #FF3DAE);
+    animation: scanner-right 2.5s ease-in-out infinite 0.6s;
+    z-index: 1;
+  }
+
+  /* Bottom scanner line */
+  .scanner-line-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, #FF3DAE, #A855F7, transparent);
+    animation: scanner-bottom 2.5s ease-in-out infinite 1.2s;
+    z-index: 1;
+  }
+
+  /* Left scanner line */
+  .scanner-line-left {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 50%;
+    background: linear-gradient(180deg, #A855F7, #FF3DAE, transparent);
+    animation: scanner-left 2.5s ease-in-out infinite 1.8s;
+    z-index: 1;
+  }
 }
