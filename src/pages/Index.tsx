@@ -25,27 +25,15 @@ const Index = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
   const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
+  const [currentHandle, setCurrentHandle] = useState("");
   const abortRef = useRef(false);
 
   const handleSubmit = useCallback(async (handle: string, nicho: string, objetivo: string) => {
     setState("loading");
     setIsDone(false);
     setProfileSnapshot(null);
+    setCurrentHandle(handle);
     abortRef.current = false;
-
-    const snapshot: ProfileData = {
-      handle,
-      full_name: handle.charAt(0).toUpperCase() + handle.slice(1).replace(/[._]/g, " "),
-      avatar_url: `https://i.pravatar.cc/150?u=${handle}`,
-      bio_text: "",
-      followers: Math.floor(Math.random() * 50000) + 1000,
-      following: Math.floor(Math.random() * 1000) + 100,
-      posts_count: Math.floor(Math.random() * 400) + 50,
-      is_verified: false,
-    };
-    setTimeout(() => {
-      if (!abortRef.current) setProfileSnapshot(snapshot);
-    }, 1200);
 
     try {
       const response = await analyzeProfile(handle, nicho, objetivo);
@@ -54,6 +42,10 @@ const Index = () => {
 
       if (!response.success) {
         if (response.error === "email_required" && response.pending_result) {
+          // Use REAL profile data from API response for the loading animation
+          if (response.pending_result.profile) {
+            setProfileSnapshot(response.pending_result.profile as ProfileData);
+          }
           setPendingResult(response.pending_result);
           setPendingInputs({ handle, nicho, objetivo });
           setIsDone(true);
@@ -62,7 +54,7 @@ const Index = () => {
               setState("form");
               setShowEmailModal(true);
             }
-          }, 1500);
+          }, 4500); // longer delay so user sees the full loading animation
           return;
         }
 
@@ -76,11 +68,15 @@ const Index = () => {
         return;
       }
 
+      // Use real profile data for loading animation
+      if (response.data?.profile) {
+        setProfileSnapshot(response.data.profile);
+      }
       setResult(response.data!);
       setIsDone(true);
       setTimeout(() => {
         if (!abortRef.current) setState("result");
-      }, 2000);
+      }, 4500);
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
@@ -111,7 +107,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} profileSnapshot={profileSnapshot} />
+      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
       <EmailCaptureModal isOpen={showEmailModal} onSuccess={handleEmailSuccess} />
 
       <main className="container max-w-4xl py-12 px-4">
