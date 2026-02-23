@@ -13,58 +13,10 @@ interface Props {
   profileSnapshot?: ProfileData | null;
 }
 
-function CountUpNumber({ target, start, suffix }: { target: number; start: boolean; suffix?: string }) {
-  const value = useCountUp(target, 2000, start);
+function CountUpNumber({ target, start }: { target: number; start: boolean }) {
+  const value = useCountUp(target, 3000, start);
   const formatted = value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : value.toString();
-  return <span>{formatted}{suffix}</span>;
-}
-
-function CircularTimer({ seconds }: { seconds: number }) {
-  const [elapsed, setElapsed] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
-
-  useEffect(() => {
-    setElapsed(0);
-    intervalRef.current = setInterval(() => {
-      setElapsed((e) => {
-        if (e >= seconds) {
-          clearInterval(intervalRef.current);
-          return seconds;
-        }
-        return e + 0.1;
-      });
-    }, 100);
-    return () => clearInterval(intervalRef.current);
-  }, [seconds]);
-
-  const progress = Math.min(elapsed / seconds, 1);
-  const remaining = Math.max(Math.ceil(seconds - elapsed), 0);
-
-  return (
-    <div className="relative w-20 h-20 flex items-center justify-center">
-      <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="35" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
-        <circle
-          cx="40" cy="40" r="35"
-          fill="none"
-          stroke="url(#timer-gradient)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={`${2 * Math.PI * 35}`}
-          strokeDashoffset={`${2 * Math.PI * 35 * (1 - progress)}`}
-          className="transition-all duration-100"
-        />
-        <defs>
-          <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6A5CFF" />
-            <stop offset="50%" stopColor="#A855F7" />
-            <stop offset="100%" stopColor="#FF3DAE" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <span className="absolute text-lg font-bold text-foreground">{remaining}s</span>
-    </div>
-  );
+  return <span>{formatted}</span>;
 }
 
 export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot }: Props) {
@@ -72,8 +24,25 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<Phase>("A");
   const [showDone, setShowDone] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const doneTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const hasProfile = !!profileSnapshot;
+  const showAvatar = hasProfile && avatarLoaded;
+  const showStats = hasProfile && phase !== "A";
+  const showBio = hasProfile && (phase === "C" || phase === "D" || phase === "done") && !!profileSnapshot?.bio_text;
+
+  // Preload avatar image
+  useEffect(() => {
+    if (!profileSnapshot?.avatar_url) {
+      setAvatarLoaded(false);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => setAvatarLoaded(true);
+    img.src = profileSnapshot.avatar_url;
+  }, [profileSnapshot?.avatar_url]);
 
   // Reset on open
   useEffect(() => {
@@ -81,12 +50,12 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
       setProgress(0);
       setPhase("A");
       setShowDone(false);
+      setAvatarLoaded(false);
       clearInterval(intervalRef.current);
       clearTimeout(doneTimerRef.current);
       return;
     }
 
-    // Slow progress simulation ~20s total
     let current = 0;
     intervalRef.current = setInterval(() => {
       current += 0.5;
@@ -108,13 +77,11 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
     else setPhase("D");
   }, [progress, showDone]);
 
-  // When API is done, show final phases then complete
+  // When API is done, complete animation
   useEffect(() => {
     if (!isDone || !isOpen) return;
-    // Let phases C/D show for a bit, then done
     clearInterval(intervalRef.current);
 
-    // If we're still early, jump to C first
     if (progress < 40) setProgress(45);
 
     doneTimerRef.current = setTimeout(() => {
@@ -137,134 +104,112 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
   }[phase];
 
   const content = (
-    <div className="flex flex-col items-center justify-center gap-6 p-6 sm:p-8 w-full max-w-md mx-auto">
-      {/* Phase A: Instagram icon + handle + timer */}
-      {phase === "A" && (
-        <div className="flex flex-col items-center gap-5 animate-in fade-in duration-500">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F56040] via-[#C13584] to-[#833AB4] flex items-center justify-center">
-            <Instagram className="w-10 h-10 text-white" />
-          </div>
-          <p className="text-foreground font-semibold text-lg">@{handle || "..."}</p>
-          <CircularTimer seconds={18} />
-        </div>
-      )}
+    <div className="flex flex-col items-center justify-center gap-5 p-6 sm:p-8 w-full max-w-sm mx-auto">
 
-      {/* Phase B: Avatar + name appear */}
-      {phase === "B" && (
-        <div className="flex flex-col items-center gap-5 animate-in fade-in duration-500">
-          {profileSnapshot ? (
+      {/* === AVATAR SECTION — always present, content transitions === */}
+      <div className="relative w-24 h-24 flex items-center justify-center">
+        {/* Instagram icon with scanner — fades out when real avatar loads */}
+        <div
+          className="absolute inset-0 flex items-center justify-center transition-all duration-700"
+          style={{ opacity: showAvatar ? 0 : 1, transform: showAvatar ? "scale(0.8)" : "scale(1)" }}
+        >
+          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#6A5CFF] via-[#A855F7] to-[#FF3DAE] flex items-center justify-center scanner-container animate-pulse-glow">
+            <div className="scanner-line-top" />
+            <div className="scanner-line-right" />
+            <div className="scanner-line-bottom" />
+            <div className="scanner-line-left" />
+            <Instagram className="w-12 h-12 text-white relative z-10" />
+          </div>
+        </div>
+
+        {/* Real avatar — fades in when loaded */}
+        <div
+          className="absolute inset-0 flex items-center justify-center transition-all duration-700"
+          style={{ opacity: showAvatar ? 1 : 0, transform: showAvatar ? "scale(1)" : "scale(1.1)" }}
+        >
+          {profileSnapshot?.avatar_url && (
             <img
               src={profileSnapshot.avatar_url}
               alt={profileSnapshot.handle}
-              className="w-20 h-20 rounded-full border-2 border-border object-cover"
+              className="w-24 h-24 rounded-full border-2 border-border object-cover"
             />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-muted animate-pulse" />
-          )}
-          <div className="text-center">
-            <p className="text-foreground font-semibold text-lg">
-              {profileSnapshot?.full_name || handle || "..."}
-            </p>
-            <p className="text-muted-foreground text-sm">@{handle || "..."}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Phase C: Full profile card with countup stats */}
-      {(phase === "C" || phase === "D") && (
-        <div className="w-full rounded-xl border border-border bg-card p-5 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4">
-            {profileSnapshot ? (
-              <img
-                src={profileSnapshot.avatar_url}
-                alt={profileSnapshot.handle}
-                className="w-16 h-16 rounded-full border-2 border-border object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-muted animate-pulse" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-foreground font-semibold truncate">
-                  {profileSnapshot?.full_name || handle}
-                </p>
-                {profileSnapshot?.is_verified && (
-                  <BadgeCheck className="w-4 h-4 text-primary shrink-0" />
-                )}
-              </div>
-              <p className="text-muted-foreground text-sm">@{handle}</p>
-            </div>
-          </div>
-
-          {/* Stats with countup */}
-          <div className="grid grid-cols-3 divide-x divide-border text-center">
-            <div className="px-2">
-              <p className="text-foreground font-bold text-lg">
-                <CountUpNumber
-                  target={profileSnapshot?.posts_count || 0}
-                  start={!!profileSnapshot}
-                />
-              </p>
-              <p className="text-muted-foreground text-xs">posts</p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground font-bold text-lg">
-                <CountUpNumber
-                  target={profileSnapshot?.followers || 0}
-                  start={!!profileSnapshot}
-                />
-              </p>
-              <p className="text-muted-foreground text-xs">seguidores</p>
-            </div>
-            <div className="px-2">
-              <p className="text-foreground font-bold text-lg">
-                <CountUpNumber
-                  target={profileSnapshot?.following || 0}
-                  start={!!profileSnapshot}
-                />
-              </p>
-              <p className="text-muted-foreground text-xs">seguindo</p>
-            </div>
-          </div>
-
-          {/* Bio */}
-          {profileSnapshot?.bio_text && (
-            <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 whitespace-pre-line">
-              {profileSnapshot.bio_text}
-            </p>
           )}
         </div>
-      )}
 
-      {/* Phase D indicator */}
-      {phase === "D" && (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm animate-in fade-in duration-300">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>IA processando dados...</span>
-        </div>
-      )}
-
-      {/* Done: checkmark */}
-      {phase === "done" && (
-        <div className="flex flex-col items-center gap-3 animate-in zoom-in-50 duration-500">
-          <div className="w-16 h-16 rounded-full bg-gradient-brand flex items-center justify-center">
-            <Check className="w-8 h-8 text-white" strokeWidth={3} />
+        {/* Done checkmark overlay */}
+        {phase === "done" && (
+          <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in-50 duration-500">
+            <div className="w-10 h-10 rounded-full bg-gradient-brand flex items-center justify-center shadow-lg">
+              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Phase label */}
-      <div className="text-center space-y-1">
-        <p className="text-foreground font-medium text-base">{phaseLabel}</p>
-        <p className="text-muted-foreground text-sm">{Math.round(progress)}%</p>
+        )}
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-        <div
-          className="h-full rounded-full shimmer-bar transition-all duration-300 ease-out"
-          style={{ width: `${Math.min(progress, 100)}%` }}
-        />
+      {/* === NAME + HANDLE — always present === */}
+      <div className="text-center">
+        <div className="flex items-center justify-center gap-1.5">
+          <p className="text-foreground font-semibold text-lg truncate max-w-[250px] transition-all duration-500">
+            {hasProfile ? profileSnapshot.full_name : `@${handle || "..."}`}
+          </p>
+          {profileSnapshot?.is_verified && (
+            <BadgeCheck className="w-5 h-5 text-primary shrink-0" />
+          )}
+        </div>
+        {hasProfile && (
+          <p className="text-muted-foreground text-sm transition-opacity duration-500">
+            @{profileSnapshot.handle}
+          </p>
+        )}
+      </div>
+
+      {/* === STATS — always in DOM, opacity controlled === */}
+      <div
+        className="w-full grid grid-cols-3 gap-3 transition-all duration-700"
+        style={{ opacity: showStats ? 1 : 0.15, transform: showStats ? "translateY(0)" : "translateY(4px)" }}
+      >
+        {[
+          { label: "posts", value: profileSnapshot?.posts_count || 0 },
+          { label: "seguidores", value: profileSnapshot?.followers || 0 },
+          { label: "seguindo", value: profileSnapshot?.following || 0 },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-lg border border-border bg-card p-3 text-center">
+            <p className="text-foreground font-bold text-xl">
+              <CountUpNumber target={stat.value} start={showStats} />
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* === BIO — expands when available === */}
+      <div
+        className="w-full overflow-hidden transition-all duration-700 ease-out"
+        style={{
+          maxHeight: showBio ? "120px" : "0px",
+          opacity: showBio ? 1 : 0,
+        }}
+      >
+        <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 whitespace-pre-line text-center px-2">
+          {profileSnapshot?.bio_text}
+        </p>
+      </div>
+
+      {/* === STATUS + AI indicator === */}
+      <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-[20px]">
+        {phase === "D" && <Loader2 className="w-4 h-4 animate-spin" />}
+        <span className="transition-opacity duration-300">{phaseLabel}</span>
+      </div>
+
+      {/* === PROGRESS BAR — always visible === */}
+      <div className="w-full space-y-1">
+        <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+          <div
+            className="h-full rounded-full shimmer-bar transition-all duration-300 ease-out"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+        <p className="text-muted-foreground text-xs text-center">{Math.round(progress)}%</p>
       </div>
     </div>
   );
