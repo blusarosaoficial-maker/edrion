@@ -14,7 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_request: {
+        Row: {
+          created_at: string
+          handle: string
+          id: string
+          nicho: string
+          objetivo: string
+          plan_at_time: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          id?: string
+          nicho: string
+          objetivo: string
+          plan_at_time?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          id?: string
+          nicho?: string
+          objetivo?: string
+          plan_at_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      analysis_result: {
+        Row: {
+          created_at: string
+          handle: string
+          id: string
+          is_reanalysis: boolean
+          request_id: string
+          result_json: Json
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          id?: string
+          is_reanalysis?: boolean
+          request_id: string
+          result_json: Json
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          id?: string
+          is_reanalysis?: boolean
+          request_id?: string
+          result_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_result_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_request"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users_profiles: {
+        Row: {
+          created_at: string
+          email: string
+          free_analysis_used: boolean
+          id: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          free_analysis_used?: boolean
+          id: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          free_analysis_used?: boolean
+          id?: string
+          plan?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

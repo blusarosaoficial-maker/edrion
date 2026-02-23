@@ -1,4 +1,81 @@
-import type { AnalysisResponse, PostData, PostMetrics } from "@/types/analysis";
+import { supabase } from "@/integrations/supabase/client";
+import type { AnalysisResponse, AnalysisResult, PostData, PostMetrics } from "@/types/analysis";
+
+// ── Real API call ──────────────────────────────────────────────
+
+export async function analyzeProfile(
+  handle: string,
+  nicho: string,
+  objetivo: string,
+): Promise<AnalysisResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke("edrion-analyze", {
+      body: { handle, nicho, objetivo },
+    });
+
+    if (error) {
+      // Network / CORS error — fallback to mock in dev
+      if (import.meta.env.DEV) {
+        console.warn("Edge function error, using mock:", error);
+        return analyzeMock(handle, nicho, objetivo);
+      }
+      return { success: false, error: "timeout" };
+    }
+
+    // Map response codes
+    if (data?.code === "EMAIL_REQUIRED") {
+      return { success: false, error: "email_required", pending_result: data.pending_result };
+    }
+    if (data?.code === "FREE_LIMIT_REACHED") {
+      return { success: false, error: "free_limit" };
+    }
+    if (data?.code === "HANDLE_ALREADY_ANALYZED") {
+      return { success: false, error: "handle_taken" };
+    }
+    if (data?.code === "PRIVATE_PROFILE") {
+      return { success: false, error: "private" };
+    }
+    if (data?.code === "NOT_FOUND") {
+      return { success: false, error: "not_found" };
+    }
+    if (data?.code === "TIMEOUT") {
+      return { success: false, error: "timeout" };
+    }
+    if (data?.code === "VALIDATION_ERROR") {
+      return { success: false, error: "timeout" };
+    }
+
+    if (data?.success && data?.data) {
+      return { success: true, data: data.data };
+    }
+
+    return { success: false, error: "timeout" };
+  } catch {
+    if (import.meta.env.DEV) {
+      return analyzeMock(handle, nicho, objetivo);
+    }
+    return { success: false, error: "timeout" };
+  }
+}
+
+export async function saveAfterSignup(
+  handle: string,
+  nicho: string,
+  objetivo: string,
+  pendingResult: AnalysisResult,
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke("edrion-save-after-signup", {
+      body: { handle, nicho, objetivo, pending_result: pendingResult },
+    });
+    if (error) return false;
+    return data?.success === true;
+  } catch {
+    return false;
+  }
+}
+
+// ── Mock (dev fallback) ────────────────────────────────────────
 
 const AVATARS = [
   "https://i.pravatar.cc/150?img=1",
@@ -20,31 +97,31 @@ const POST_THUMBS = [
 ];
 
 const NICHO_BIOS: Record<string, { current: string; suggested: string; rationale: string; cta: string }> = {
-  "fitness": {
+  fitness: {
     current: "💪 Treino pesado | Vida saudável",
     suggested: "Transformo corpos em 12 semanas com treino e dieta personalizados. +500 alunos. ⬇️ Comece agora",
     rationale: "Bio genérica sem proposta de valor clara nem prova social",
     cta: "Agende sua avaliação gratuita",
   },
-  "marketing": {
+  marketing: {
     current: "📈 Marketing Digital | Empreendedor",
     suggested: "Ajudo negócios a faturar 6 dígitos com tráfego pago. Resultados em 30 dias ou devolvemos. ⬇️",
     rationale: "Falta especificidade no serviço e garantia para o cliente",
     cta: "Solicite seu diagnóstico gratuito",
   },
-  "gastronomia": {
+  gastronomia: {
     current: "🍕 Comida boa todo dia",
     suggested: "Chef de cozinha com receitas práticas em até 15 min. +200 receitas testadas. ⬇️ Cardápio semanal grátis",
     rationale: "Bio não comunica expertise nem diferencial",
     cta: "Baixe o cardápio da semana",
   },
-  "moda": {
+  moda: {
     current: "👗 Fashion | Style",
     suggested: "Consultora de imagem: vista-se com intenção e destaque-se sem gastar mais. ⬇️ Quiz de estilo grátis",
     rationale: "Bio em inglês perde conexão com público brasileiro",
     cta: "Descubra seu estilo em 2 minutos",
   },
-  "default": {
+  default: {
     current: "✨ Conteúdo de qualidade",
     suggested: "Especialista em [seu nicho] ajudando [público] a alcançar [resultado]. ⬇️ Entre em contato",
     rationale: "Bio vaga sem proposta de valor específica",
@@ -53,7 +130,7 @@ const NICHO_BIOS: Record<string, { current: string; suggested: string; rationale
 };
 
 const CAPTIONS_BY_NICHO: Record<string, string[]> = {
-  "fitness": [
+  fitness: [
     "3 exercícios que vão mudar seu shape 💪",
     "O erro que trava seu emagrecimento",
     "Café da manhã fit em 5 min",
@@ -64,7 +141,7 @@ const CAPTIONS_BY_NICHO: Record<string, string[]> = {
     "Snack proteico receita rápida",
     "Por que você não ganha massa muscular",
   ],
-  "marketing": [
+  marketing: [
     "3 erros que queimam seu orçamento de ads",
     "Como escalar de R$1k pra R$10k/dia",
     "Copy que converte: fórmula prática",
@@ -75,7 +152,7 @@ const CAPTIONS_BY_NICHO: Record<string, string[]> = {
     "Por que seu lead é caro demais",
     "Automação que salvou meu tempo",
   ],
-  "default": [
+  default: [
     "Conteúdo que gera resultado",
     "3 dicas que ninguém te conta",
     "O segredo por trás dos bastidores",
@@ -89,21 +166,21 @@ const CAPTIONS_BY_NICHO: Record<string, string[]> = {
 };
 
 const NEXT_POST_BY_NICHO: Record<string, { format: string; hook: string; outline: string[]; cta: string; angle: string }> = {
-  "fitness": {
+  fitness: {
     format: "reel",
     hook: "Você está fazendo esse exercício ERRADO e nem sabe",
     outline: ["Mostre o erro comum na execução", "Demonstre a forma correta", "Explique o impacto nos resultados"],
     cta: "Comente TREINO para receber a planilha gratuita",
     angle: "Conteúdo educativo com correção de erro comum",
   },
-  "marketing": {
+  marketing: {
     format: "carrossel",
     hook: "Gastei R$50 mil em ads pra aprender essas 5 lições",
     outline: ["Abra com resultado real", "Liste as 5 lições com dados", "Feche com ação prática"],
     cta: "Salve esse post e aplique na sua próxima campanha",
     angle: "Autoridade via experiência com dados concretos",
   },
-  "default": {
+  default: {
     format: "reel",
     hook: "Você está cometendo esse erro no seu conteúdo?",
     outline: ["Apresente o erro comum", "Mostre consequência", "Entregue solução prática"],
@@ -140,9 +217,8 @@ function generatePosts(nicho: string): PostData[] {
 export async function analyzeMock(
   handle: string,
   nicho: string,
-  _objetivo: string
+  _objetivo: string,
 ): Promise<AnalysisResponse> {
-  // Simulated errors
   const h = handle.toLowerCase();
   if (h === "privado") {
     await delay(800);
@@ -157,13 +233,11 @@ export async function analyzeMock(
     return { success: false, error: "timeout" };
   }
 
-  // Simulate real latency
   await delay(rand(2500, 4500));
 
   const nichoKey = Object.keys(NICHO_BIOS).includes(nicho) ? nicho : "default";
   const posts = generatePosts(nichoKey);
 
-  // Find top and worst by engagement_score
   let topIdx = 0;
   let worstIdx = 0;
   for (let i = 1; i < posts.length; i++) {
@@ -199,6 +273,7 @@ export async function analyzeMock(
         next_post_suggestion: nextPost,
       },
       limits: { posts_analyzed: 9, note: "Diagnóstico objetivo" },
+      plan: "free",
     },
   };
 }

@@ -3,15 +3,18 @@ import { toast } from "sonner";
 import AnalyzeForm from "@/components/AnalyzeForm";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
-import { analyzeMock } from "@/services/analyze";
+import EmailCaptureModal from "@/components/EmailCaptureModal";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { analyzeProfile, saveAfterSignup } from "@/services/analyze";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
 
-type AppState = "form" | "loading" | "result";
+type AppState = "form" | "loading" | "result" | "upgrade";
 
 const ERROR_MESSAGES: Record<string, string> = {
   private: "Esse perfil é privado. Só conseguimos analisar perfis públicos.",
   not_found: "Não encontramos esse perfil. Verifique o @.",
   timeout: "O Instagram pode estar instável agora. Tente novamente em alguns minutos.",
+  handle_taken: "Esse perfil já foi analisado por outro usuário.",
 };
 
 const Index = () => {
@@ -19,6 +22,9 @@ const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileData | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
+  const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
   const abortRef = useRef(false);
 
   const handleSubmit = useCallback(async (handle: string, nicho: string, objetivo: string) => {
@@ -27,7 +33,6 @@ const Index = () => {
     setProfileSnapshot(null);
     abortRef.current = false;
 
-    // Generate a quick snapshot for loading phase B
     const snapshot: ProfileData = {
       handle,
       full_name: handle.charAt(0).toUpperCase() + handle.slice(1).replace(/[._]/g, " "),
@@ -38,17 +43,34 @@ const Index = () => {
       posts_count: Math.floor(Math.random() * 400) + 50,
       is_verified: false,
     };
-    // Delay showing snapshot to align with phase B
     setTimeout(() => {
       if (!abortRef.current) setProfileSnapshot(snapshot);
     }, 1200);
 
     try {
-      const response = await analyzeMock(handle, nicho, objetivo);
+      const response = await analyzeProfile(handle, nicho, objetivo);
 
       if (abortRef.current) return;
 
       if (!response.success) {
+        if (response.error === "email_required" && response.pending_result) {
+          setPendingResult(response.pending_result);
+          setPendingInputs({ handle, nicho, objetivo });
+          setIsDone(true);
+          setTimeout(() => {
+            if (!abortRef.current) {
+              setState("form");
+              setShowEmailModal(true);
+            }
+          }, 1500);
+          return;
+        }
+
+        if (response.error === "free_limit") {
+          setState("upgrade");
+          return;
+        }
+
         setState("form");
         toast.error(ERROR_MESSAGES[response.error || "timeout"] || ERROR_MESSAGES.timeout);
         return;
@@ -56,15 +78,25 @@ const Index = () => {
 
       setResult(response.data!);
       setIsDone(true);
-      // Small delay before showing result
       setTimeout(() => {
         if (!abortRef.current) setState("result");
-      }, 600);
+      }, 2000);
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
   }, []);
+
+  const handleEmailSuccess = useCallback(async () => {
+    if (pendingResult && pendingInputs) {
+      await saveAfterSignup(pendingInputs.handle, pendingInputs.nicho, pendingInputs.objetivo, pendingResult);
+      setResult(pendingResult);
+      setShowEmailModal(false);
+      setState("result");
+      setPendingResult(null);
+      setPendingInputs(null);
+    }
+  }, [pendingResult, pendingInputs]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -72,17 +104,19 @@ const Index = () => {
     setResult(null);
     setIsDone(false);
     setProfileSnapshot(null);
+    setPendingResult(null);
+    setPendingInputs(null);
+    setShowEmailModal(false);
   }, []);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Loading overlay */}
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} profileSnapshot={profileSnapshot} />
+      <EmailCaptureModal isOpen={showEmailModal} onSuccess={handleEmailSuccess} />
 
       <main className="container max-w-4xl py-12 px-4">
-        {state === "form" && (
+        {state === "form" && !showEmailModal && (
           <div className="flex flex-col items-center gap-10">
-            {/* Hero */}
             <div className="text-center space-y-4 max-w-lg">
               <h1
                 className="text-3xl md:text-4xl font-bold text-gradient-brand"
@@ -97,7 +131,6 @@ const Index = () => {
 
             <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
 
-            {/* Trust signals */}
             <p className="text-muted-foreground text-xs text-center max-w-sm">
               Não compartilhamos dados. Análise 100% automática de perfis públicos.
             </p>
@@ -106,6 +139,10 @@ const Index = () => {
 
         {state === "result" && result && (
           <ResultView result={result} onReset={handleReset} />
+        )}
+
+        {state === "upgrade" && (
+          <UpgradePrompt onBack={handleReset} />
         )}
       </main>
     </div>

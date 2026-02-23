@@ -76,7 +76,7 @@ export default function LoadingOverlay({ isOpen, isDone, profileSnapshot }: Prop
       }
 
       setProgress(current);
-    }, 80);
+    }, 150);
 
     return () => {
       clearInterval(intervalRef.current);
