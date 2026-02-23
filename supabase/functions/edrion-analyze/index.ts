@@ -67,6 +67,8 @@ function json(body: unknown, status: number) {
   });
 }
 
+// ── Apify types ──────────────────────────────────────────────
+
 interface ApifyPost {
   id?: string;
   shortCode?: string;
@@ -91,6 +93,8 @@ interface ApifyProfile {
   latestPosts?: ApifyPost[];
   isPrivate?: boolean;
 }
+
+// ── Data helpers ─────────────────────────────────────────────
 
 function normalizeProfile(raw: ApifyProfile) {
   return {
@@ -118,7 +122,6 @@ async function proxyAvatar(
     const arrayBuf = await blob.arrayBuffer();
     const filePath = `${handle}.jpg`;
 
-    // Upsert: remove old file first (ignore error if not exists)
     await supabaseAdmin.storage.from("avatars").remove([filePath]);
 
     const { error: uploadErr } = await supabaseAdmin.storage
@@ -157,11 +160,12 @@ function normalizePosts(posts: ApifyPost[]) {
   });
 }
 
+// ── Apify scraper ────────────────────────────────────────────
+
 async function callApify(handle: string): Promise<ApifyProfile> {
   const token = Deno.env.get("APIFY_TOKEN");
   const actorId = Deno.env.get("APIFY_ACTOR_ID") || "apify~instagram-scraper";
 
-  // Step 1: Start the actor run (async, returns immediately)
   const startUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${token}`;
   const startRes = await fetch(startUrl, {
     method: "POST",
@@ -188,7 +192,6 @@ async function callApify(handle: string): Promise<ApifyProfile> {
     throw new Error("Apify run failed to start");
   }
 
-  // Step 2: Poll for run completion (max ~50s to stay within edge function limits)
   const maxWait = 50000;
   const pollInterval = 3000;
   const startTime = Date.now();
@@ -208,7 +211,6 @@ async function callApify(handle: string): Promise<ApifyProfile> {
     const status = statusData?.data?.status;
 
     if (status === "SUCCEEDED") {
-      // Step 3: Fetch dataset items
       const dataRes = await fetch(
         `https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`,
       );
@@ -235,179 +237,12 @@ async function callApify(handle: string): Promise<ApifyProfile> {
     if (status === "FAILED" || status === "ABORTED" || status === "TIMED-OUT") {
       throw new Error("NOT_FOUND");
     }
-    // else RUNNING/READY — keep polling
   }
 
   throw new Error("TIMEOUT");
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return json({ code: "METHOD_NOT_ALLOWED" }, 405);
-  }
-
-  try {
-    const body = await req.json();
-    const { handle, nicho, objetivo } = body as { handle?: string; nicho?: string; objetivo?: string };
-
-    // 1. Validate
-    const cleanHandle = (handle || "").replace(/^@/, "").trim().toLowerCase();
-    if (!cleanHandle || !HANDLE_REGEX.test(cleanHandle)) {
-      return json({ code: "VALIDATION_ERROR", message: "Handle inválido" }, 422);
-    }
-    if (!nicho || !objetivo) {
-      return json({ code: "VALIDATION_ERROR", message: "Nicho e objetivo são obrigatórios" }, 422);
-    }
-
-    // Create service role client for DB operations
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    // 2. Check if handle already analyzed
-    const { data: existingResults } = await supabaseAdmin
-      .from("analysis_result")
-      .select("id, request_id, result_json, analysis_request!inner(user_id)")
-      .eq("handle", cleanHandle)
-      .limit(1);
-
-    const existingResult = existingResults?.[0];
-
-    // 3. Check auth
-    let userId: string | null = null;
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const userClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } },
-      );
-      const { data: { user }, error: userError } = await userClient.auth.getUser();
-      if (!userError && user?.id) {
-        userId = user.id;
-      }
-    }
-
-    // If handle exists in DB
-    if (existingResult) {
-      const ownerUserId = (existingResult as any).analysis_request?.user_id;
-      if (userId && ownerUserId === userId) {
-        // Return cached result
-        return json({ success: true, data: existingResult.result_json }, 200);
-      }
-      // Belongs to another user or no auth
-      return json({ code: "HANDLE_ALREADY_ANALYZED" }, 409);
-    }
-
-    // 4. If not authenticated -> scrape but require email
-    if (!userId) {
-      // Run scraping anyway
-      let rawProfile: ApifyProfile;
-      try {
-        rawProfile = await callApify(cleanHandle);
-      } catch (err) {
-        const msg = (err as Error).message;
-        if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
-        if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
-        return json({ code: "TIMEOUT" }, 504);
-      }
-
-      const profile = normalizeProfile(rawProfile);
-      profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
-      const posts = normalizePosts(rawProfile.latestPosts || []);
-      const nichoKey = Object.keys(NICHO_BIOS).includes(nicho) ? nicho : "default";
-      const result = buildFreeResult(profile, posts, nichoKey);
-
-      return json({ code: "EMAIL_REQUIRED", pending_result: result }, 401);
-    }
-
-    // 5. Check plan limits
-    const { data: userProfile } = await supabaseAdmin
-      .from("users_profiles")
-      .select("plan, free_analysis_used")
-      .eq("id", userId)
-      .single();
-
-    if (!userProfile) {
-      // Auto-create profile if missing
-      await supabaseAdmin.from("users_profiles").insert({
-        id: userId,
-        email: "",
-        plan: "free",
-        free_analysis_used: false,
-      });
-    }
-
-    const plan = userProfile?.plan || "free";
-    const freeUsed = userProfile?.free_analysis_used || false;
-
-    if (plan === "free" && freeUsed) {
-      return json({ code: "FREE_LIMIT_REACHED" }, 403);
-    }
-
-    // 6. Call Apify
-    let rawProfile: ApifyProfile;
-    try {
-      rawProfile = await callApify(cleanHandle);
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
-      if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
-      return json({ code: "TIMEOUT" }, 504);
-    }
-
-    // 7. Normalize
-    const profile = normalizeProfile(rawProfile);
-    profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
-    const posts = normalizePosts(rawProfile.latestPosts || []);
-    const nichoKey = Object.keys(NICHO_BIOS).includes(nicho) ? nicho : "default";
-
-    // 8. Build result
-    const result = plan === "premium"
-      ? buildPremiumResult(profile, posts, nichoKey)
-      : buildFreeResult(profile, posts, nichoKey);
-
-    // 9. Persist
-    const { data: reqInsert } = await supabaseAdmin
-      .from("analysis_request")
-      .insert({
-        user_id: userId,
-        handle: cleanHandle,
-        nicho,
-        objetivo,
-        plan_at_time: plan,
-      })
-      .select("id")
-      .single();
-
-    if (reqInsert) {
-      await supabaseAdmin.from("analysis_result").insert({
-        request_id: reqInsert.id,
-        handle: cleanHandle,
-        result_json: result,
-        is_reanalysis: false,
-      });
-    }
-
-    // 10. Update free_analysis_used
-    if (plan === "free") {
-      await supabaseAdmin
-        .from("users_profiles")
-        .update({ free_analysis_used: true })
-        .eq("id", userId);
-    }
-
-    return json({ success: true, data: result }, 200);
-  } catch (err) {
-    console.error("edrion-analyze error:", err);
-    return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);
-  }
-});
+// ── Result builders ──────────────────────────────────────────
 
 function buildFreeResult(
   profile: ReturnType<typeof normalizeProfile>,
@@ -459,7 +294,152 @@ function buildPremiumResult(
       improvement_plan: null,
       pdf_available: true,
     },
-    reanalysis_available: true,
     plan: "premium" as const,
   };
 }
+
+// ── Main handler ─────────────────────────────────────────────
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return json({ code: "METHOD_NOT_ALLOWED" }, 405);
+  }
+
+  try {
+    const body = await req.json();
+    const { handle, nicho, objetivo } = body as { handle?: string; nicho?: string; objetivo?: string };
+
+    // ── [1] Validate handle ──────────────────────────────────
+    const cleanHandle = (handle || "").replace(/^@/, "").trim().toLowerCase();
+    if (!cleanHandle || !HANDLE_REGEX.test(cleanHandle)) {
+      return json({ code: "VALIDATION_ERROR", message: "Handle inválido" }, 422);
+    }
+    if (!nicho || !objetivo) {
+      return json({ code: "VALIDATION_ERROR", message: "Nicho e objetivo são obrigatórios" }, 422);
+    }
+
+    // ── [2] Check auth (BEFORE any Apify call) ───────────────
+    const authHeader = req.headers.get("Authorization");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // If token is anon key itself, user is not authenticated
+    const token = authHeader?.replace("Bearer ", "") || "";
+    if (!authHeader?.startsWith("Bearer ") || token === anonKey) {
+      return json({ code: "AUTH_REQUIRED" }, 401);
+    }
+
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      anonKey,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user?.id) {
+      return json({ code: "AUTH_REQUIRED" }, 401);
+    }
+    const userId = user.id;
+
+    // Service role client for DB operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // ── [3] Check plan limits ────────────────────────────────
+    const { data: userProfile } = await supabaseAdmin
+      .from("users_profiles")
+      .select("plan, free_analysis_used")
+      .eq("id", userId)
+      .single();
+
+    if (!userProfile) {
+      // Auto-create profile if missing (e.g. magic link first login)
+      await supabaseAdmin.from("users_profiles").insert({
+        id: userId,
+        email: user.email || "",
+        plan: "free",
+        free_analysis_used: false,
+      });
+    }
+
+    const plan = userProfile?.plan || "free";
+    const freeUsed = userProfile?.free_analysis_used || false;
+
+    if (plan === "free" && freeUsed) {
+      return json({ code: "FREE_LIMIT_REACHED" }, 403);
+    }
+
+    // ── [4] Check cached result for (handle + user_id) ───────
+    const { data: cachedResults } = await supabaseAdmin
+      .from("analysis_result")
+      .select("result_json")
+      .eq("handle", cleanHandle)
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (cachedResults && cachedResults.length > 0) {
+      return json({ success: true, data: cachedResults[0].result_json }, 200);
+    }
+
+    // ── [5] Call Apify ───────────────────────────────────────
+    let rawProfile: ApifyProfile;
+    try {
+      rawProfile = await callApify(cleanHandle);
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
+      if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
+      return json({ code: "TIMEOUT" }, 504);
+    }
+
+    // ── [6] Normalize + proxy avatar ─────────────────────────
+    const profile = normalizeProfile(rawProfile);
+    profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
+    const posts = normalizePosts(rawProfile.latestPosts || []);
+    const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
+
+    // ── [7] Build result ─────────────────────────────────────
+    const result = plan === "premium"
+      ? buildPremiumResult(profile, posts, nichoKey)
+      : buildFreeResult(profile, posts, nichoKey);
+
+    // ── [8] Persist ──────────────────────────────────────────
+    const { data: reqInsert } = await supabaseAdmin
+      .from("analysis_request")
+      .insert({
+        user_id: userId,
+        handle: cleanHandle,
+        nicho: nicho!,
+        objetivo: objetivo!,
+        plan_at_time: plan,
+      })
+      .select("id")
+      .single();
+
+    if (reqInsert) {
+      await supabaseAdmin.from("analysis_result").insert({
+        request_id: reqInsert.id,
+        handle: cleanHandle,
+        result_json: result,
+        user_id: userId,
+      });
+    }
+
+    // ── [9] Mark free as used ────────────────────────────────
+    if (plan === "free") {
+      await supabaseAdmin
+        .from("users_profiles")
+        .update({ free_analysis_used: true })
+        .eq("id", userId);
+    }
+
+    return json({ success: true, data: result }, 200);
+  } catch (err) {
+    console.error("edrion-analyze error:", err);
+    return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);
+  }
+});

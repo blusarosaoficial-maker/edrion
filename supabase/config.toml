@@ -2,6 +2,3 @@ project_id = "glgocjuwmssnaztljdus"
 
 [functions.edrion-analyze]
 verify_jwt = false
-
-[functions.edrion-save-after-signup]
-verify_jwt = false
