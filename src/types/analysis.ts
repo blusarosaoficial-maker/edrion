@@ -45,18 +45,34 @@ export interface AnalysisResult {
     bio_suggestion: BioSuggestion;
     top_post: PostData;
     worst_post: PostData;
-    next_post_suggestion: NextPostSuggestion;
+    next_post_suggestion?: NextPostSuggestion;
+    // Premium-only fields
+    bio_variations?: string[];
+    posts_analysis?: PostData[];
+    competitors_analysis?: unknown[];
+    strategic_score?: unknown;
+    improvement_plan?: unknown;
+    pdf_available?: boolean;
   };
-  limits: {
+  limits?: {
     posts_analyzed: number;
     note: string;
   };
+  plan: "free" | "premium";
+  reanalysis_available?: boolean;
 }
 
-export type AnalysisError = "private" | "not_found" | "timeout";
+export type AnalysisError =
+  | "private"
+  | "not_found"
+  | "timeout"
+  | "free_limit"
+  | "email_required"
+  | "handle_taken";
 
 export interface AnalysisResponse {
   success: boolean;
   data?: AnalysisResult;
   error?: AnalysisError;
+  pending_result?: AnalysisResult;
 }
