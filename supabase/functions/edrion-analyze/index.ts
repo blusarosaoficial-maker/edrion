@@ -537,6 +537,8 @@ Por que funciona: Manteve tom acolhedor ("te ajudo", "acolhe"), especificou a do
 
 9. Cada linha da bio deve funcionar sozinha se lida isoladamente.
 
+10. NUNCA invente dados, números, métricas ou conquistas que não estejam presentes na bio atual ou nas legendas fornecidas. Se o perfil não menciona números de clientes, faturamento ou resultados, use elementos qualitativos (método, abordagem, diferencial) em vez de inventar provas numéricas. Credibilidade falsa é pior que nenhuma credibilidade.
+
 </regras_criticas>`;
 
   const legendas = captions.length > 0 ? `\n\nLegendas recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : "";
