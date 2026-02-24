@@ -762,7 +762,7 @@ function buildPremiumResult(
 interface AuthResult {
   authenticated: boolean;
   userId?: string;
-  supabaseAdmin: ReturnType<typeof createClient>;
+  supabaseAdmin: any;
 }
 
 function getAuth(req: Request): AuthResult {
