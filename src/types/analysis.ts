@@ -24,11 +24,23 @@ export interface PostData {
   metrics: PostMetrics;
 }
 
+export interface BioCriteria {
+  profession_name: string; // "Presente" | "Ausente"
+  service: string;
+  authority: string;
+  call_to_action: string;
+}
+
 export interface BioSuggestion {
   current_bio: string;
   suggested_bio: string;
   rationale_short: string;
   cta_option: string;
+  // AI-generated fields (optional for backward compat)
+  score?: number;
+  criteria?: BioCriteria;
+  strengths?: string;
+  improvements?: string;
 }
 
 export interface NextPostSuggestion {

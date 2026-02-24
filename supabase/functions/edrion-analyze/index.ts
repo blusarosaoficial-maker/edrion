@@ -242,14 +242,150 @@ async function callApify(handle: string): Promise<ApifyProfile> {
   throw new Error("TIMEOUT");
 }
 
+// ── OpenAI bio analysis ──────────────────────────────────────
+
+interface AIBioResult {
+  profession_name: string;
+  service: string;
+  authority: string;
+  call_to_action: string;
+  score: number;
+  strengths: string;
+  improvements: string;
+  suggested_bio: string;
+  rationale: string;
+  cta_option: string;
+}
+
+async function analyzeBioWithAI(
+  profile: ReturnType<typeof normalizeProfile>,
+  nicho: string,
+  objetivo: string,
+): Promise<AIBioResult | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    console.warn("OPENAI_API_KEY not set, falling back to template");
+    return null;
+  }
+
+  const systemPrompt = `Você é uma especialista em Social Selling, posicionamento estratégico e otimização de perfis profissionais no Instagram.
+
+Sua missão é analisar bios de perfis profissionais considerando o nicho e o objetivo do perfil, tornando a comunicação mais clara, estratégica e orientada a resultados.
+
+A bio ideal deve seguir 4 critérios essenciais:
+1. Profissão/Nome: usar o nicho ou ocupação no nome do perfil para facilitar buscas e posicionamento.
+2. Serviço claro: deixar explícito o que a pessoa faz logo nas primeiras linhas.
+3. Autoridade/Diferencial: mostrar experiência, especialização, método ou resultado que aumente a confiança.
+4. Call to Action estratégico: incentivar uma ação alinhada ao objetivo do perfil.
+
+Ajuste sempre sua análise com base no objetivo:
+- Se o objetivo for crescer seguidores: priorize clareza, identificação e autoridade de nicho.
+- Se o objetivo for vender: priorize proposta de valor, dor resolvida e CTA forte.
+- Se o objetivo for gerar leads: priorize promessa clara + direcionamento para contato ou link.
+
+REGRAS CRÍTICAS:
+- A Nova Bio NÃO pode ultrapassar 149 caracteres.
+- Responda APENAS através da tool call fornecida.`;
+
+  const userMessage = `Analise esta bio de perfil do Instagram:
+
+nome_usuario: ${profile.handle}
+nome_completo: ${profile.full_name}
+bio: ${(profile.bio_text || "").slice(0, 500)}
+seguidores: ${profile.followers}
+seguindo: ${profile.following}
+publicacoes: ${profile.posts_count}
+nicho: ${nicho}
+objetivo: ${objetivo}
+
+Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e melhorias, e reescreva a bio (máximo 149 caracteres).`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "analyze_bio",
+              description: "Retorna a análise estruturada da bio do Instagram",
+              parameters: {
+                type: "object",
+                properties: {
+                  profession_name: { type: "string", enum: ["Presente", "Ausente"] },
+                  service: { type: "string", enum: ["Presente", "Ausente"] },
+                  authority: { type: "string", enum: ["Presente", "Ausente"] },
+                  call_to_action: { type: "string", enum: ["Presente", "Ausente"] },
+                  score: { type: "number", minimum: 0, maximum: 10 },
+                  strengths: { type: "string", description: "Pontos fortes da bio atual" },
+                  improvements: { type: "string", description: "Pontos de melhoria estratégicos" },
+                  suggested_bio: { type: "string", description: "Nova bio otimizada (max 149 chars)" },
+                  rationale: { type: "string", description: "Explicação da análise" },
+                  cta_option: { type: "string", description: "CTA sugerido alinhado ao objetivo" },
+                },
+                required: ["profession_name", "service", "authority", "call_to_action", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "analyze_bio" } },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("OpenAI API error:", res.status, text);
+      return null;
+    }
+
+    const data = await res.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error("OpenAI: no tool call in response");
+      return null;
+    }
+
+    const parsed = JSON.parse(toolCall.function.arguments) as AIBioResult;
+    // Enforce 149 char limit
+    if (parsed.suggested_bio && parsed.suggested_bio.length > 149) {
+      parsed.suggested_bio = parsed.suggested_bio.slice(0, 149);
+    }
+    return parsed;
+  } catch (err) {
+    console.error("analyzeBioWithAI error:", (err as Error).message);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── Result builders ──────────────────────────────────────────
 
-function buildFreeResult(
+async function buildFreeResult(
   profile: ReturnType<typeof normalizeProfile>,
   posts: ReturnType<typeof normalizePosts>,
   nichoKey: string,
+  nicho: string,
+  objetivo: string,
 ) {
-  const bio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
+  // Try AI analysis first, fallback to template
+  const aiResult = await analyzeBioWithAI(profile, nicho, objetivo);
+  const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
 
   let topIdx = 0;
   let worstIdx = 0;
@@ -258,15 +394,33 @@ function buildFreeResult(
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
 
+  const bio_suggestion = aiResult
+    ? {
+        current_bio: profile.bio_text,
+        suggested_bio: aiResult.suggested_bio,
+        rationale_short: aiResult.rationale,
+        cta_option: aiResult.cta_option,
+        score: aiResult.score,
+        criteria: {
+          profession_name: aiResult.profession_name,
+          service: aiResult.service,
+          authority: aiResult.authority,
+          call_to_action: aiResult.call_to_action,
+        },
+        strengths: aiResult.strengths,
+        improvements: aiResult.improvements,
+      }
+    : {
+        current_bio: profile.bio_text,
+        suggested_bio: templateBio.suggested,
+        rationale_short: templateBio.rationale,
+        cta_option: templateBio.cta,
+      };
+
   return {
     profile,
     deliverables: {
-      bio_suggestion: {
-        current_bio: profile.bio_text,
-        suggested_bio: bio.suggested,
-        rationale_short: bio.rationale,
-        cta_option: bio.cta,
-      },
+      bio_suggestion,
       top_post: posts[topIdx] || null,
       worst_post: posts[worstIdx] || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
@@ -280,10 +434,11 @@ function buildPremiumResult(
   profile: ReturnType<typeof normalizeProfile>,
   posts: ReturnType<typeof normalizePosts>,
   nichoKey: string,
+  nicho: string,
+  objetivo: string,
 ) {
-  const freeResult = buildFreeResult(profile, posts, nichoKey);
-
-  return {
+  // Premium also gets AI bio analysis
+  return buildFreeResult(profile, posts, nichoKey, nicho, objetivo).then((freeResult) => ({
     ...freeResult,
     deliverables: {
       ...freeResult.deliverables,
@@ -295,7 +450,7 @@ function buildPremiumResult(
       pdf_available: true,
     },
     plan: "premium" as const,
-  };
+  }));
 }
 
 // ── Auth helper ──────────────────────────────────────────────
@@ -404,7 +559,7 @@ Deno.serve(async (req) => {
 
     // ── [5] If NOT authenticated → return pending_result ─────
     if (!userId) {
-      const pendingResult = buildFreeResult(profile, posts, nichoKey);
+      const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!);
       return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
     }
 
@@ -434,8 +589,8 @@ Deno.serve(async (req) => {
 
     // ── [7] Build result ─────────────────────────────────────
     const result = plan === "premium"
-      ? buildPremiumResult(profile, posts, nichoKey)
-      : buildFreeResult(profile, posts, nichoKey);
+      ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!)
+      : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!);
 
     // ── [8] Persist ──────────────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin

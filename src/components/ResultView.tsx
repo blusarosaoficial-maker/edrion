@@ -5,15 +5,14 @@ import {
   Eye,
   TrendingUp,
   Lightbulb,
-  FileText,
   ExternalLink,
   RotateCcw,
   CheckCircle2,
-  XCircle,
   Zap,
   Lock,
 } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
+import BioAnalysisSection from "@/components/BioAnalysisSection";
 
 interface Props {
   result: AnalysisResult;
@@ -68,43 +67,8 @@ export default function ResultView({ result, onReset }: Props) {
         </p>
       )}
 
-      {/* 1. Bio Suggestion */}
-      <section className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-          <FileText className="w-5 h-5 text-primary" />
-          <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Sugestão de Bio
-          </h3>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <XCircle className="w-3.5 h-3.5 text-destructive" /> Atual
-              </div>
-              <p className="text-sm text-foreground/80 bg-secondary rounded-lg p-3 border border-border">
-                {bio_suggestion.current_bio}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> Sugerida
-              </div>
-              <p className="text-sm text-foreground bg-primary/10 rounded-lg p-3 border border-primary/20">
-                {bio_suggestion.suggested_bio}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground italic">
-            💡 {bio_suggestion.rationale_short}
-          </p>
-          <div className="flex items-center gap-2 text-sm">
-            <Zap className="w-4 h-4 text-accent" />
-            <span className="text-foreground font-medium">CTA sugerido:</span>
-            <span className="text-muted-foreground">{bio_suggestion.cta_option}</span>
-          </div>
-        </div>
-      </section>
+      {/* 1. Bio Suggestion (now with AI analysis) */}
+      <BioAnalysisSection bio={bio_suggestion} />
 
       {/* 2 & 3. Top & Worst Post */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
