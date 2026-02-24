@@ -261,6 +261,7 @@ async function analyzeBioWithAI(
   profile: ReturnType<typeof normalizeProfile>,
   nicho: string,
   objetivo: string,
+  captions: string[] = [],
 ): Promise<AIBioResult | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) {
@@ -283,6 +284,13 @@ Ajuste sempre sua análise com base no objetivo:
 - Se o objetivo for vender: priorize proposta de valor, dor resolvida e CTA forte.
 - Se o objetivo for gerar leads: priorize promessa clara + direcionamento para contato ou link.
 
+ANÁLISE DE TOM DE VOZ:
+Antes de sugerir a nova bio, analise a bio atual e as legendas recentes do perfil para identificar o tom de comunicação do usuário (ex: formal, informal, descontraído, técnico, inspiracional, humorístico, direto, acolhedor).
+
+A nova bio DEVE manter o mesmo tom de voz identificado. Use palavras, expressões e estilo compatível com a forma como o usuário já se comunica. A estrutura e estratégia mudam, mas a "voz" permanece a mesma.
+
+Se a bio atual estiver vazia ou muito curta para inferir o tom, use as legendas dos posts recentes como referência. Se ambos estiverem vazios, use um tom profissional e acessível como padrão.
+
 REGRAS CRÍTICAS:
 - A Nova Bio NÃO pode ultrapassar 149 caracteres.
 - Responda APENAS através da tool call fornecida.`;
@@ -298,7 +306,7 @@ publicacoes: ${profile.posts_count}
 nicho: ${nicho}
 objetivo: ${objetivo}
 
-Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e melhorias, e reescreva a bio (máximo 149 caracteres).`;
+Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e melhorias, e reescreva a bio (máximo 149 caracteres).${captions.length > 0 ? `\n\nlegendas_recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : ""}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -336,8 +344,9 @@ Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e mel
                   suggested_bio: { type: "string", description: "Nova bio otimizada (max 149 chars)" },
                   rationale: { type: "string", description: "Explicação da análise" },
                   cta_option: { type: "string", description: "CTA sugerido alinhado ao objetivo" },
+                  detected_tone: { type: "string", description: "Tom de voz identificado na comunicação do perfil (ex: informal e descontraído, formal e técnico, acolhedor e inspiracional)" },
                 },
-                required: ["profession_name", "service", "authority", "call_to_action", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option"],
+                required: ["profession_name", "service", "authority", "call_to_action", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option", "detected_tone"],
                 additionalProperties: false,
               },
             },
@@ -384,7 +393,8 @@ async function buildFreeResult(
   objetivo: string,
 ) {
   // Try AI analysis first, fallback to template
-  const aiResult = await analyzeBioWithAI(profile, nicho, objetivo);
+  const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
+  const aiResult = await analyzeBioWithAI(profile, nicho, objetivo, captions);
   const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
 
   let topIdx = 0;
