@@ -179,10 +179,11 @@ export async function analyzeMock(
       deliverables: {
         bio_suggestion: {
           current_bio: "✨ Conteúdo de qualidade",
-          suggested_bio: "Especialista ajudando seu público a crescer. ⬇️",
-          rationale_short: "Bio vaga sem proposta de valor",
+          suggested_bio: "Ajudo seu público a crescer com estratégia\n+200 clientes transformados\nFale comigo no direct ⬇️",
+          rationale_short: "A bio atual é vaga e não comunica transformação, público-alvo ou diferencial. A nova bio posiciona autoridade e direciona para ação.",
           cta_option: "Fale comigo no direct",
-          score: 4,
+          score: 3.3,
+          score_new: 8.0,
           criteria: {
             clarity: 2,
             authority: 1,
@@ -190,6 +191,22 @@ export async function analyzeMock(
             seo: 1,
             brand_voice: 3,
             specificity: 1,
+          },
+          criteria_new: {
+            clarity: 4,
+            authority: 4,
+            cta: 5,
+            seo: 4,
+            brand_voice: 4,
+            specificity: 3,
+          },
+          diagnostic: {
+            proposta_valor: "A bio atual não comunica o que a pessoa faz nem qual transformação entrega. Apenas um emoji genérico.",
+            segmentacao_publico: "Público-alvo completamente ausente. Não há indicação de para quem o conteúdo é direcionado.",
+            gatilhos_autoridade: "Nenhum elemento de prova social, autoridade ou diferencial presente.",
+            cta_conversao: "Sem CTA. Não há direcionamento para próximo passo.",
+            seo_instagram: "Sem keywords buscáveis no nome ou na bio.",
+            tom_de_voz: "Informal e descontraído, uso de emoji decorativo.",
           },
           strengths: "Uso de emoji transmite leveza e personalidade.",
           improvements: "Falta proposta de valor, público-alvo, CTA e keywords de SEO.",

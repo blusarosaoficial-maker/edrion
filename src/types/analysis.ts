@@ -33,13 +33,25 @@ export interface BioCriteria {
   specificity: number;   // 1-5
 }
 
+export interface BioDiagnostic {
+  proposta_valor: string;
+  segmentacao_publico: string;
+  gatilhos_autoridade: string;
+  cta_conversao: string;
+  seo_instagram: string;
+  tom_de_voz: string;
+}
+
 export interface BioSuggestion {
   current_bio: string;
   suggested_bio: string;
   rationale_short: string;
   cta_option: string;
   score?: number;
+  score_new?: number;
   criteria?: BioCriteria;
+  criteria_new?: BioCriteria;
+  diagnostic?: BioDiagnostic;
   strengths?: string;
   improvements?: string;
   name_keyword?: string;
@@ -61,7 +73,6 @@ export interface AnalysisResult {
     top_post: PostData;
     worst_post: PostData;
     next_post_suggestion?: NextPostSuggestion;
-    // Premium-only fields
     bio_variations?: string[];
     posts_analysis?: PostData[];
     competitors_analysis?: unknown[];
