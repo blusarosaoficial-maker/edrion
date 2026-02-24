@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mail, Lock, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Sparkles, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +17,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [waitingConfirmation, setWaitingConfirmation] = useState(false);
 
   // Listen for auth state change
   useEffect(() => {
@@ -75,7 +76,14 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
         options: { emailRedirectTo: window.location.origin },
       });
       if (error) throw error;
-      // onAuthStateChange will trigger onSuccess
+
+      // Try to sign in immediately (works if email confirmation is disabled)
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        // Email confirmation likely required
+        setWaitingConfirmation(true);
+      }
+      // If sign in succeeded, onAuthStateChange will trigger onSuccess
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar conta");
     } finally {
@@ -92,6 +100,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
       setLoading(false);
       setMode("login");
       setShowPassword(false);
+      setWaitingConfirmation(false);
     }
   }, [isOpen]);
 
@@ -112,106 +121,146 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={mode === "login" ? handleLogin : handleSignup} className="space-y-4 mt-2">
-          {/* Email */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">E-mail</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                disabled={loading}
-              />
-            </div>
+        {waitingConfirmation ? (
+          <div className="space-y-4 mt-2 text-center">
+            <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
+            <h3 className="text-lg font-semibold text-foreground">Conta criada!</h3>
+            <p className="text-sm text-muted-foreground">
+              Enviamos um link de confirmação para <strong className="text-foreground">{email}</strong>. Verifique sua caixa de entrada e clique no link para ativar sua conta.
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const { error } = await supabase.auth.signInWithPassword({ email, password });
+                  if (error) {
+                    toast.error("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
+                  }
+                } catch {
+                  toast.error("Erro ao tentar entrar.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-semibold flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" />
+              {loading ? "Verificando..." : "Já confirmei"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-11 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Fechar
+            </button>
           </div>
-
-          {/* Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 pl-10 pr-10 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password (signup only) */}
-          {mode === "signup" && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Confirmar senha</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={loading}
-                />
+        ) : (
+          <>
+            <form onSubmit={mode === "login" ? handleLogin : handleSignup} className="space-y-4 mt-2">
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">E-mail</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-semibold flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all disabled:opacity-50"
-          >
-            <Sparkles className="w-4 h-4" />
-            {loading
-              ? (mode === "login" ? "Entrando..." : "Criando conta...")
-              : (mode === "login" ? "Entrar" : "Criar conta")}
-          </button>
-        </form>
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-11 pl-10 pr-10 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
-        {/* Toggle mode */}
-        <p className="text-sm text-muted-foreground text-center mt-2">
-          {mode === "login" ? (
-            <>
-              Não tem conta?{" "}
+              {/* Confirm Password (signup only) */}
+              {mode === "signup" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Confirmar senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
-                type="button"
-                onClick={() => setMode("signup")}
-                className="text-primary hover:underline font-medium"
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-semibold flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all disabled:opacity-50"
               >
-                Crie agora
+                <Sparkles className="w-4 h-4" />
+                {loading
+                  ? (mode === "login" ? "Entrando..." : "Criando conta...")
+                  : (mode === "login" ? "Entrar" : "Criar conta")}
               </button>
-            </>
-          ) : (
-            <>
-              Já tem conta?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="text-primary hover:underline font-medium"
-              >
-                Entrar
-              </button>
-            </>
-          )}
-        </p>
+            </form>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Não compartilhamos seus dados. Sem spam.
-        </p>
+            {/* Toggle mode */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              {mode === "login" ? (
+                <>
+                  Não tem conta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode("signup")}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Crie agora
+                  </button>
+                </>
+              ) : (
+                <>
+                  Já tem conta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode("login")}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Entrar
+                  </button>
+                </>
+              )}
+            </p>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Não compartilhamos seus dados. Sem spam.
+            </p>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
