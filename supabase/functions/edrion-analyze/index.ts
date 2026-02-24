@@ -244,21 +244,33 @@ async function callApify(handle: string): Promise<ApifyProfile> {
 
 // ── OpenAI bio analysis ──────────────────────────────────────
 
+interface AIBioRubric {
+  clareza: number;
+  autoridade: number;
+  forca_cta: number;
+  seo_descoberta: number;
+  voz_da_marca: number;
+  especificidade: number;
+}
+
 interface AIBioResult {
-  rubric_clarity: number;       // 1-5
-  rubric_authority: number;     // 1-5
-  rubric_cta: number;           // 1-5
-  rubric_seo: number;           // 1-5
-  rubric_brand_voice: number;   // 1-5
-  rubric_specificity: number;   // 1-5
-  score: number;                // 0-10 geral
-  strengths: string;
-  improvements: string;
-  suggested_bio: string;
-  rationale: string;
-  cta_option: string;
-  name_keyword: string;
-  detected_tone: string;
+  analise_diagnostica: {
+    proposta_valor: string;
+    segmentacao_publico: string;
+    gatilhos_autoridade: string;
+    cta_conversao: string;
+    seo_instagram: string;
+    tom_de_voz: string;
+  };
+  rubrica_bio_atual: AIBioRubric;
+  nota_geral: number;
+  pontos_fortes: string;
+  pontos_de_melhoria: string;
+  sugestao_keyword_nome: string;
+  bio_sugerida: string;
+  rubrica_bio_nova: AIBioRubric;
+  justificativa_bio: string;
+  cta_sugerido: string;
 }
 
 async function analyzeBioWithAI(
@@ -527,18 +539,17 @@ Por que funciona: Manteve tom acolhedor ("te ajudo", "acolhe"), especificou a do
 
 </regras_criticas>`;
 
-  const userMessage = `Analise esta bio de perfil do Instagram:
+  const legendas = captions.length > 0 ? `\n\nLegendas recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : "";
 
-nome_usuario: ${profile.handle}
-nome_completo: ${profile.full_name}
-bio: ${(profile.bio_text || "").slice(0, 500)}
-seguidores: ${profile.followers}
-seguindo: ${profile.following}
-publicacoes: ${profile.posts_count}
-nicho: ${nicho}
-objetivo: ${objetivo}
+  const userMessage = `Analise a bio do perfil @${profile.handle}.
+Nicho: ${nicho}.
+Objetivo principal: ${objetivo.toUpperCase()}.
+Bio atual: ${(profile.bio_text || "").slice(0, 500)}
+Seguidores: ${profile.followers} | Seguindo: ${profile.following} | Posts: ${profile.posts_count}
 
-Execute o processo completo de duas fases conforme suas instrucoes. Avalie a bio atual na rubrica de 6 criterios (1-5 cada), identifique pontos fortes e melhorias, detecte o tom de voz, sugira keyword para o campo Nome, e gere uma nova bio estrategica (maximo 149 caracteres).${captions.length > 0 ? `\n\nlegendas_recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : ""}`;
+Execute o processo completo de duas fases. Retorne analise diagnostica,
+rubrica da bio atual (1-5 cada), pontos fortes/melhorias, keyword para Nome,
+nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -566,22 +577,51 @@ Execute o processo completo de duas fases conforme suas instrucoes. Avalie a bio
               parameters: {
                 type: "object",
                 properties: {
-                  rubric_clarity: { type: "number", description: "Clareza: quão claro é o que a pessoa faz (1-5)" },
-                  rubric_authority: { type: "number", description: "Autoridade: provas e diferenciais (1-5)" },
-                  rubric_cta: { type: "number", description: "Força do CTA (1-5)" },
-                  rubric_seo: { type: "number", description: "SEO e descoberta no Instagram (1-5)" },
-                  rubric_brand_voice: { type: "number", description: "Voz da marca (1-5)" },
-                  rubric_specificity: { type: "number", description: "Especificidade de público e resultado (1-5)" },
-                  score: { type: "number", description: "Score geral da bio (0-10)" },
-                  strengths: { type: "string", description: "Pontos fortes da bio atual" },
-                  improvements: { type: "string", description: "Pontos de melhoria estratégicos" },
-                  suggested_bio: { type: "string", description: "Nova bio otimizada (max 149 chars)" },
-                  rationale: { type: "string", description: "Explicação da análise" },
-                  cta_option: { type: "string", description: "CTA sugerido alinhado ao objetivo" },
-                  name_keyword: { type: "string", description: "Sugestão de keyword para o campo Nome do Instagram (ex: Maria | Nutricionista Esportiva)" },
-                  detected_tone: { type: "string", description: "Tom de voz identificado (ex: informal e descontraído, formal e técnico)" },
+                  analise_diagnostica: {
+                    type: "object",
+                    properties: {
+                      proposta_valor: { type: "string", description: "Análise da proposta de valor atual — comunica transformação ou apenas função?" },
+                      segmentacao_publico: { type: "string", description: "Para quem essa pessoa fala? O público está explícito, implícito ou ausente?" },
+                      gatilhos_autoridade: { type: "string", description: "Elementos de prova social, autoridade, gatilhos emocionais e diferenciais" },
+                      cta_conversao: { type: "string", description: "Avaliação do CTA — existe? É claro? Está alinhado ao objetivo?" },
+                      seo_instagram: { type: "string", description: "O campo Nome tem keyword? A bio tem termos buscáveis?" },
+                      tom_de_voz: { type: "string", description: "Tom identificado: vocabulário, formalidade, registro emocional" },
+                    },
+                    required: ["proposta_valor", "segmentacao_publico", "gatilhos_autoridade", "cta_conversao", "seo_instagram", "tom_de_voz"],
+                  },
+                  rubrica_bio_atual: {
+                    type: "object",
+                    properties: {
+                      clareza: { type: "number", minimum: 1, maximum: 5 },
+                      autoridade: { type: "number", minimum: 1, maximum: 5 },
+                      forca_cta: { type: "number", minimum: 1, maximum: 5 },
+                      seo_descoberta: { type: "number", minimum: 1, maximum: 5 },
+                      voz_da_marca: { type: "number", minimum: 1, maximum: 5 },
+                      especificidade: { type: "number", minimum: 1, maximum: 5 },
+                    },
+                    required: ["clareza", "autoridade", "forca_cta", "seo_descoberta", "voz_da_marca", "especificidade"],
+                  },
+                  nota_geral: { type: "number", description: "Média das 6 notas da rubrica, convertida para escala /10. Calculada como: (soma das 6 notas / 30) * 10" },
+                  pontos_fortes: { type: "string", description: "O que está funcionando bem na bio atual" },
+                  pontos_de_melhoria: { type: "string", description: "O que precisa melhorar na bio atual" },
+                  sugestao_keyword_nome: { type: "string", description: "Sugestão de keyword para o campo Nome do Instagram (ex: 'Micha | Marketing Digital Lo-Fi')" },
+                  bio_sugerida: { type: "string", description: "Nova bio otimizada com no máximo 149 caracteres, em 3 linhas estratégicas", maxLength: 149 },
+                  rubrica_bio_nova: {
+                    type: "object",
+                    properties: {
+                      clareza: { type: "number", minimum: 1, maximum: 5 },
+                      autoridade: { type: "number", minimum: 1, maximum: 5 },
+                      forca_cta: { type: "number", minimum: 1, maximum: 5 },
+                      seo_descoberta: { type: "number", minimum: 1, maximum: 5 },
+                      voz_da_marca: { type: "number", minimum: 1, maximum: 5 },
+                      especificidade: { type: "number", minimum: 1, maximum: 5 },
+                    },
+                    required: ["clareza", "autoridade", "forca_cta", "seo_descoberta", "voz_da_marca", "especificidade"],
+                  },
+                  justificativa_bio: { type: "string", description: "Explicação de por que a nova bio é melhor que a atual, conectando com o objetivo do perfil" },
+                  cta_sugerido: { type: "string", description: "CTA alternativo alinhado ao objetivo principal do perfil" },
                 },
-                required: ["rubric_clarity", "rubric_authority", "rubric_cta", "rubric_seo", "rubric_brand_voice", "rubric_specificity", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option", "name_keyword", "detected_tone"],
+                required: ["analise_diagnostica", "rubrica_bio_atual", "nota_geral", "pontos_fortes", "pontos_de_melhoria", "sugestao_keyword_nome", "bio_sugerida", "rubrica_bio_nova", "justificativa_bio", "cta_sugerido"],
                 additionalProperties: false,
               },
             },
@@ -606,8 +646,8 @@ Execute o processo completo de duas fases conforme suas instrucoes. Avalie a bio
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIBioResult;
     // Enforce 149 char limit
-    if (parsed.suggested_bio && parsed.suggested_bio.length > 149) {
-      parsed.suggested_bio = parsed.suggested_bio.slice(0, 149);
+    if (parsed.bio_sugerida && parsed.bio_sugerida.length > 149) {
+      parsed.bio_sugerida = parsed.bio_sugerida.slice(0, 149);
     }
     return parsed;
   } catch (err) {
@@ -639,25 +679,38 @@ async function buildFreeResult(
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
 
+  // Calculate scores from rubric
+  const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
+
   const bio_suggestion = aiResult
     ? {
         current_bio: profile.bio_text,
-        suggested_bio: aiResult.suggested_bio,
-        rationale_short: aiResult.rationale,
-        cta_option: aiResult.cta_option,
-        score: aiResult.score,
+        suggested_bio: aiResult.bio_sugerida,
+        rationale_short: aiResult.justificativa_bio,
+        cta_option: aiResult.cta_sugerido,
+        score: parseFloat(((sumRubric(aiResult.rubrica_bio_atual) / 30) * 10).toFixed(1)),
+        score_new: parseFloat(((sumRubric(aiResult.rubrica_bio_nova) / 30) * 10).toFixed(1)),
         criteria: {
-          clarity: aiResult.rubric_clarity,
-          authority: aiResult.rubric_authority,
-          cta: aiResult.rubric_cta,
-          seo: aiResult.rubric_seo,
-          brand_voice: aiResult.rubric_brand_voice,
-          specificity: aiResult.rubric_specificity,
+          clarity: aiResult.rubrica_bio_atual.clareza,
+          authority: aiResult.rubrica_bio_atual.autoridade,
+          cta: aiResult.rubrica_bio_atual.forca_cta,
+          seo: aiResult.rubrica_bio_atual.seo_descoberta,
+          brand_voice: aiResult.rubrica_bio_atual.voz_da_marca,
+          specificity: aiResult.rubrica_bio_atual.especificidade,
         },
-        strengths: aiResult.strengths,
-        improvements: aiResult.improvements,
-        name_keyword: aiResult.name_keyword,
-        detected_tone: aiResult.detected_tone,
+        criteria_new: {
+          clarity: aiResult.rubrica_bio_nova.clareza,
+          authority: aiResult.rubrica_bio_nova.autoridade,
+          cta: aiResult.rubrica_bio_nova.forca_cta,
+          seo: aiResult.rubrica_bio_nova.seo_descoberta,
+          brand_voice: aiResult.rubrica_bio_nova.voz_da_marca,
+          specificity: aiResult.rubrica_bio_nova.especificidade,
+        },
+        diagnostic: aiResult.analise_diagnostica,
+        strengths: aiResult.pontos_fortes,
+        improvements: aiResult.pontos_de_melhoria,
+        name_keyword: aiResult.sugestao_keyword_nome,
+        detected_tone: aiResult.analise_diagnostica.tom_de_voz,
       }
     : {
         current_bio: profile.bio_text,
