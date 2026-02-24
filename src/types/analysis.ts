@@ -25,10 +25,12 @@ export interface PostData {
 }
 
 export interface BioCriteria {
-  profession_name: string; // "Presente" | "Ausente"
-  service: string;
-  authority: string;
-  call_to_action: string;
+  clarity: number;       // 1-5
+  authority: number;     // 1-5
+  cta: number;           // 1-5
+  seo: number;           // 1-5
+  brand_voice: number;   // 1-5
+  specificity: number;   // 1-5
 }
 
 export interface BioSuggestion {
@@ -36,11 +38,12 @@ export interface BioSuggestion {
   suggested_bio: string;
   rationale_short: string;
   cta_option: string;
-  // AI-generated fields (optional for backward compat)
   score?: number;
   criteria?: BioCriteria;
   strengths?: string;
   improvements?: string;
+  name_keyword?: string;
+  detected_tone?: string;
 }
 
 export interface NextPostSuggestion {

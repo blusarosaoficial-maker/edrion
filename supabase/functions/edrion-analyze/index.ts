@@ -245,16 +245,20 @@ async function callApify(handle: string): Promise<ApifyProfile> {
 // ── OpenAI bio analysis ──────────────────────────────────────
 
 interface AIBioResult {
-  profession_name: string;
-  service: string;
-  authority: string;
-  call_to_action: string;
-  score: number;
+  rubric_clarity: number;       // 1-5
+  rubric_authority: number;     // 1-5
+  rubric_cta: number;           // 1-5
+  rubric_seo: number;           // 1-5
+  rubric_brand_voice: number;   // 1-5
+  rubric_specificity: number;   // 1-5
+  score: number;                // 0-10 geral
   strengths: string;
   improvements: string;
   suggested_bio: string;
   rationale: string;
   cta_option: string;
+  name_keyword: string;
+  detected_tone: string;
 }
 
 async function analyzeBioWithAI(
@@ -534,7 +538,7 @@ publicacoes: ${profile.posts_count}
 nicho: ${nicho}
 objetivo: ${objetivo}
 
-Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e melhorias, e reescreva a bio (máximo 149 caracteres).${captions.length > 0 ? `\n\nlegendas_recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : ""}`;
+Execute o processo completo de duas fases conforme suas instrucoes. Avalie a bio atual na rubrica de 6 criterios (1-5 cada), identifique pontos fortes e melhorias, detecte o tom de voz, sugira keyword para o campo Nome, e gere uma nova bio estrategica (maximo 149 caracteres).${captions.length > 0 ? `\n\nlegendas_recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : ""}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -562,19 +566,22 @@ Avalie a bio nos 4 critérios, dê uma nota de 0 a 10, liste pontos fortes e mel
               parameters: {
                 type: "object",
                 properties: {
-                  profession_name: { type: "string", enum: ["Presente", "Ausente"] },
-                  service: { type: "string", enum: ["Presente", "Ausente"] },
-                  authority: { type: "string", enum: ["Presente", "Ausente"] },
-                  call_to_action: { type: "string", enum: ["Presente", "Ausente"] },
-                  score: { type: "number", minimum: 0, maximum: 10 },
+                  rubric_clarity: { type: "number", description: "Clareza: quão claro é o que a pessoa faz (1-5)" },
+                  rubric_authority: { type: "number", description: "Autoridade: provas e diferenciais (1-5)" },
+                  rubric_cta: { type: "number", description: "Força do CTA (1-5)" },
+                  rubric_seo: { type: "number", description: "SEO e descoberta no Instagram (1-5)" },
+                  rubric_brand_voice: { type: "number", description: "Voz da marca (1-5)" },
+                  rubric_specificity: { type: "number", description: "Especificidade de público e resultado (1-5)" },
+                  score: { type: "number", description: "Score geral da bio (0-10)" },
                   strengths: { type: "string", description: "Pontos fortes da bio atual" },
                   improvements: { type: "string", description: "Pontos de melhoria estratégicos" },
                   suggested_bio: { type: "string", description: "Nova bio otimizada (max 149 chars)" },
                   rationale: { type: "string", description: "Explicação da análise" },
                   cta_option: { type: "string", description: "CTA sugerido alinhado ao objetivo" },
-                  detected_tone: { type: "string", description: "Tom de voz identificado na comunicação do perfil (ex: informal e descontraído, formal e técnico, acolhedor e inspiracional)" },
+                  name_keyword: { type: "string", description: "Sugestão de keyword para o campo Nome do Instagram (ex: Maria | Nutricionista Esportiva)" },
+                  detected_tone: { type: "string", description: "Tom de voz identificado (ex: informal e descontraído, formal e técnico)" },
                 },
-                required: ["profession_name", "service", "authority", "call_to_action", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option", "detected_tone"],
+                required: ["rubric_clarity", "rubric_authority", "rubric_cta", "rubric_seo", "rubric_brand_voice", "rubric_specificity", "score", "strengths", "improvements", "suggested_bio", "rationale", "cta_option", "name_keyword", "detected_tone"],
                 additionalProperties: false,
               },
             },
@@ -640,13 +647,17 @@ async function buildFreeResult(
         cta_option: aiResult.cta_option,
         score: aiResult.score,
         criteria: {
-          profession_name: aiResult.profession_name,
-          service: aiResult.service,
-          authority: aiResult.authority,
-          call_to_action: aiResult.call_to_action,
+          clarity: aiResult.rubric_clarity,
+          authority: aiResult.rubric_authority,
+          cta: aiResult.rubric_cta,
+          seo: aiResult.rubric_seo,
+          brand_voice: aiResult.rubric_brand_voice,
+          specificity: aiResult.rubric_specificity,
         },
         strengths: aiResult.strengths,
         improvements: aiResult.improvements,
+        name_keyword: aiResult.name_keyword,
+        detected_tone: aiResult.detected_tone,
       }
     : {
         current_bio: profile.bio_text,

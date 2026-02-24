@@ -3,26 +3,44 @@ import {
   CheckCircle2,
   XCircle,
   Zap,
+  Mic,
+  Search,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import type { BioSuggestion } from "@/types/analysis";
 
 interface Props {
   bio: BioSuggestion;
 }
 
-function CriteriaItem({ label, value }: { label: string; value: string }) {
-  const present = value === "Presente";
+const CRITERIA_LABELS: { key: string; label: string }[] = [
+  { key: "clarity", label: "Clareza" },
+  { key: "authority", label: "Autoridade" },
+  { key: "cta", label: "Força do CTA" },
+  { key: "seo", label: "SEO" },
+  { key: "brand_voice", label: "Voz da Marca" },
+  { key: "specificity", label: "Especificidade" },
+];
+
+function scoreColor(v: number) {
+  if (v >= 4) return "bg-primary";
+  if (v >= 3) return "bg-yellow-500";
+  return "bg-destructive";
+}
+
+function RubricItem({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {present ? (
-        <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-      ) : (
-        <XCircle className="w-4 h-4 text-destructive shrink-0" />
-      )}
-      <span className="text-foreground">{label}</span>
-      <span className={`ml-auto text-xs font-medium ${present ? "text-primary" : "text-destructive"}`}>
-        {value}
-      </span>
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-foreground">{label}</span>
+        <span className="text-xs font-bold text-muted-foreground">{value}/5</span>
+      </div>
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+        <div
+          className={`h-full rounded-full transition-all ${scoreColor(value)}`}
+          style={{ width: `${value * 20}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -44,13 +62,38 @@ export default function BioAnalysisSection({ bio }: Props) {
         )}
       </div>
       <div className="p-5 space-y-4">
-        {/* AI Criteria */}
+        {/* 6-criteria rubric */}
         {hasAI && bio.criteria && (
-          <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-secondary border border-border">
-            <CriteriaItem label="Profissão/Nome" value={bio.criteria.profession_name} />
-            <CriteriaItem label="Serviço" value={bio.criteria.service} />
-            <CriteriaItem label="Autoridade" value={bio.criteria.authority} />
-            <CriteriaItem label="Call to Action" value={bio.criteria.call_to_action} />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4 rounded-lg bg-secondary border border-border">
+            {CRITERIA_LABELS.map(({ key, label }) => (
+              <RubricItem
+                key={key}
+                label={label}
+                value={(bio.criteria as unknown as Record<string, number>)[key] ?? 0}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Detected tone */}
+        {hasAI && bio.detected_tone && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary border border-border">
+            <Mic className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm text-foreground">
+              <span className="font-medium">Tom identificado:</span>{" "}
+              <span className="text-muted-foreground">{bio.detected_tone}</span>
+            </span>
+          </div>
+        )}
+
+        {/* Name keyword suggestion */}
+        {hasAI && bio.name_keyword && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+            <Search className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm text-foreground">
+              <span className="font-medium">Sugestão para Nome:</span>{" "}
+              <span className="text-muted-foreground">{bio.name_keyword}</span>
+            </span>
           </div>
         )}
 
