@@ -552,7 +552,7 @@ rubrica da bio atual (1-5 cada), pontos fortes/melhorias, keyword para Nome,
 nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 45000);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -563,7 +563,7 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
