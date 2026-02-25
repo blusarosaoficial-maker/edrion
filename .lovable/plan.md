@@ -1,46 +1,28 @@
 
 
-# Redeploy edrion-analyze + Criar bucket post-thumbnails
+## Deploy Edge Function edrion-analyze (commit 79a3bcd)
 
-## O que sera feito
+### Status: Code Synchronized
 
-### 1. Criar bucket publico `post-thumbnails` no Supabase Storage
-- Bucket publico (mesmo padrao do `avatars` existente)
-- Necessario para que a funcao `proxyPostThumbnail` consiga salvar e servir as thumbnails dos posts via URL publica do Supabase Storage
-- SQL migration para criar o bucket e configurar RLS
+All changes from commit `79a3bcd` are already present in the codebase. No file modifications needed.
 
-### 2. Redeploy da edge function `edrion-analyze`
-- O codigo ja esta sincronizado do GitHub com todas as correcoes:
-  - Anti-alucinacao na bio (regra 10 no system prompt)
-  - Proxy de thumbnails via `proxyPostThumbnail()` + bucket `post-thumbnails`
-  - Fallback melhorado no modal (mensagem amigavel quando IA indisponivel)
-  - UX dos cards de post (hover, score badge, tier badge)
-  - Legenda completa (`full_caption`) nos dados do post
+### Changes Confirmed in `supabase/functions/edrion-analyze/index.ts`:
 
-## Detalhes tecnicos
+1. **`ApifyProfile` interface** -- added `externalUrl` and `bioLinks` fields (lines 107-108)
+2. **`normalizeProfile()`** -- now extracts `bio_link` from profile (line 195)
+3. **System prompt (mission)** -- changed from "gerar nova bio" to "ADAPTAR e OTIMIZAR a bio existente" (line 509)
+4. **Phase 2 instructions** -- added guidance to preserve identity, tone, and facts (lines 593-596)
+5. **REGRA DO LINK DA BIO** -- new rule block prohibiting invention of link content (lines 678-686)
+6. **Rule 10 (expanded)** -- now explicitly prohibits inventing products, courses, methods, and offers (line 778)
+7. **Rule 11 (new)** -- requires bio to be a strategic evolution, not invented from scratch (line 780)
+8. **User message** -- now includes "Link da bio" context for the AI (line 790)
+9. **`validateBioTextClaims()`** -- new function that filters hallucinated offer terms like masterclass, curso, ebook, mentoria, etc. (lines 155-181)
 
-### Migration SQL
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('post-thumbnails', 'post-thumbnails', true);
+### Action Required
 
--- Permitir leitura publica (objetos publicos)
-CREATE POLICY "Public read post-thumbnails"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'post-thumbnails');
+Redeploy the `edrion-analyze` edge function to Supabase to activate all anti-hallucination improvements.
 
--- Permitir service role fazer upload (edge function usa service role key)
-CREATE POLICY "Service role upload post-thumbnails"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'post-thumbnails');
+### No Frontend Changes
 
-CREATE POLICY "Service role delete post-thumbnails"
-ON storage.objects FOR DELETE
-USING (bucket_id = 'post-thumbnails');
-```
+No frontend files were modified in this commit. Only the edge function needs redeployment.
 
-### Deploy
-- Redeploy da funcao `edrion-analyze`
-
-### Nenhuma alteracao de codigo
-- Todos os arquivos frontend e backend ja estao sincronizados do GitHub
