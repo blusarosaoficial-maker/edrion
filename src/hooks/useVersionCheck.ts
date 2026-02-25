@@ -17,6 +17,7 @@ export function useVersionCheck(intervalMs = 5 * 60 * 1000) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const checkVersion = useCallback(async () => {
+    if (import.meta.env.DEV) return; // No version check in dev/preview
     try {
       const res = await fetch(`/version.json?t=${Date.now()}`, {
         cache: "no-store",
