@@ -143,17 +143,30 @@ export async function analyzeMock(
 
   const nichoKey = ["fitness", "marketing", "gastronomia", "moda"].includes(nicho) ? nicho : "default";
 
+  const followers = rand(1200, 85000);
   const posts = Array.from({ length: 9 }, (_, i) => {
     const likes = rand(50, 3000);
     const comments = rand(5, 200);
     const views = Math.random() > 0.3 ? rand(1000, 50000) : 0;
-    const engagement_score = views > 0 ? parseFloat(((likes + 2 * comments) / views).toFixed(4)) : likes + 2 * comments;
+    const isVideo = Math.random() > 0.4;
+    const engagement_score = views > 0
+      ? parseFloat(((likes + 3 * comments) / views).toFixed(4))
+      : parseFloat(((likes + 3 * comments) / followers).toFixed(4));
     return {
       post_id: `post_${Date.now()}_${i}`,
       permalink: `https://instagram.com/p/mock${i}`,
       thumb_url: `https://picsum.photos/seed/p${i + 1}/400/400`,
       caption_preview: `Post de ${nichoKey} #${i + 1}`,
-      metrics: { likes, comments, views, engagement_score },
+      full_caption: `Post de ${nichoKey} #${i + 1} — Conteúdo inspirador sobre ${nichoKey}. Compartilhe com quem precisa! #${nichoKey} #dicas #conteudo`,
+      post_type: isVideo ? "Video" : "Image",
+      hashtags: [`#${nichoKey}`, "#conteudo", "#dicas"],
+      timestamp: new Date(Date.now() - i * 86400000).toISOString(),
+      is_pinned: i === 0,
+      has_location: Math.random() > 0.7,
+      music_info: isVideo ? "Artista - Música" : null,
+      metrics: { likes, comments, views, engagement_score, engagement_rate: engagement_score },
+      tier: (engagement_score > 0.15 ? "gold" : engagement_score > 0.06 ? "silver" : "bronze") as "gold" | "silver" | "bronze",
+      analysis: null as import("@/types/analysis").PostAnalysis | null,
     };
   });
 
@@ -163,6 +176,36 @@ export async function analyzeMock(
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
 
+  posts[topIdx].analysis = {
+    resumo_desempenho: "Este post teve a melhor performance do perfil por combinar um gancho forte com formato adequado ao público. O engajamento ficou acima da média do perfil.",
+    fatores_positivos: ["Gancho chamativo na primeira linha", "Formato com alta distribuição algorítmica", "Legenda com CTA claro"],
+    fatores_negativos: ["Hashtags poderiam ser mais específicas do nicho"],
+    analise_gancho: "A primeira linha cria curiosidade imediata, prendendo a atenção do espectador nos primeiros 3 segundos.",
+    analise_legenda: "Boa estrutura com storytelling e chamada para ação no final. Uso adequado de emojis.",
+    analise_formato: "Formato ideal para maximizar alcance e distribuição algorítmica em 2026.",
+    analise_hashtags: "Mix adequado de hashtags mas poderia incluir hashtags de comunidade para ampliar descoberta.",
+    rubrica: { gancho: 4, legenda: 4, formato: 5, engajamento: 3, estrategia: 4 },
+    nota_geral: 8.0,
+    recomendacoes: ["Adicione hashtags de comunidade do nicho", "Teste CTAs diferentes para aumentar salvamentos", "Mantenha esse formato como base do calendário editorial"],
+    classificacao: "gold",
+  };
+  posts[topIdx].tier = "gold";
+
+  posts[worstIdx].analysis = {
+    resumo_desempenho: "Este post teve baixa performance por falta de gancho claro e formato desalinhado com o objetivo do perfil.",
+    fatores_positivos: ["Visual limpo e bem produzido"],
+    fatores_negativos: ["Sem gancho claro na primeira linha", "Legenda genérica sem valor entregue", "Formato de imagem limita alcance"],
+    analise_gancho: "A legenda começa de forma genérica sem criar curiosidade ou identificação com o público.",
+    analise_legenda: "Falta storytelling e CTA. Não entrega valor claro ao leitor.",
+    analise_formato: "Imagem estática tem alcance limitado para esse tipo de conteúdo aspiracional.",
+    analise_hashtags: "Poucas hashtags e muito genéricas, não ajudam na descoberta.",
+    rubrica: { gancho: 2, legenda: 2, formato: 2, engajamento: 1, estrategia: 2 },
+    nota_geral: 3.6,
+    recomendacoes: ["Reformule como Reel para maior alcance", "Adicione gancho provocativo na primeira linha", "Inclua CTA pedindo para salvar ou compartilhar"],
+    classificacao: "bronze",
+  };
+  posts[worstIdx].tier = "bronze";
+
   return {
     success: true,
     data: {
@@ -171,7 +214,7 @@ export async function analyzeMock(
         full_name: handle.charAt(0).toUpperCase() + handle.slice(1).replace(/[._]/g, " "),
         avatar_url: `https://i.pravatar.cc/150?img=${rand(1, 8)}`,
         bio_text: "✨ Conteúdo de qualidade",
-        followers: rand(1200, 85000),
+        followers,
         following: rand(200, 1500),
         posts_count: rand(80, 600),
         is_verified: Math.random() > 0.85,

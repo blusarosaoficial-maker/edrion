@@ -78,6 +78,18 @@ interface ApifyPost {
   likesCount?: number;
   commentsCount?: number;
   videoViewCount?: number;
+  type?: string;
+  hashtags?: string[];
+  mentions?: string[];
+  timestamp?: string;
+  productType?: string;
+  isPinned?: boolean;
+  musicInfo?: { artist_name?: string; song_name?: string; uses_original_audio?: boolean };
+  locationName?: string;
+  taggedUsers?: unknown[];
+  images?: string[];
+  videoUrl?: string;
+  alt?: string;
 }
 
 interface ApifyProfile {
@@ -141,23 +153,57 @@ async function proxyAvatar(
   }
 }
 
-function normalizePosts(posts: ApifyPost[]) {
-  return posts.slice(0, 9).map((p, i) => {
+function normalizePosts(posts: ApifyPost[], followers: number) {
+  const normalized = posts.slice(0, 9).map((p, i) => {
     const likes = p.likesCount || 0;
     const comments = p.commentsCount || 0;
     const views = p.videoViewCount || 0;
-    const engagement_score = views > 0
-      ? parseFloat(((likes + 2 * comments) / views).toFixed(4))
-      : likes + 2 * comments;
+    const isVideo = p.type === "Video" || p.productType === "clips";
+
+    // Engagement: comments weighted 3x (deeper engagement signal)
+    // Videos use views as denominator; images/carousels use followers
+    let engagement_rate: number;
+    if (isVideo && views > 0) {
+      engagement_rate = (likes + 3 * comments) / views;
+    } else if (followers > 0) {
+      engagement_rate = (likes + 3 * comments) / followers;
+    } else {
+      engagement_rate = likes + 3 * comments;
+    }
+    const engagement_score = parseFloat(engagement_rate.toFixed(6));
 
     return {
       post_id: p.id || p.shortCode || `post_${i}`,
       permalink: p.url || (p.shortCode ? `https://instagram.com/p/${p.shortCode}` : ""),
       thumb_url: p.displayUrl || "",
       caption_preview: (p.caption || "").slice(0, 120),
-      metrics: { likes, comments, views, engagement_score },
+      full_caption: (p.caption || "").slice(0, 500),
+      post_type: p.type || (p.productType === "clips" ? "Video" : "Image"),
+      hashtags: p.hashtags || [],
+      mentions: p.mentions || [],
+      timestamp: p.timestamp || "",
+      is_pinned: p.isPinned || false,
+      has_location: !!p.locationName,
+      music_info: p.musicInfo
+        ? `${p.musicInfo.artist_name || "Unknown"} - ${p.musicInfo.song_name || "Unknown"}${p.musicInfo.uses_original_audio ? " (audio original)" : ""}`
+        : null,
+      metrics: { likes, comments, views, engagement_score, engagement_rate: engagement_score },
+      tier: "bronze" as "gold" | "silver" | "bronze",
+      analysis: null as unknown,
     };
   });
+
+  // Classify tiers relative to account average
+  if (normalized.length > 0) {
+    const avg = normalized.reduce((s, p) => s + p.metrics.engagement_score, 0) / normalized.length;
+    for (const post of normalized) {
+      if (post.metrics.engagement_score > avg * 2) post.tier = "gold";
+      else if (post.metrics.engagement_score >= avg) post.tier = "silver";
+      else post.tier = "bronze";
+    }
+  }
+
+  return normalized;
 }
 
 // ── Apify scraper ────────────────────────────────────────────
@@ -660,6 +706,238 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
   }
 }
 
+// ── Post Analysis AI ─────────────────────────────────────────
+
+interface AIPostRubric {
+  gancho: number;
+  legenda: number;
+  formato: number;
+  engajamento: number;
+  estrategia: number;
+}
+
+interface AIPostAnalysis {
+  resumo_desempenho: string;
+  fatores_positivos: string[];
+  fatores_negativos: string[];
+  analise_gancho: string;
+  analise_legenda: string;
+  analise_formato: string;
+  analise_hashtags: string;
+  rubrica: AIPostRubric;
+  nota_geral: number;
+  recomendacoes: string[];
+  classificacao: "gold" | "silver" | "bronze";
+}
+
+interface AIPostsResult {
+  top_post_analysis: AIPostAnalysis;
+  worst_post_analysis: AIPostAnalysis;
+}
+
+async function analyzePostsWithAI(
+  profile: ReturnType<typeof normalizeProfile>,
+  topPost: ReturnType<typeof normalizePosts>[number],
+  worstPost: ReturnType<typeof normalizePosts>[number],
+  allPosts: ReturnType<typeof normalizePosts>,
+  nicho: string,
+  objetivo: string,
+): Promise<AIPostsResult | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return null;
+
+  const postSystemPrompt = `Voce e uma especialista senior em estrategia de conteudo para Instagram, analise de performance de posts e growth hacking para criadores de conteudo brasileiros.
+
+<missao>
+Sua missao e analisar dois posts de um perfil do Instagram: o post de melhor performance (TOP) e o post de pior performance (WORST). Para cada um, execute uma analise profunda e retorne via tool call.
+</missao>
+
+<contexto_limitacoes>
+IMPORTANTE: Os unicos dados quantitativos disponiveis sao likes, comentarios e visualizacoes de video. NAO temos acesso a salvamentos, compartilhamentos, alcance ou impressoes. Sua analise deve focar na qualidade QUALITATIVA do conteudo (gancho, legenda, formato, estrategia) complementada pelos dados quantitativos disponiveis.
+</contexto_limitacoes>
+
+<processo_analise>
+
+Para CADA post (top e worst), execute:
+
+ETAPA 1 — RESUMO DE DESEMPENHO:
+- Por que esse post performou bem (ou mal) comparado a media do perfil?
+- Qual a relacao entre o tipo de conteudo e o engajamento obtido?
+- Contextualize os numeros (likes, comments, views) em relacao ao tamanho do perfil (seguidores).
+
+ETAPA 2 — ANALISE DO GANCHO:
+- A primeira linha da legenda captura atencao?
+- Se e video/reel: o formato visual tipicamente prende o espectador nos primeiros 3 segundos?
+- O gancho gera curiosidade, identificacao ou urgencia?
+
+ETAPA 3 — ANALISE DA LEGENDA:
+- Qualidade do copywriting (storytelling, valor entregue, estrutura)
+- Uso de emojis e formatacao (escaneabilidade)
+- Presenca de CTA (call-to-action) — pede para salvar, compartilhar, comentar?
+- Tamanho adequado para o formato?
+
+ETAPA 4 — ANALISE DO FORMATO:
+- O formato escolhido (Reel/Carrossel/Imagem) e o ideal para este tipo de conteudo?
+- Reels tendem a ter mais alcance; carrosseis mais salvamentos; imagens mais para comunidade.
+- O formato esta alinhado com o objetivo do perfil?
+
+ETAPA 5 — ANALISE DE HASHTAGS:
+- Quantidade de hashtags (ideal: 3-15 para 2025-2026)
+- Mix de hashtags: nicho especifico vs. genericas vs. de comunidade?
+- Hashtags alinhadas com o conteudo do post?
+
+ETAPA 6 — ANALISE ESTRATEGICA:
+- O post esta alinhado com o nicho e objetivo do perfil?
+- Contribui para posicionamento, autoridade ou conversao?
+- Timing e contexto do post
+
+</processo_analise>
+
+<rubrica_avaliacao>
+Pontue de 1 a 5 cada criterio:
+
+| Criterio | 1 (Fraco) | 3 (Mediano) | 5 (Excelente) |
+|---|---|---|---|
+| Gancho/Hook | Sem gancho, comeca generico | Gancho parcial, nao muito impactante | Gancho irresistivel que prende em 3s |
+| Legenda/Caption | Sem valor, generica ou ausente | Entrega valor parcial, sem CTA | Storytelling envolvente + CTA claro |
+| Formato | Formato errado para o conteudo | Formato OK mas poderia ser melhor | Formato perfeito para maximizar o objetivo |
+| Engajamento | Nao provoca interacao | Algum elemento de interacao | Multiplos gatilhos de save/share/comment |
+| Estrategia | Desalinhado do nicho/objetivo | Parcialmente alinhado | 100% alinhado, contribui para posicionamento |
+</rubrica_avaliacao>
+
+<tom_analise>
+- Para o TOP post: tom celebratorio e analitico. Destaque o que foi bem feito. "Esse post e um exemplo de..."
+- Para o WORST post: tom construtivo e mentor. Sem criticar, mas orientar. "Esse post tem oportunidade de melhoria em..."
+- Sempre em portugues brasileiro, linguagem acessivel mas profissional.
+</tom_analise>
+
+<regras>
+1. Responda APENAS via tool call fornecida.
+2. Recomendacoes devem ser ESPECIFICAS e ACIONAVEIS (nao genericas como "melhore o gancho").
+3. NUNCA invente dados, numeros ou metricas que nao estejam nos dados fornecidos.
+4. Maximo 3-5 recomendacoes por post, priorizadas por impacto.
+5. A classificacao (gold/silver/bronze) deve ser sua avaliacao qualitativa global do post.
+6. Se nao temos views para um post de imagem, contextualize usando likes e comments vs seguidores.
+7. A nota geral (0-10) deve refletir a media ponderada da rubrica: gancho e engajamento tem peso 1.5x.
+</regras>`;
+
+  const postsContext = allPosts.map((p, i) =>
+    `Post ${i+1}: ${p.post_type} | Likes: ${p.metrics.likes} | Comments: ${p.metrics.comments} | Views: ${p.metrics.views} | Score: ${p.metrics.engagement_score} | Tier: ${p.tier}`
+  ).join("\n");
+
+  const formatPostDetail = (p: ReturnType<typeof normalizePosts>[number], label: string) => `
+--- ${label} ---
+Tipo: ${p.post_type}
+Legenda completa: "${p.full_caption}"
+Hashtags: ${p.hashtags.length > 0 ? p.hashtags.join(", ") : "nenhuma"}
+Likes: ${p.metrics.likes} | Comments: ${p.metrics.comments} | Views: ${p.metrics.views}
+Engagement Score: ${p.metrics.engagement_score} | Tier quantitativo: ${p.tier}
+Fixado: ${p.is_pinned ? "Sim" : "Nao"}
+Localizacao: ${p.has_location ? "Sim" : "Nao"}
+Musica: ${p.music_info || "N/A"}
+Data: ${p.timestamp || "N/A"}`;
+
+  const userMessage = `Analise os posts do perfil @${profile.handle}.
+Nicho: ${nicho}. Objetivo: ${objetivo.toUpperCase()}.
+Seguidores: ${profile.followers} | Posts totais: ${profile.posts_count}
+
+CONTEXTO — Ultimos ${allPosts.length} posts (para comparacao relativa):
+${postsContext}
+
+${formatPostDetail(topPost, "TOP POST (melhor performance)")}
+
+${formatPostDetail(worstPost, "WORST POST (pior performance)")}
+
+Execute a analise completa para ambos os posts.`;
+
+  const postAnalysisSchema = {
+    type: "object" as const,
+    properties: {
+      resumo_desempenho: { type: "string" as const, description: "Resumo de por que esse post performou bem ou mal" },
+      fatores_positivos: { type: "array" as const, items: { type: "string" as const }, description: "Fatores positivos de performance" },
+      fatores_negativos: { type: "array" as const, items: { type: "string" as const }, description: "Fatores negativos ou pontos de melhoria" },
+      analise_gancho: { type: "string" as const, description: "Analise da qualidade do gancho/hook" },
+      analise_legenda: { type: "string" as const, description: "Analise da qualidade da legenda" },
+      analise_formato: { type: "string" as const, description: "Analise da escolha de formato" },
+      analise_hashtags: { type: "string" as const, description: "Analise do uso de hashtags" },
+      rubrica: {
+        type: "object" as const,
+        properties: {
+          gancho: { type: "number" as const, minimum: 1, maximum: 5 },
+          legenda: { type: "number" as const, minimum: 1, maximum: 5 },
+          formato: { type: "number" as const, minimum: 1, maximum: 5 },
+          engajamento: { type: "number" as const, minimum: 1, maximum: 5 },
+          estrategia: { type: "number" as const, minimum: 1, maximum: 5 },
+        },
+        required: ["gancho", "legenda", "formato", "engajamento", "estrategia"],
+      },
+      nota_geral: { type: "number" as const, description: "Nota geral do post de 0 a 10" },
+      recomendacoes: { type: "array" as const, items: { type: "string" as const }, description: "3-5 recomendacoes acionaveis" },
+      classificacao: { type: "string" as const, enum: ["gold", "silver", "bronze"] },
+    },
+    required: ["resumo_desempenho", "fatores_positivos", "fatores_negativos", "analise_gancho", "analise_legenda", "analise_formato", "analise_hashtags", "rubrica", "nota_geral", "recomendacoes", "classificacao"],
+  };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 40000);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: postSystemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "analyze_posts",
+              description: "Retorna a analise estruturada dos posts top e worst do Instagram",
+              parameters: {
+                type: "object",
+                properties: {
+                  top_post_analysis: postAnalysisSchema,
+                  worst_post_analysis: postAnalysisSchema,
+                },
+                required: ["top_post_analysis", "worst_post_analysis"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "analyze_posts" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("OpenAI Posts API error:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error("OpenAI Posts: no tool call in response");
+      return null;
+    }
+
+    return JSON.parse(toolCall.function.arguments) as AIPostsResult;
+  } catch (err) {
+    console.error("analyzePostsWithAI error:", (err as Error).message);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── Result builders ──────────────────────────────────────────
 
 async function buildFreeResult(
@@ -669,17 +947,22 @@ async function buildFreeResult(
   nicho: string,
   objetivo: string,
 ) {
-  // Try AI analysis first, fallback to template
-  const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
-  const aiResult = await analyzeBioWithAI(profile, nicho, objetivo, captions);
   const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
 
+  // Find top and worst posts
   let topIdx = 0;
   let worstIdx = 0;
   for (let i = 1; i < posts.length; i++) {
     if (posts[i].metrics.engagement_score > posts[topIdx].metrics.engagement_score) topIdx = i;
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
+
+  // Run BOTH AI analyses in parallel
+  const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
+  const [aiResult, postsAiResult] = await Promise.all([
+    analyzeBioWithAI(profile, nicho, objetivo, captions),
+    analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo),
+  ]);
 
   // Calculate scores from rubric
   const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
@@ -721,12 +1004,16 @@ async function buildFreeResult(
         cta_option: templateBio.cta,
       };
 
+  // Attach AI post analysis to top/worst posts
+  const topPostData = { ...posts[topIdx], analysis: postsAiResult?.top_post_analysis || null };
+  const worstPostData = { ...posts[worstIdx], analysis: postsAiResult?.worst_post_analysis || null };
+
   return {
     profile,
     deliverables: {
       bio_suggestion,
-      top_post: posts[topIdx] || null,
-      worst_post: posts[worstIdx] || null,
+      top_post: topPostData || null,
+      worst_post: worstPostData || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
     },
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
@@ -858,7 +1145,7 @@ Deno.serve(async (req) => {
     // ── [4] Normalize + proxy avatar ─────────────────────────
     const profile = normalizeProfile(rawProfile);
     profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
-    const posts = normalizePosts(rawProfile.latestPosts || []);
+    const posts = normalizePosts(rawProfile.latestPosts || [], profile.followers);
     const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
     // ── [5] If NOT authenticated → return pending_result ─────

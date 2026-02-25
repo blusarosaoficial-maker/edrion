@@ -14,6 +14,29 @@ export interface PostMetrics {
   comments: number;
   views: number;
   engagement_score: number;
+  engagement_rate?: number;
+}
+
+export interface PostRubric {
+  gancho: number;
+  legenda: number;
+  formato: number;
+  engajamento: number;
+  estrategia: number;
+}
+
+export interface PostAnalysis {
+  resumo_desempenho: string;
+  fatores_positivos: string[];
+  fatores_negativos: string[];
+  analise_gancho: string;
+  analise_legenda: string;
+  analise_formato: string;
+  analise_hashtags: string;
+  rubrica: PostRubric;
+  nota_geral: number;
+  recomendacoes: string[];
+  classificacao: "gold" | "silver" | "bronze";
 }
 
 export interface PostData {
@@ -21,7 +44,16 @@ export interface PostData {
   permalink: string;
   thumb_url: string;
   caption_preview: string;
+  full_caption?: string;
+  post_type?: string;
+  hashtags?: string[];
+  timestamp?: string;
+  is_pinned?: boolean;
+  has_location?: boolean;
+  music_info?: string | null;
   metrics: PostMetrics;
+  tier?: "gold" | "silver" | "bronze";
+  analysis?: PostAnalysis | null;
 }
 
 export interface BioCriteria {

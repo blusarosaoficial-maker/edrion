@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -10,9 +11,14 @@ import {
   CheckCircle2,
   Zap,
   Lock,
+  Trophy,
+  Medal,
+  Circle,
+  Search,
 } from "lucide-react";
-import type { AnalysisResult } from "@/types/analysis";
+import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
+import PostAnalysisModal from "@/components/PostAnalysisModal";
 
 interface Props {
   result: AnalysisResult;
@@ -28,6 +34,7 @@ function formatNum(n: number): string {
 export default function ResultView({ result, onReset }: Props) {
   const { profile, deliverables, limits, plan } = result;
   const { bio_suggestion, top_post, worst_post, next_post_suggestion } = deliverables;
+  const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
@@ -77,14 +84,25 @@ export default function ResultView({ result, onReset }: Props) {
           icon={<ThumbsUp className="w-5 h-5 text-primary" />}
           post={top_post}
           accentClass="border-primary/30"
+          onClickAnalysis={() => setSelectedPost({ post: top_post, variant: "top" })}
         />
         <PostCard
           title="Worst Post"
           icon={<ThumbsDown className="w-5 h-5 text-destructive" />}
           post={worst_post}
           accentClass="border-destructive/30"
+          onClickAnalysis={() => setSelectedPost({ post: worst_post, variant: "worst" })}
         />
       </div>
+
+      {selectedPost && (
+        <PostAnalysisModal
+          isOpen={!!selectedPost}
+          onClose={() => setSelectedPost(null)}
+          post={selectedPost.post}
+          variant={selectedPost.variant}
+        />
+      )}
 
       {/* 4. Next Post Suggestion — blurred for free */}
       {next_post_suggestion && (
@@ -151,24 +169,51 @@ export default function ResultView({ result, onReset }: Props) {
   );
 }
 
+function tierBadge(tier?: "gold" | "silver" | "bronze") {
+  if (!tier) return null;
+  const cfg = {
+    gold: { label: "Gold", icon: <Trophy className="w-3 h-3" />, cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+    silver: { label: "Silver", icon: <Medal className="w-3 h-3" />, cls: "bg-slate-400/10 text-slate-400 border-slate-400/20" },
+    bronze: { label: "Bronze", icon: <Circle className="w-3 h-3" />, cls: "bg-orange-600/10 text-orange-600 border-orange-600/20" },
+  }[tier];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${cfg.cls}`}>
+      {cfg.icon} {cfg.label}
+    </span>
+  );
+}
+
 function PostCard({
   title,
   icon,
   post,
   accentClass,
+  onClickAnalysis,
 }: {
   title: string;
   icon: React.ReactNode;
-  post: AnalysisResult["deliverables"]["top_post"];
+  post: PostData;
   accentClass: string;
+  onClickAnalysis: () => void;
 }) {
+  const tier = post.analysis?.classificacao || post.tier;
+  const score = post.analysis?.nota_geral;
+
   return (
-    <section className={`rounded-xl border bg-card overflow-hidden ${accentClass}`}>
+    <section className={`rounded-xl border bg-card overflow-hidden ${accentClass} cursor-pointer hover:border-primary/50 transition-colors`} onClick={onClickAnalysis}>
       <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
         {icon}
         <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
           {title}
         </h3>
+        {tierBadge(tier)}
+        {score !== undefined && (
+          <span className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full ${
+            score >= 7 ? "bg-primary/10 text-primary" : score >= 4 ? "bg-yellow-500/10 text-yellow-600" : "bg-destructive/10 text-destructive"
+          }`}>
+            {score}/10
+          </span>
+        )}
       </div>
       <div className="p-5 space-y-4">
         <img
@@ -186,14 +231,22 @@ function PostCard({
           )}
           <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Score" value={post.metrics.engagement_score.toFixed(4)} />
         </div>
-        <a
-          href={post.permalink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-        >
-          Ver no Instagram <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center justify-between">
+          <a
+            href={post.permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Ver no Instagram <ExternalLink className="w-3 h-3" />
+          </a>
+          {post.analysis && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Search className="w-3 h-3" /> Ver analise
+            </span>
+          )}
+        </div>
       </div>
     </section>
   );
