@@ -230,6 +230,67 @@ async function proxyPostThumbnail(
   }
 }
 
+// ── Video transcription ─────────────────────────────────────
+
+async function transcribeVideo(
+  videoUrl: string,
+  usesOriginalAudio: boolean | null,
+  musicInfo: string | null,
+): Promise<{ text: string | null; skipped_reason: string | null }> {
+  if (!videoUrl) {
+    return { text: null, skipped_reason: null };
+  }
+
+  if (usesOriginalAudio === false) {
+    return { text: null, skipped_reason: `Audio e musica da biblioteca (${musicInfo || "desconhecida"}). Transcricao de fala nao aplicavel.` };
+  }
+
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return { text: null, skipped_reason: "API indisponivel" };
+
+  try {
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) throw new Error(`fetch video ${videoRes.status}`);
+
+    const blob = await videoRes.blob();
+    if (blob.size > 25 * 1024 * 1024) {
+      return { text: null, skipped_reason: "Video muito longo para transcricao (>25MB)" };
+    }
+
+    const formData = new FormData();
+    formData.append("file", new File([blob], "video.mp4", { type: "video/mp4" }));
+    formData.append("model", "gpt-4o-mini-transcribe");
+    formData.append("language", "pt");
+    formData.append("response_format", "json");
+
+    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}` },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Whisper API error:", res.status, errText);
+      return { text: null, skipped_reason: "Erro na transcricao" };
+    }
+
+    const result = await res.json();
+    const transcript = result.text?.trim() || "";
+
+    if (transcript.length < 20) {
+      return { text: null, skipped_reason: "Audio sem fala detectavel (possivelmente musica ou instrumental)" };
+    }
+
+    return { text: transcript, skipped_reason: null };
+  } catch (err) {
+    console.warn("transcribeVideo error:", (err as Error).message);
+    return { text: null, skipped_reason: "Erro ao processar audio" };
+  }
+}
+
+// ── Data helpers ─────────────────────────────────────────────
+
 function normalizePosts(posts: ApifyPost[], followers: number) {
   const normalized = posts.slice(0, 9).map((p, i) => {
     const likes = p.likesCount || 0;
@@ -264,6 +325,8 @@ function normalizePosts(posts: ApifyPost[], followers: number) {
       music_info: p.musicInfo
         ? `${p.musicInfo.artist_name || "Unknown"} - ${p.musicInfo.song_name || "Unknown"}${p.musicInfo.uses_original_audio ? " (audio original)" : ""}`
         : null,
+      video_url: isVideo ? (p.videoUrl || "") : "",
+      uses_original_audio: p.musicInfo?.uses_original_audio ?? null,
       metrics: { likes, comments, views, engagement_score, engagement_rate: engagement_score },
       tier: "bronze" as "gold" | "silver" | "bronze",
       analysis: null as unknown,
@@ -827,6 +890,8 @@ async function analyzePostsWithAI(
   allPosts: ReturnType<typeof normalizePosts>,
   nicho: string,
   objetivo: string,
+  topTranscript?: string | null,
+  worstTranscript?: string | null,
 ): Promise<AIPostsResult | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) return null;
@@ -854,6 +919,13 @@ ETAPA 2 — ANALISE DO GANCHO:
 - A primeira linha da legenda captura atencao?
 - Se e video/reel: o formato visual tipicamente prende o espectador nos primeiros 3 segundos?
 - O gancho gera curiosidade, identificacao ou urgencia?
+
+ETAPA 2B — ANALISE DO AUDIO (somente se TRANSCRICAO DO AUDIO foi fornecida):
+- Avalie o tom de voz: energia, clareza, ritmo de fala
+- A fala complementa ou repete a legenda?
+- O roteiro falado e estruturado (gancho vocal, desenvolvimento, CTA falado)?
+- A pessoa transmite confianca, autoridade e autenticidade?
+- Se NAO ha transcricao, ignore esta etapa completamente e retorne "N/A" no campo analise_audio.
 
 ETAPA 3 — ANALISE DA LEGENDA:
 - Qualidade do copywriting (storytelling, valor entregue, estrutura)
@@ -910,7 +982,7 @@ Pontue de 1 a 5 cada criterio:
     `Post ${i+1}: ${p.post_type} | Likes: ${p.metrics.likes} | Comments: ${p.metrics.comments} | Views: ${p.metrics.views} | Score: ${p.metrics.engagement_score} | Tier: ${p.tier}`
   ).join("\n");
 
-  const formatPostDetail = (p: ReturnType<typeof normalizePosts>[number], label: string) => `
+  const formatPostDetail = (p: ReturnType<typeof normalizePosts>[number], label: string, transcript?: string | null) => `
 --- ${label} ---
 Tipo: ${p.post_type}
 Legenda completa: "${p.full_caption}"
@@ -920,7 +992,7 @@ Engagement Score: ${p.metrics.engagement_score} | Tier quantitativo: ${p.tier}
 Fixado: ${p.is_pinned ? "Sim" : "Nao"}
 Localizacao: ${p.has_location ? "Sim" : "Nao"}
 Musica: ${p.music_info || "N/A"}
-Data: ${p.timestamp || "N/A"}`;
+Data: ${p.timestamp || "N/A"}${transcript ? `\nTRANSCRICAO DO AUDIO: "${transcript}"` : ""}`;
 
   const userMessage = `Analise os posts do perfil @${profile.handle}.
 Nicho: ${nicho}. Objetivo: ${objetivo.toUpperCase()}.
@@ -929,9 +1001,9 @@ Seguidores: ${profile.followers} | Posts totais: ${profile.posts_count}
 CONTEXTO — Ultimos ${allPosts.length} posts (para comparacao relativa):
 ${postsContext}
 
-${formatPostDetail(topPost, "TOP POST (melhor performance)")}
+${formatPostDetail(topPost, "TOP POST (melhor performance)", topTranscript)}
 
-${formatPostDetail(worstPost, "WORST POST (pior performance)")}
+${formatPostDetail(worstPost, "WORST POST (pior performance)", worstTranscript)}
 
 Execute a analise completa para ambos os posts.`;
 
@@ -945,6 +1017,7 @@ Execute a analise completa para ambos os posts.`;
       analise_legenda: { type: "string" as const, description: "Analise da qualidade da legenda" },
       analise_formato: { type: "string" as const, description: "Analise da escolha de formato" },
       analise_hashtags: { type: "string" as const, description: "Analise do uso de hashtags" },
+      analise_audio: { type: "string" as const, description: "Analise do audio/fala do video baseada na transcricao. Se nao ha transcricao fornecida, retorne 'N/A'" },
       rubrica: {
         type: "object" as const,
         properties: {
@@ -960,7 +1033,7 @@ Execute a analise completa para ambos os posts.`;
       recomendacoes: { type: "array" as const, items: { type: "string" as const }, description: "3-5 recomendacoes acionaveis" },
       classificacao: { type: "string" as const, enum: ["gold", "silver", "bronze"] },
     },
-    required: ["resumo_desempenho", "fatores_positivos", "fatores_negativos", "analise_gancho", "analise_legenda", "analise_formato", "analise_hashtags", "rubrica", "nota_geral", "recomendacoes", "classificacao"],
+    required: ["resumo_desempenho", "fatores_positivos", "fatores_negativos", "analise_gancho", "analise_legenda", "analise_formato", "analise_hashtags", "analise_audio", "rubrica", "nota_geral", "recomendacoes", "classificacao"],
   };
 
   const controller = new AbortController();
@@ -1044,11 +1117,21 @@ async function buildFreeResult(
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
 
-  // Run BOTH AI analyses in parallel
+  // Phase 1: Transcribe video audio for top/worst posts (parallel)
+  const [topTranscript, worstTranscript] = await Promise.all([
+    posts[topIdx].post_type === "Video"
+      ? transcribeVideo(posts[topIdx].video_url, posts[topIdx].uses_original_audio, posts[topIdx].music_info)
+      : Promise.resolve({ text: null, skipped_reason: null }),
+    posts[worstIdx].post_type === "Video"
+      ? transcribeVideo(posts[worstIdx].video_url, posts[worstIdx].uses_original_audio, posts[worstIdx].music_info)
+      : Promise.resolve({ text: null, skipped_reason: null }),
+  ]);
+
+  // Phase 2: Run BOTH AI analyses in parallel (posts AI now includes transcription)
   const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
   const [aiResult, postsAiResult] = await Promise.all([
     analyzeBioWithAI(profile, nicho, objetivo, captions),
-    analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo),
+    analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo, topTranscript.text, worstTranscript.text),
   ]);
 
   // Calculate scores from rubric
@@ -1091,9 +1174,19 @@ async function buildFreeResult(
         cta_option: templateBio.cta,
       };
 
-  // Attach AI post analysis to top/worst posts
-  const topPostData = { ...posts[topIdx], analysis: postsAiResult?.top_post_analysis || null };
-  const worstPostData = { ...posts[worstIdx], analysis: postsAiResult?.worst_post_analysis || null };
+  // Attach AI post analysis + transcription to top/worst posts
+  const topPostData = {
+    ...posts[topIdx],
+    analysis: postsAiResult?.top_post_analysis || null,
+    transcription: topTranscript.text || null,
+    transcription_skipped: topTranscript.skipped_reason || null,
+  };
+  const worstPostData = {
+    ...posts[worstIdx],
+    analysis: postsAiResult?.worst_post_analysis || null,
+    transcription: worstTranscript.text || null,
+    transcription_skipped: worstTranscript.skipped_reason || null,
+  };
 
   // Proxy thumbnails for top and worst posts (parallel)
   const [topThumb, worstThumb] = await Promise.all([

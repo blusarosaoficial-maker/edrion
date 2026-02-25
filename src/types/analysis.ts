@@ -33,6 +33,7 @@ export interface PostAnalysis {
   analise_legenda: string;
   analise_formato: string;
   analise_hashtags: string;
+  analise_audio?: string;
   rubrica: PostRubric;
   nota_geral: number;
   recomendacoes: string[];
@@ -54,6 +55,8 @@ export interface PostData {
   metrics: PostMetrics;
   tier?: "gold" | "silver" | "bronze";
   analysis?: PostAnalysis | null;
+  transcription?: string | null;
+  transcription_skipped?: string | null;
 }
 
 export interface BioCriteria {

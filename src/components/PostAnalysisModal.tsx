@@ -285,8 +285,35 @@ export default function PostAnalysisModal({ isOpen, onClose, post, variant }: Po
                     <DetailBlock title="Legenda / Caption" text={analysis.analise_legenda} />
                     <DetailBlock title="Formato" text={analysis.analise_formato} />
                     <DetailBlock title="Hashtags" text={analysis.analise_hashtags} />
+                    {analysis.analise_audio && analysis.analise_audio !== "N/A" && (
+                      <DetailBlock title="Audio / Fala" text={analysis.analise_audio} />
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Audio Transcription (collapsible) */}
+                {post.transcription && (
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-3 rounded-lg bg-secondary border border-border hover:bg-secondary/80 transition-colors">
+                      <Music className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm font-medium text-foreground flex-1">Transcricao do Audio</span>
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <p className="text-sm text-foreground/80 bg-secondary rounded-lg p-3 border border-border whitespace-pre-line">
+                        {post.transcription}
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* Transcription skipped message */}
+                {post.transcription_skipped && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary border border-border">
+                    <Music className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <p className="text-xs text-muted-foreground">{post.transcription_skipped}</p>
+                  </div>
+                )}
 
                 {/* Recommendations */}
                 <div className="space-y-2">
