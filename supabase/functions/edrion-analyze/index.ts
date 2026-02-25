@@ -104,6 +104,8 @@ interface ApifyProfile {
   verified?: boolean;
   latestPosts?: ApifyPost[];
   isPrivate?: boolean;
+  externalUrl?: string;
+  bioLinks?: Array<{ title?: string; url?: string; lynxUrl?: string; linkType?: string }>;
 }
 
 // ── Anti-hallucination validator ─────────────────────────────
@@ -150,6 +152,34 @@ function validateBioHallucinations(
   return sanitized;
 }
 
+function validateBioTextClaims(
+  bioSugerida: string,
+  originalBio: string,
+  captions: string[],
+): string {
+  // Terms that indicate specific offers/products — only allowed if present in source corpus
+  const offerTerms = /\b(masterclass|workshop|curso|ebook|e-book|mentoria|consultoria|programa|método|metodo|imersão|imersao|treinamento|bootcamp|guia|planilha|template|checklist|webinar|aula)\b/gi;
+
+  const matches = bioSugerida.match(offerTerms);
+  if (!matches || matches.length === 0) return bioSugerida;
+
+  const corpus = [originalBio, ...captions].join(" ").toLowerCase();
+
+  let result = bioSugerida;
+  for (const term of matches) {
+    if (corpus.includes(term.toLowerCase())) continue;
+
+    // Hallucinated term — remove the line that contains it
+    const lines = result.split("\n");
+    result = lines.filter((line) => !line.toLowerCase().includes(term.toLowerCase())).join("\n");
+  }
+
+  // If too much was removed, keep original
+  if (result.trim().length < 30) return bioSugerida;
+
+  return result.trim();
+}
+
 // ── Data helpers ─────────────────────────────────────────────
 
 function normalizeProfile(raw: ApifyProfile) {
@@ -162,6 +192,7 @@ function normalizeProfile(raw: ApifyProfile) {
     following: raw.followsCount || 0,
     posts_count: raw.postsCount || 0,
     is_verified: raw.verified || false,
+    bio_link: raw.externalUrl || raw.bioLinks?.[0]?.url || "",
   };
 }
 
@@ -475,7 +506,7 @@ async function analyzeBioWithAI(
 
 <missao>
 
-Sua missão é executar um processo de duas fases: primeiro, realizar uma análise diagnóstica profunda da bio atual; segundo, gerar uma nova bio estratégica, otimizada e alinhada ao objetivo do perfil. Toda resposta DEVE ser enviada exclusivamente via tool call fornecida.
+Sua missão é executar um processo de duas fases: primeiro, realizar uma análise diagnóstica profunda da bio atual; segundo, ADAPTAR e OTIMIZAR a bio existente para torná-la mais estratégica e alinhada ao objetivo do perfil. Você não cria bios do zero — você evolui a bio atual preservando identidade e tom. Toda resposta DEVE ser enviada exclusivamente via tool call fornecida.
 
 </missao>
 
@@ -559,7 +590,18 @@ RUBRICA DE AVALIAÇÃO DA BIO ATUAL (pontue de 1 a 5 cada critério):
 
 <fase_2_geracao_estrategica>
 
-Com base na análise da Fase 1, gere a nova bio seguindo estas diretrizes:
+Com base na análise da Fase 1, ADAPTE a bio atual seguindo estas diretrizes. A bio sugerida deve ser uma evolução reconhecível da bio original — não uma bio completamente diferente. Preserve:
+- Elementos de identidade que já funcionam (tom, estilo, termos-chave do usuário)
+- Informações factuais presentes na bio atual
+- Referências a produtos/serviços que o usuário JÁ menciona
+
+Melhore:
+- Estrutura (aplique o formato de 3 linhas se possível)
+- Clareza da proposta de valor
+- Força do CTA
+- SEO e descoberta
+
+Diretrizes:
 
 ESTRUTURA ÓTIMA (3 LINHAS):
 
@@ -632,6 +674,16 @@ AJUSTE POR OBJETIVO:
 PRESERVAÇÃO DE TOM:
 
 A nova bio DEVE usar o mesmo tom de voz identificado na Etapa 6 da análise. Use vocabulário, estilo de frase e registro emocional compatíveis. A estratégia muda, a voz permanece.
+
+REGRA DO LINK DA BIO:
+
+- Se o link da bio for fornecido, o CTA da bio sugerida DEVE ser genérico e compatível com qualquer página de destino (ex: "Saiba mais 👇", "Link na bio 👇", "Comece aqui 👇")
+
+- NUNCA mencione ou descreva o conteúdo do link (você não sabe o que está lá)
+
+- NUNCA invente nomes de produtos, cursos, masterclasses, ebooks ou ofertas que não estejam EXPLICITAMENTE mencionados na bio atual ou nas legendas
+
+- Se a bio atual menciona algo específico no CTA (ex: "Baixe o guia"), você pode manter ou adaptar essa referência
 
 AUTO-AVALIAÇÃO OBRIGATÓRIA:
 
@@ -723,7 +775,9 @@ Por que funciona: Manteve tom acolhedor ("te ajudo", "acolhe"), especificou a do
 
 9. Cada linha da bio deve funcionar sozinha se lida isoladamente.
 
-10. NUNCA invente dados, números, métricas ou conquistas que não estejam presentes na bio atual ou nas legendas fornecidas. Se o perfil não menciona números de clientes, faturamento ou resultados, use elementos qualitativos (método, abordagem, diferencial) em vez de inventar provas numéricas. Credibilidade falsa é pior que nenhuma credibilidade.
+10. NUNCA invente dados, números, métricas, conquistas, nomes de produtos, cursos, métodos, ofertas ou qualquer informação que não esteja EXPLICITAMENTE presente na bio atual ou nas legendas fornecidas. Se uma informação não aparece no texto fonte, ela NÃO EXISTE para você. Use apenas: (a) o que está escrito na bio, (b) temas recorrentes das legendas, (c) o nicho e objetivo informados. Credibilidade falsa é pior que nenhuma credibilidade.
+
+11. A bio sugerida deve ser uma EVOLUÇÃO ESTRATÉGICA da bio atual — não uma bio inventada do zero. Mantenha elementos que já funcionam (tom, identidade, diferenciais reais). Melhore estrutura, clareza, CTA e SEO. A personalidade do perfil deve ser reconhecível na bio nova.
 
 </regras_criticas>`;
 
@@ -733,6 +787,7 @@ Por que funciona: Manteve tom acolhedor ("te ajudo", "acolhe"), especificou a do
 Nicho: ${nicho}.
 Objetivo principal: ${objetivo.toUpperCase()}.
 Bio atual: ${(profile.bio_text || "").slice(0, 500)}
+Link da bio: ${profile.bio_link || "(sem link)"}
 Seguidores: ${profile.followers} | Seguindo: ${profile.following} | Posts: ${profile.posts_count}
 
 Execute o processo completo de duas fases. Retorne analise diagnostica,
@@ -833,9 +888,14 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIBioResult;
-    // Validate and sanitize hallucinated numeric claims
+    // Validate and sanitize hallucinated claims (numeric + textual)
     if (parsed.bio_sugerida) {
       parsed.bio_sugerida = validateBioHallucinations(
+        parsed.bio_sugerida,
+        profile.bio_text,
+        captions,
+      );
+      parsed.bio_sugerida = validateBioTextClaims(
         parsed.bio_sugerida,
         profile.bio_text,
         captions,
