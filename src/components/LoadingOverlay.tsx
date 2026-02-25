@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Instagram, Check, BadgeCheck, Loader2 } from "lucide-react";
+import { ScanSearch, Check, BadgeCheck, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCountUp } from "@/hooks/useCountUp";
 import type { ProfileData } from "@/types/analysis";
@@ -113,12 +113,18 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
           className="absolute inset-0 flex items-center justify-center transition-all duration-700"
           style={{ opacity: showAvatar ? 0 : 1, transform: showAvatar ? "scale(0.8)" : "scale(1)" }}
         >
-          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#6A5CFF] via-[#A855F7] to-[#FF3DAE] flex items-center justify-center scanner-container animate-pulse-glow">
-            <div className="scanner-line-top" />
-            <div className="scanner-line-right" />
-            <div className="scanner-line-bottom" />
-            <div className="scanner-line-left" />
-            <Instagram className="w-12 h-12 text-white relative z-10" />
+          <div className="ai-scanner">
+            {/* Radar pulse waves */}
+            <div className="ai-scanner-pulse" />
+            <div className="ai-scanner-pulse ai-scanner-pulse-delayed" />
+            {/* Outer dashed ring — slow reverse rotation */}
+            <div className="ai-scanner-ring-outer" />
+            {/* Inner gradient ring — forward rotation */}
+            <div className="ai-scanner-ring-inner" />
+            {/* Core icon */}
+            <div className="ai-scanner-core">
+              <ScanSearch className="w-8 h-8 text-white relative z-10" />
+            </div>
           </div>
         </div>
 

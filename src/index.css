@@ -153,86 +153,88 @@
     animation: pulse-glow 2s ease-in-out infinite;
   }
 
-  /* Scanner lines for Instagram icon */
-  @keyframes scanner-top {
-    0% { transform: translateX(-100%); }
-    50% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
-  }
-  @keyframes scanner-right {
-    0% { transform: translateY(-100%); }
-    50% { transform: translateY(100%); }
-    100% { transform: translateY(-100%); }
-  }
-  @keyframes scanner-bottom {
-    0% { transform: translateX(100%); }
-    50% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  @keyframes scanner-left {
-    0% { transform: translateY(100%); }
-    50% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
-  }
+  /* === AI Profile Scanner === */
 
-  .scanner-container {
+  .ai-scanner {
     position: relative;
-    overflow: hidden;
-    border-radius: 1rem;
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .scanner-container::before,
-  .scanner-container::after {
-    content: '';
-    position: absolute;
-    z-index: 1;
+  /* Core — icon container with breathing glow */
+  .ai-scanner-core {
+    position: relative;
+    z-index: 10;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: rgba(106, 92, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: scanner-breathe 2.5s ease-in-out infinite;
   }
 
-  /* Top scanner line */
-  .scanner-line-top {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 50%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #A855F7, #6A5CFF);
-    animation: scanner-top 2.5s ease-in-out infinite;
-    z-index: 1;
+  @keyframes scanner-breathe {
+    0%, 100% {
+      box-shadow: 0 0 12px rgba(106, 92, 255, 0.5);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 24px rgba(168, 85, 247, 0.7), 0 0 48px rgba(255, 61, 174, 0.3);
+      transform: scale(1.05);
+    }
   }
 
-  /* Right scanner line */
-  .scanner-line-right {
+  /* Inner ring — 3/4 arc, rotates forward */
+  .ai-scanner-ring-inner {
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 2px;
-    height: 50%;
-    background: linear-gradient(180deg, transparent, #6A5CFF, #FF3DAE);
-    animation: scanner-right 2.5s ease-in-out infinite 0.6s;
-    z-index: 1;
+    inset: 4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: #6A5CFF;
+    border-right-color: #A855F7;
+    border-bottom-color: #FF3DAE;
+    animation: scanner-spin 3s linear infinite;
   }
 
-  /* Bottom scanner line */
-  .scanner-line-bottom {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 50%;
-    height: 2px;
-    background: linear-gradient(90deg, #FF3DAE, #A855F7, transparent);
-    animation: scanner-bottom 2.5s ease-in-out infinite 1.2s;
-    z-index: 1;
+  @keyframes scanner-spin {
+    to { transform: rotate(360deg); }
   }
 
-  /* Left scanner line */
-  .scanner-line-left {
+  /* Outer ring — dashed, rotates reverse */
+  .ai-scanner-ring-outer {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 2px;
-    height: 50%;
-    background: linear-gradient(180deg, #A855F7, #FF3DAE, transparent);
-    animation: scanner-left 2.5s ease-in-out infinite 1.8s;
-    z-index: 1;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(168, 85, 247, 0.3);
+    animation: scanner-spin 8s linear infinite reverse;
+  }
+
+  /* Radar pulse waves — expanding circles */
+  @keyframes scanner-pulse-expand {
+    0% {
+      transform: scale(0.5);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.8);
+      opacity: 0;
+    }
+  }
+
+  .ai-scanner-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(106, 92, 255, 0.4);
+    animation: scanner-pulse-expand 3s ease-out infinite;
+  }
+
+  .ai-scanner-pulse-delayed {
+    animation-delay: 1.5s;
   }
 }
