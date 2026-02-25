@@ -180,6 +180,37 @@ function validateBioTextClaims(
   return result.trim();
 }
 
+function enforceBioQuality(bio: string, objetivo: string): string {
+  let lines = bio.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  // CTA indicators — directional emojis or action words in last line
+  const ctaPattern = /👇|↓|👉|➡|link|bio|clique|acesse|saiba|confira|descubra|comece|agende|entre|fale/i;
+  const hasCTA = lines.length > 0 && ctaPattern.test(lines[lines.length - 1]);
+
+  if (!hasCTA) {
+    const ctaMap: Record<string, string> = {
+      crescer: "Conteúdo que transforma 👇",
+      engajar: "Confira o conteúdo 👇",
+      vender: "Saiba mais 👇",
+      autoridade: "Descubra mais 👇",
+      consistencia: "Acompanhe a jornada 👇",
+    };
+    lines.push(ctaMap[objetivo] || "Saiba mais 👇");
+  }
+
+  // Ensure exactly 3 lines: keep first, merge middle, keep last (CTA)
+  if (lines.length > 3) {
+    const first = lines[0];
+    const last = lines[lines.length - 1];
+    const middle = lines.slice(1, -1).join(" | ");
+    lines = [first, middle, last];
+  }
+
+  let result = lines.join("\n");
+  if (result.length > 149) result = result.slice(0, 149);
+  return result;
+}
+
 // ── Data helpers ─────────────────────────────────────────────
 
 function normalizeProfile(raw: ApifyProfile) {
@@ -793,6 +824,8 @@ Por que funciona: Manteve tom acolhedor ("te ajudo", "acolhe"), especificou a do
 
 11. A bio sugerida deve ser uma EVOLUÇÃO ESTRATÉGICA da bio atual — não uma bio inventada do zero. Mantenha elementos que já funcionam (tom, identidade, diferenciais reais). Melhore estrutura, clareza, CTA e SEO. A personalidade do perfil deve ser reconhecível na bio nova.
 
+12. TODA bio sugerida (principal e variações) DEVE obrigatoriamente conter CTA na linha 3 com emoji direcional (👇, ↓ ou 👉). Bio sem CTA é bio incompleta e será rejeitada. O CTA deve ser compatível com o objetivo do perfil.
+
 </regras_criticas>`;
 
   const legendas = captions.length > 0 ? `\n\nLegendas recentes:\n${captions.map(c => `- "${c}"`).join("\n")}` : "";
@@ -918,16 +951,16 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
         captions,
       );
     }
-    // Enforce 149 char limit
-    if (parsed.bio_sugerida && parsed.bio_sugerida.length > 149) {
-      parsed.bio_sugerida = parsed.bio_sugerida.slice(0, 149);
+    // Enforce structural quality (3 lines + CTA) and 149 char limit
+    if (parsed.bio_sugerida) {
+      parsed.bio_sugerida = enforceBioQuality(parsed.bio_sugerida, objetivo);
     }
     // Validate and sanitize bio variations (same rules as main bio)
     for (const key of ["bio_variacao_autoridade", "bio_variacao_conexao", "bio_variacao_acao"] as const) {
       if (parsed[key]) {
         parsed[key] = validateBioHallucinations(parsed[key], profile.bio_text, captions);
         parsed[key] = validateBioTextClaims(parsed[key], profile.bio_text, captions);
-        if (parsed[key].length > 149) parsed[key] = parsed[key].slice(0, 149);
+        parsed[key] = enforceBioQuality(parsed[key], objetivo);
       }
     }
     return parsed;
