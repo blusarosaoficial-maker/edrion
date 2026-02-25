@@ -10,27 +10,27 @@ const HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
 
 const NICHO_BIOS: Record<string, { suggested: string; rationale: string; cta: string }> = {
   fitness: {
-    suggested: "Transformo corpos em 12 semanas com treino e dieta personalizados. Alunos transformados. ⬇️ Comece agora",
+    suggested: "Transformo corpos em 12 semanas\nTreino + dieta personalizados\n⬇️ Comece agora",
     rationale: "Bio genérica sem proposta de valor clara nem prova social",
     cta: "Agende sua avaliação gratuita",
   },
   marketing: {
-    suggested: "Ajudo negócios a faturar 6 dígitos com tráfego pago. Resultados em 30 dias ou devolvemos. ⬇️",
+    suggested: "Ajudo negócios a faturar com tráfego pago\nResultados em 30 dias ou devolvemos\n⬇️ Solicite diagnóstico",
     rationale: "Falta especificidade no serviço e garantia para o cliente",
     cta: "Solicite seu diagnóstico gratuito",
   },
   gastronomia: {
-    suggested: "Chef de cozinha com receitas práticas em até 15 min. Receitas testadas na prática. ⬇️ Cardápio semanal grátis",
+    suggested: "Receitas práticas em até 15 min\nTestadas na prática por chef\n⬇️ Cardápio semanal grátis",
     rationale: "Bio não comunica expertise nem diferencial",
     cta: "Baixe o cardápio da semana",
   },
   moda: {
-    suggested: "Consultora de imagem: vista-se com intenção e destaque-se sem gastar mais. ⬇️ Quiz de estilo grátis",
+    suggested: "Vista-se com intenção e destaque-se\nConsultora de imagem pessoal\n⬇️ Quiz de estilo grátis",
     rationale: "Bio em inglês perde conexão com público brasileiro",
     cta: "Descubra seu estilo em 2 minutos",
   },
   default: {
-    suggested: "Especialista em [seu nicho] ajudando [público] a alcançar [resultado]. ⬇️ Entre em contato",
+    suggested: "Especialista em [seu nicho]\nAjudando [público] a [resultado]\n⬇️ Entre em contato",
     rationale: "Bio vaga sem proposta de valor específica",
     cta: "Fale comigo no direct",
   },
@@ -142,7 +142,7 @@ function validateBioHallucinations(
     sanitized = sanitized.replace(claimPattern, " ");
   }
 
-  sanitized = sanitized.replace(/\s{2,}/g, " ").trim();
+  sanitized = sanitized.replace(/[^\S\n]{2,}/g, " ").replace(/\n{3,}/g, "\n").trim();
 
   // If sanitization made bio too short, keep original
   if (sanitized.length < 30) return bioSugerida;
@@ -730,7 +730,7 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
                   pontos_fortes: { type: "string", description: "O que está funcionando bem na bio atual" },
                   pontos_de_melhoria: { type: "string", description: "O que precisa melhorar na bio atual" },
                   sugestao_keyword_nome: { type: "string", description: "Sugestão de keyword para o campo Nome do Instagram (ex: 'Micha | Marketing Digital Lo-Fi')" },
-                  bio_sugerida: { type: "string", description: "Nova bio otimizada com no máximo 149 caracteres, em 3 linhas estratégicas", maxLength: 149 },
+                  bio_sugerida: { type: "string", description: "Nova bio otimizada com no máximo 149 caracteres. DEVE conter exatamente 2 quebras de linha (\\n) para criar 3 linhas estratégicas. Formato: 'Linha1\\nLinha2\\nLinha3'. Cada \\n conta como 1 caractere no limite de 149.", maxLength: 149 },
                   rubrica_bio_nova: {
                     type: "object",
                     properties: {
