@@ -299,10 +299,32 @@ export default function PostAnalysisModal({ isOpen, onClose, post, variant }: Po
                 </div>
               </>
             ) : (
-              <div className="p-4 rounded-lg bg-secondary border border-border text-center">
-                <p className="text-sm text-muted-foreground">
-                  Analise detalhada nao disponivel para este resultado.
-                </p>
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-secondary border border-border text-center space-y-2">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 mx-auto" />
+                  <p className="text-sm font-medium text-foreground">
+                    Analise de IA indisponivel
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    A analise detalhada nao pode ser gerada neste momento.
+                    Isso pode ocorrer por instabilidade temporaria do servico de IA.
+                    Tente uma nova analise em alguns minutos.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Resumo Rapido
+                  </p>
+                  <div className={`p-3 rounded-lg border ${isTop ? "bg-primary/5 border-primary/10" : "bg-accent/10 border-accent/20"}`}>
+                    <p className="text-sm text-foreground/80">
+                      {isTop
+                        ? `Este foi o post com melhor engajamento entre os analisados, com taxa de ${post.metrics.engagement_score.toFixed(4)}.${post.metrics.views > 0 ? ` O conteudo alcancou ${formatNum(post.metrics.views)} visualizacoes.` : ` Recebeu ${formatNum(post.metrics.likes)} curtidas.`}`
+                        : `Este post teve o menor engajamento entre os analisados, com taxa de ${post.metrics.engagement_score.toFixed(4)}.${post.post_type === "Image" ? " Considere testar formatos de video/reel para ampliar o alcance." : ""}`
+                      }
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

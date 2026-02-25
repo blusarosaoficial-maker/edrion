@@ -10,7 +10,7 @@ const HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
 
 const NICHO_BIOS: Record<string, { suggested: string; rationale: string; cta: string }> = {
   fitness: {
-    suggested: "Transformo corpos em 12 semanas com treino e dieta personalizados. +500 alunos. ⬇️ Comece agora",
+    suggested: "Transformo corpos em 12 semanas com treino e dieta personalizados. Alunos transformados. ⬇️ Comece agora",
     rationale: "Bio genérica sem proposta de valor clara nem prova social",
     cta: "Agende sua avaliação gratuita",
   },
@@ -20,7 +20,7 @@ const NICHO_BIOS: Record<string, { suggested: string; rationale: string; cta: st
     cta: "Solicite seu diagnóstico gratuito",
   },
   gastronomia: {
-    suggested: "Chef de cozinha com receitas práticas em até 15 min. +200 receitas testadas. ⬇️ Cardápio semanal grátis",
+    suggested: "Chef de cozinha com receitas práticas em até 15 min. Receitas testadas na prática. ⬇️ Cardápio semanal grátis",
     rationale: "Bio não comunica expertise nem diferencial",
     cta: "Baixe o cardápio da semana",
   },
@@ -106,6 +106,50 @@ interface ApifyProfile {
   isPrivate?: boolean;
 }
 
+// ── Anti-hallucination validator ─────────────────────────────
+
+function validateBioHallucinations(
+  bioSugerida: string,
+  originalBio: string,
+  captions: string[],
+): string {
+  // Regex to find numerical claims: +500, 140 empresas, R$1M, 6 dígitos, etc.
+  const numericClaimRegex = /(?:\+?\d[\d.,]*\s*(?:k|mil|milhões?|milhoes?|M|bi|empresas?|clientes?|alunos?|pacientes?|protocolos?|semanas?|dias?|meses?|anos?|dígitos?|digitos?|projetos?|pessoas?|%|reais?))|(?:R\$\s*[\d.,]+[kKmM]?)|(?:mais\s+de\s+\d[\d.,]*)|(?:\d[\d.,]*\s*(?:em\s+faturamento|de\s+faturamento))/gi;
+
+  const claims = bioSugerida.match(numericClaimRegex);
+  if (!claims || claims.length === 0) {
+    return bioSugerida; // No numerical claims, safe
+  }
+
+  // Build searchable corpus from source data
+  const corpus = [originalBio, ...captions].join(" ").toLowerCase();
+
+  let sanitized = bioSugerida;
+  for (const claim of claims) {
+    const numberMatch = claim.match(/\d[\d.,]*/);
+    if (!numberMatch) continue;
+    const num = numberMatch[0];
+
+    // Check if this number exists in source data
+    if (corpus.includes(num)) continue;
+
+    // Hallucinated claim — remove the numeric phrase
+    const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const claimPattern = new RegExp(
+      `\\s*(?:por\\s+)?(?:mais\\s+de\\s+)?\\+?${escaped}[\\d.,]*\\s*(?:k|mil|milhões?|milhoes?|M|bi|empresas?|clientes?|alunos?|pacientes?|protocolos?|semanas?|dias?|meses?|anos?|dígitos?|digitos?|projetos?|pessoas?|%|reais?)?\\s*(?:em\\s+\\w+)?`,
+      "gi",
+    );
+    sanitized = sanitized.replace(claimPattern, " ");
+  }
+
+  sanitized = sanitized.replace(/\s{2,}/g, " ").trim();
+
+  // If sanitization made bio too short, keep original
+  if (sanitized.length < 30) return bioSugerida;
+
+  return sanitized;
+}
+
 // ── Data helpers ─────────────────────────────────────────────
 
 function normalizeProfile(raw: ApifyProfile) {
@@ -153,6 +197,39 @@ async function proxyAvatar(
   }
 }
 
+async function proxyPostThumbnail(
+  handle: string,
+  postId: string,
+  originalUrl: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<string> {
+  if (!originalUrl) return originalUrl;
+  try {
+    const res = await fetch(originalUrl);
+    if (!res.ok) throw new Error(`fetch thumbnail ${res.status}`);
+    const blob = await res.blob();
+    const arrayBuf = await blob.arrayBuffer();
+    const filePath = `${handle}/${postId}.jpg`;
+
+    await supabaseAdmin.storage.from("post-thumbnails").remove([filePath]);
+
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from("post-thumbnails")
+      .upload(filePath, new Uint8Array(arrayBuf), {
+        contentType: blob.type || "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadErr) throw uploadErr;
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    return `${supabaseUrl}/storage/v1/object/public/post-thumbnails/${filePath}`;
+  } catch (err) {
+    console.warn("proxyPostThumbnail fallback to original:", (err as Error).message);
+    return originalUrl;
+  }
+}
+
 function normalizePosts(posts: ApifyPost[], followers: number) {
   const normalized = posts.slice(0, 9).map((p, i) => {
     const likes = p.likesCount || 0;
@@ -177,7 +254,7 @@ function normalizePosts(posts: ApifyPost[], followers: number) {
       permalink: p.url || (p.shortCode ? `https://instagram.com/p/${p.shortCode}` : ""),
       thumb_url: p.displayUrl || "",
       caption_preview: (p.caption || "").slice(0, 120),
-      full_caption: (p.caption || "").slice(0, 500),
+      full_caption: (p.caption || "").slice(0, 2200),
       post_type: p.type || (p.productType === "clips" ? "Video" : "Image"),
       hashtags: p.hashtags || [],
       mentions: p.mentions || [],
@@ -513,13 +590,13 @@ Nova bio:
 
 "Nutrição estratégica p/ atletas que querem performance máxima
 
-+500 protocolos personalizados | Método NutriPeak
+Protocolos personalizados | Método NutriPeak
 
 Agende sua avaliação 👇"
 
 (148 caracteres)
 
-Por que funciona: Transformação clara, público específico, prova numérica, método proprietário, CTA com emoji direcional.
+Por que funciona: Transformação clara, público específico, método proprietário, CTA com emoji direcional.
 
 EXEMPLO 2 — Marketing Digital:
 
@@ -533,13 +610,13 @@ Nova bio:
 
 "Loto a agenda de negócios locais com Instagram estratégico
 
-Método testado em +80 empresas de SP
+Método testado com negócios locais de SP
 
 Diagnóstico grátis no link 👇"
 
 (128 caracteres)
 
-Por que funciona: Resultado concreto (lotar agenda), público (negócios locais), prova (+80 empresas), CTA com isca (diagnóstico grátis).
+Por que funciona: Resultado concreto (lotar agenda), público (negócios locais), método testado como prova social, CTA com isca (diagnóstico grátis).
 
 EXEMPLO 3 — Psicóloga (tom acolhedor):
 
@@ -693,6 +770,14 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIBioResult;
+    // Validate and sanitize hallucinated numeric claims
+    if (parsed.bio_sugerida) {
+      parsed.bio_sugerida = validateBioHallucinations(
+        parsed.bio_sugerida,
+        profile.bio_text,
+        captions,
+      );
+    }
     // Enforce 149 char limit
     if (parsed.bio_sugerida && parsed.bio_sugerida.length > 149) {
       parsed.bio_sugerida = parsed.bio_sugerida.slice(0, 149);
@@ -879,7 +964,7 @@ Execute a analise completa para ambos os posts.`;
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 40000);
+  const timeout = setTimeout(() => controller.abort(), 55000);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -918,7 +1003,8 @@ Execute a analise completa para ambos os posts.`;
     });
 
     if (!res.ok) {
-      console.error("OpenAI Posts API error:", res.status);
+      const errorText = await res.text();
+      console.error("OpenAI Posts API error:", res.status, errorText);
       return null;
     }
 
@@ -946,6 +1032,7 @@ async function buildFreeResult(
   nichoKey: string,
   nicho: string,
   objetivo: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
 ) {
   const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
 
@@ -1008,6 +1095,14 @@ async function buildFreeResult(
   const topPostData = { ...posts[topIdx], analysis: postsAiResult?.top_post_analysis || null };
   const worstPostData = { ...posts[worstIdx], analysis: postsAiResult?.worst_post_analysis || null };
 
+  // Proxy thumbnails for top and worst posts (parallel)
+  const [topThumb, worstThumb] = await Promise.all([
+    proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin),
+    proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin),
+  ]);
+  topPostData.thumb_url = topThumb;
+  worstPostData.thumb_url = worstThumb;
+
   return {
     profile,
     deliverables: {
@@ -1027,9 +1122,10 @@ function buildPremiumResult(
   nichoKey: string,
   nicho: string,
   objetivo: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
 ) {
   // Premium also gets AI bio analysis
-  return buildFreeResult(profile, posts, nichoKey, nicho, objetivo).then((freeResult) => ({
+  return buildFreeResult(profile, posts, nichoKey, nicho, objetivo, supabaseAdmin).then((freeResult) => ({
     ...freeResult,
     deliverables: {
       ...freeResult.deliverables,
@@ -1150,7 +1246,7 @@ Deno.serve(async (req) => {
 
     // ── [5] If NOT authenticated → return pending_result ─────
     if (!userId) {
-      const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!);
+      const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
       return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
     }
 
@@ -1180,8 +1276,8 @@ Deno.serve(async (req) => {
 
     // ── [7] Build result ─────────────────────────────────────
     const result = plan === "premium"
-      ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!)
-      : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!);
+      ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin)
+      : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
 
     // ── [8] Persist ──────────────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin

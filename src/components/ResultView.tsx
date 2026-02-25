@@ -200,7 +200,7 @@ function PostCard({
   const score = post.analysis?.nota_geral;
 
   return (
-    <section className={`rounded-xl border bg-card overflow-hidden ${accentClass} cursor-pointer hover:border-primary/50 transition-colors`} onClick={onClickAnalysis}>
+    <section className={`rounded-xl border bg-card overflow-hidden ${accentClass} cursor-pointer hover:border-primary/50 hover:scale-[1.01] transition-all duration-200 group`} onClick={onClickAnalysis}>
       <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
         {icon}
         <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -216,12 +216,19 @@ function PostCard({
         )}
       </div>
       <div className="p-5 space-y-4">
-        <img
-          src={post.thumb_url}
-          alt={post.caption_preview}
-          className="w-full aspect-square rounded-lg object-cover bg-muted"
-          loading="lazy"
-        />
+        <div className="relative overflow-hidden rounded-lg">
+          <img
+            src={post.thumb_url}
+            alt={post.caption_preview}
+            className="w-full aspect-square rounded-lg object-cover bg-muted transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="text-white text-xs font-medium backdrop-blur-sm px-2 py-0.5 rounded">
+              Toque para ver analise
+            </span>
+          </div>
+        </div>
         <p className="text-sm text-foreground line-clamp-2">{post.caption_preview}</p>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <MetricItem icon={<ThumbsUp className="w-3.5 h-3.5" />} label="Likes" value={formatNum(post.metrics.likes)} />
@@ -241,11 +248,9 @@ function PostCard({
           >
             Ver no Instagram <ExternalLink className="w-3 h-3" />
           </a>
-          {post.analysis && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Search className="w-3 h-3" /> Ver analise
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:text-primary/80 transition-colors">
+            <Search className="w-3 h-3" /> Ver Analise Completa &rarr;
+          </span>
         </div>
       </div>
     </section>
