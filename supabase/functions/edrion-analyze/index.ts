@@ -488,6 +488,9 @@ interface AIBioResult {
   rubrica_bio_nova: AIBioRubric;
   justificativa_bio: string;
   cta_sugerido: string;
+  bio_variacao_autoridade: string;
+  bio_variacao_conexao: string;
+  bio_variacao_acao: string;
 }
 
 async function analyzeBioWithAI(
@@ -689,6 +692,17 @@ AUTO-AVALIAÇÃO OBRIGATÓRIA:
 
 Após gerar a nova bio, pontue-a na mesma rubrica de 6 critérios (1-5). Se qualquer critério ficar abaixo de 4, revise internamente antes de apresentar. A bio final apresentada deve ter pontuação mínima de 4 em todos os critérios.
 
+TRÊS VARIAÇÕES ESTRATÉGICAS:
+
+Além da bio principal (que é a evolução direta da bio atual), gere 3 variações com ângulos estratégicos diferentes. Cada variação deve:
+- Respeitar as mesmas regras (max 149 chars, 3 linhas, sem alucinações)
+- Usar APENAS informações presentes na bio atual e legendas
+- Ter um ângulo estratégico distinto:
+
+Variação 1 — AUTORIDADE: Lidera com credenciais, expertise e prova social. Foco em "por que confiar nessa pessoa".
+Variação 2 — CONEXÃO: Lidera com personalidade, identificação e empatia. Foco em "essa pessoa me entende".
+Variação 3 — AÇÃO: Lidera com proposta de valor e CTA direto. Foco em "o que essa pessoa pode fazer por mim".
+
 </fase_2_geracao_estrategica>
 
 <exemplos_referencia>
@@ -863,8 +877,11 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
                   },
                   justificativa_bio: { type: "string", description: "Explicação de por que a nova bio é melhor que a atual, conectando com o objetivo do perfil" },
                   cta_sugerido: { type: "string", description: "CTA alternativo alinhado ao objetivo principal do perfil" },
+                  bio_variacao_autoridade: { type: "string", description: "Bio alternativa: foco em autoridade e credenciais (max 149 chars, 3 linhas)" },
+                  bio_variacao_conexao: { type: "string", description: "Bio alternativa: foco em conexao e personalidade (max 149 chars, 3 linhas)" },
+                  bio_variacao_acao: { type: "string", description: "Bio alternativa: foco em proposta de valor e CTA (max 149 chars, 3 linhas)" },
                 },
-                required: ["analise_diagnostica", "rubrica_bio_atual", "nota_geral", "pontos_fortes", "pontos_de_melhoria", "sugestao_keyword_nome", "bio_sugerida", "rubrica_bio_nova", "justificativa_bio", "cta_sugerido"],
+                required: ["analise_diagnostica", "rubrica_bio_atual", "nota_geral", "pontos_fortes", "pontos_de_melhoria", "sugestao_keyword_nome", "bio_sugerida", "rubrica_bio_nova", "justificativa_bio", "cta_sugerido", "bio_variacao_autoridade", "bio_variacao_conexao", "bio_variacao_acao"],
                 additionalProperties: false,
               },
             },
@@ -904,6 +921,14 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
     // Enforce 149 char limit
     if (parsed.bio_sugerida && parsed.bio_sugerida.length > 149) {
       parsed.bio_sugerida = parsed.bio_sugerida.slice(0, 149);
+    }
+    // Validate and sanitize bio variations (same rules as main bio)
+    for (const key of ["bio_variacao_autoridade", "bio_variacao_conexao", "bio_variacao_acao"] as const) {
+      if (parsed[key]) {
+        parsed[key] = validateBioHallucinations(parsed[key], profile.bio_text, captions);
+        parsed[key] = validateBioTextClaims(parsed[key], profile.bio_text, captions);
+        if (parsed[key].length > 149) parsed[key] = parsed[key].slice(0, 149);
+      }
     }
     return parsed;
   } catch (err) {
@@ -1226,6 +1251,11 @@ async function buildFreeResult(
         improvements: aiResult.pontos_de_melhoria,
         name_keyword: aiResult.sugestao_keyword_nome,
         detected_tone: aiResult.analise_diagnostica.tom_de_voz,
+        variations: aiResult.bio_variacao_autoridade ? [
+          { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
+          { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em personalidade e identificação" },
+          { label: "Ação", bio: aiResult.bio_variacao_acao, rationale: "Foco em proposta de valor e CTA direto" },
+        ] : undefined,
       }
     : {
         current_bio: profile.bio_text,
@@ -1282,7 +1312,6 @@ function buildPremiumResult(
     ...freeResult,
     deliverables: {
       ...freeResult.deliverables,
-      bio_variations: [],
       posts_analysis: posts,
       competitors_analysis: [],
       strategic_score: null,

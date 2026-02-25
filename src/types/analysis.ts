@@ -77,6 +77,12 @@ export interface BioDiagnostic {
   tom_de_voz: string;
 }
 
+export interface BioVariation {
+  label: string;
+  bio: string;
+  rationale: string;
+}
+
 export interface BioSuggestion {
   current_bio: string;
   suggested_bio: string;
@@ -91,6 +97,7 @@ export interface BioSuggestion {
   improvements?: string;
   name_keyword?: string;
   detected_tone?: string;
+  variations?: BioVariation[];
 }
 
 export interface NextPostSuggestion {
@@ -108,7 +115,6 @@ export interface AnalysisResult {
     top_post: PostData;
     worst_post: PostData;
     next_post_suggestion?: NextPostSuggestion;
-    bio_variations?: string[];
     posts_analysis?: PostData[];
     competitors_analysis?: unknown[];
     strategic_score?: unknown;

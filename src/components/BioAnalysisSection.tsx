@@ -217,6 +217,25 @@ export default function BioAnalysisSection({ bio }: Props) {
           </div>
         </div>
 
+        {/* Bio Variations */}
+        {bio.variations && bio.variations.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Variações Estratégicas
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {bio.variations.map((v, i) => (
+                <div key={i} className="p-3 rounded-lg bg-secondary border border-border space-y-2">
+                  <span className="text-xs font-bold text-primary">{v.label}</span>
+                  <p className="text-sm text-foreground whitespace-pre-line">{v.bio}</p>
+                  <p className="text-xs text-muted-foreground italic">{v.rationale}</p>
+                  <p className="text-xs text-muted-foreground text-right">{v.bio.length}/149 chars</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Rubric - Bio Nova */}
         {hasAI && bio.criteria_new && (
           <div className="space-y-2">
