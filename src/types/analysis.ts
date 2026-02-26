@@ -110,6 +110,7 @@ export interface NextPostSuggestion {
 
 export interface ScriptScene {
   numero: number;
+  titulo_cena?: string;
   instrucao: string;
   duracao_estimada: string;
 }

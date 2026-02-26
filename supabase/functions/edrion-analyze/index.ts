@@ -1219,6 +1219,7 @@ Execute a analise completa para ambos os posts.`;
 
 interface AIScriptScene {
   numero: number;
+  titulo_cena: string;
   instrucao: string;
   duracao_estimada: string;
 }
@@ -1269,17 +1270,36 @@ FRAMEWORKS DISPONÍVEIS (use TODOS ao longo da semana, sem repetir):
 </contexto_viral>
 
 <regras_roteiro>
-1. CADA roteiro deve ter: hook (0-3s), 3-5 cenas com instrucoes claras de gravacao, CTA final
-2. Instrucoes de cena devem ser ESPECIFICAS e GRAVAVEIS: "Olhe para a camera e diga X", "Mostre Y na tela", "Corte para B-roll de Z"
-3. Os 7 dias DEVEM cobrir angulos diferentes: educativo, entretenimento, autoridade, bastidores, transformacao, comunidade, venda soft
-4. Pelo menos 5 roteiros devem ser formato Reel e pelo menos 1 carrossel
-5. Hooks devem ser provocativos, criar curiosidade ou identificacao IMEDIATA
-6. CTAs devem variar: "comente X", "salve para depois", "envie para alguem", "link na bio"
-7. Legendas sugeridas devem ter storytelling, valor e CTA escrito
-8. Hashtags: 5-10 por post, mix de nicho especifico + descoberta
-9. NUNCA invente dados, numeros ou cases que nao existam no perfil
-10. Tom deve ser compativel com o perfil analisado
-11. Cada roteiro deve ser autoavaliado com score_interno de 1-10
+1. CADA roteiro deve ter: hook (0-3s), 3-5 cenas DETALHADAS, CTA final
+2. Os 7 dias DEVEM cobrir angulos diferentes: educativo, entretenimento, autoridade, bastidores, transformacao, comunidade, venda soft
+3. Pelo menos 5 roteiros devem ser formato Reel e pelo menos 1 carrossel
+4. Hooks devem ser provocativos, criar curiosidade ou identificacao IMEDIATA
+5. CTAs devem variar: "comente X", "salve para depois", "envie para alguem", "link na bio"
+6. Legendas sugeridas devem ter storytelling, valor e CTA escrito
+7. Hashtags: 5-10 por post, mix de nicho especifico + descoberta
+8. NUNCA invente dados, numeros ou cases que nao existam no perfil
+9. Tom deve ser compativel com o perfil analisado
+10. Cada roteiro deve ser autoavaliado com score_interno de 1-10
+
+REGRA CRITICA — FORMATO DAS CENAS:
+Cada cena DEVE ser um ROTEIRO DETALHADO pronto para gravar, NAO uma instrucao vaga.
+
+ERRADO (vago demais):
+- "Mostre o erro comum na execucao"
+- "Explique o impacto nos resultados"
+- "Apresente o problema"
+
+CORRETO (roteiro gravavel):
+- 'Cena 1 - Inicio Impactante\nVoce (com expressao de surpresa): "Serio que voce ainda faz isso? Para agora e me ouve..."\n(Pausa dramatica, olha fixo pra camera)'
+- 'Cena 2 - Quebra de Objecao\nVoce: "Eu sei o que voce ta pensando: mas fulano faz assim e da certo. So que olha o que acontece quando..."\n(Corte rapido: mostre exemplo na tela)\nTexto na tela: "O que ninguem te conta"'
+- 'Cena 3 - Prova e Solucao\nVoce (sorrindo, confiante): "Agora faz assim: pega seu celular, abre o app e..."\n(Mostre a tela do celular com o passo a passo)'
+
+Cada instrucao de cena deve conter:
+- titulo_cena: nome curto da cena (ex: "Inicio Impactante", "Quebra de Objecao", "Prova Social", "Convite Direto")
+- DIALOGOS LITERAIS prontos pra falar — entre aspas, como um script de cinema
+- EXPRESSOES E ACOES entre parenteses: (com cara de surpresa), (apontando para camera), (sorrindo)
+- INDICACOES DE PRODUCAO quando aplicavel: "Corte rapido para...", "Texto na tela: ...", "B-roll de..."
+- A pessoa deve poder GRAVAR imediatamente lendo o roteiro, sem precisar pensar no que dizer
 
 DISTRIBUICAO SEMANAL RECOMENDADA:
 - Segunda: Conteudo educativo (autoridade)
@@ -1326,10 +1346,11 @@ const weeklyContentSchema = {
               type: "object" as const,
               properties: {
                 numero: { type: "number" as const },
-                instrucao: { type: "string" as const, description: "Instrucao detalhada e gravavel para esta cena" },
+                titulo_cena: { type: "string" as const, description: "Nome curto da cena: Inicio Impactante, Quebra de Objecao, Prova Social, Convite Direto, etc." },
+                instrucao: { type: "string" as const, description: "Roteiro DETALHADO: dialogos literais entre aspas, expressoes/acoes entre parenteses, indicacoes de producao. A pessoa deve poder gravar lendo este texto." },
                 duracao_estimada: { type: "string" as const },
               },
-              required: ["numero", "instrucao", "duracao_estimada"],
+              required: ["numero", "titulo_cena", "instrucao", "duracao_estimada"],
             },
           },
           cta: { type: "string" as const, description: "Call-to-action final" },

@@ -227,8 +227,13 @@ function DayCard({
                     <span className="text-[10px] font-bold">{cena.numero}</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-foreground/90">{cena.instrucao}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {cena.titulo_cena && (
+                      <p className={`text-xs font-bold ${accentClass} mb-1`}>
+                        {cena.titulo_cena}
+                      </p>
+                    )}
+                    <p className="text-sm text-foreground/90 whitespace-pre-line">{cena.instrucao}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
                       {cena.duracao_estimada}
                     </p>
                   </div>
