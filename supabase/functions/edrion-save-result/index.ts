@@ -67,12 +67,27 @@ Deno.serve(async (req) => {
     // ── [3] Check cache (handle + user_id) ───────────────────
     const { data: cached } = await supabaseAdmin
       .from("analysis_result")
-      .select("id")
+      .select("id, result_json")
       .eq("handle", cleanHandle)
       .eq("user_id", userId)
       .limit(1);
 
     if (cached && cached.length > 0) {
+      // If cached result is missing weekly_content_plan but new result has it, update
+      const cachedJson = cached[0].result_json as Record<string, unknown> | null;
+      const cachedDeliverables = cachedJson?.deliverables as Record<string, unknown> | undefined;
+      const newResult = result as Record<string, unknown>;
+      const newDeliverables = newResult?.deliverables as Record<string, unknown> | undefined;
+
+      if (!cachedDeliverables?.weekly_content_plan && newDeliverables?.weekly_content_plan) {
+        // Update stale cache with new result that includes weekly_content_plan
+        await supabaseAdmin
+          .from("analysis_result")
+          .update({ result_json: result })
+          .eq("id", cached[0].id);
+        return json({ success: true, message: "Updated with weekly content" }, 200);
+      }
+
       return json({ success: true, message: "Already saved" }, 200);
     }
 

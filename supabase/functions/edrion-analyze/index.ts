@@ -1377,7 +1377,11 @@ async function generateWeeklyContent(
   worstPostInsights: string,
 ): Promise<AIWeeklyContentResult | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("generateWeeklyContent: OPENAI_API_KEY not set, skipping");
+    return null;
+  }
+  console.log(`generateWeeklyContent: starting for @${profile.handle}, nicho=${nicho}`);
 
   const legendas = captions.length > 0
     ? captions.map(c => `- "${c.slice(0, 300)}"`).join("\n")
@@ -1445,7 +1449,9 @@ Gere 7 roteiros usando frameworks DIFERENTES, com auto-avaliacao interna (score_
       return null;
     }
 
-    return JSON.parse(toolCall.function.arguments) as AIWeeklyContentResult;
+    const parsed = JSON.parse(toolCall.function.arguments) as AIWeeklyContentResult;
+    console.log(`generateWeeklyContent: success, ${parsed.roteiros?.length || 0} scripts generated`);
+    return parsed;
   } catch (err) {
     console.error("generateWeeklyContent error:", (err as Error).message);
     return null;
@@ -1597,6 +1603,7 @@ async function buildFreeResult(
   const weeklyPlan = weeklyContentResult
     ? applyWeeklyQualityGate(weeklyContentResult)
     : null;
+  console.log(`buildFreeResult: weeklyPlan=${weeklyPlan ? `OK (${weeklyPlan.scripts.length} scripts)` : "NULL"}`);
 
   return {
     profile,
@@ -1718,7 +1725,19 @@ Deno.serve(async (req) => {
         .limit(1);
 
       if (cachedResults && cachedResults.length > 0) {
-        return json({ success: true, data: cachedResults[0].result_json }, 200);
+        const cached = cachedResults[0].result_json as Record<string, unknown>;
+        const deliverables = cached?.deliverables as Record<string, unknown> | undefined;
+        // If cache is missing weekly_content_plan, delete stale cache and re-analyze
+        if (deliverables && !deliverables.weekly_content_plan) {
+          console.log(`Cache stale for ${cleanHandle} (missing weekly_content_plan), re-analyzing...`);
+          await supabaseAdmin
+            .from("analysis_result")
+            .delete()
+            .eq("handle", cleanHandle)
+            .eq("user_id", userId);
+        } else {
+          return json({ success: true, data: cached }, 200);
+        }
       }
     }
 
