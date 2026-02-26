@@ -1407,7 +1407,7 @@ ${legendas}
 Gere 7 roteiros usando frameworks DIFERENTES, com auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 50000);
+  const timeout = setTimeout(() => controller.abort(), 90000);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1445,7 +1445,7 @@ Gere 7 roteiros usando frameworks DIFERENTES, com auto-avaliacao interna (score_
     const data = await res.json();
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
-      console.error("OpenAI Weekly: no tool call");
+      console.error("OpenAI Weekly: no tool call. Response:", JSON.stringify(data?.choices?.[0]?.message || {}).slice(0, 500));
       return null;
     }
 
@@ -1474,9 +1474,9 @@ function applyWeeklyQualityGate(
     cenas: r.cenas,
     cta: r.cta,
     legenda_sugerida: r.legenda_sugerida,
-    hashtags_sugeridas: r.hashtags_sugeridas.map(
-      (h) => h.startsWith("#") ? h : `#${h}`
-    ),
+    hashtags_sugeridas: (r.hashtags_sugeridas || [])
+      .filter((h): h is string => typeof h === "string" && h.length > 0)
+      .map((h) => h.startsWith("#") ? h : `#${h}`),
   }));
 
   return {
@@ -1590,12 +1590,18 @@ async function buildFreeResult(
     ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
     : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
 
-  // Phase 3: Weekly content + thumbnail proxying in parallel
-  const [weeklyContentResult, topThumb, worstThumb] = await Promise.all([
-    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights),
-    proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin),
-    proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin),
+  // Phase 3: Weekly content + thumbnail proxying in parallel (isolated so failures don't cascade)
+  const [weeklyContentResult, thumbnails] = await Promise.all([
+    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
+      .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
+    Promise.all([
+      proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
+        .catch(() => topPostData.thumb_url),
+      proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
+        .catch(() => worstPostData.thumb_url),
+    ]),
   ]);
+  const [topThumb, worstThumb] = thumbnails;
   topPostData.thumb_url = topThumb;
   worstPostData.thumb_url = worstThumb;
 
