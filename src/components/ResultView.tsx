@@ -5,11 +5,9 @@ import {
   MessageCircle,
   Eye,
   TrendingUp,
-  Lightbulb,
   ExternalLink,
   RotateCcw,
   CheckCircle2,
-  Zap,
   Trophy,
   Medal,
   Circle,
@@ -33,7 +31,7 @@ function formatNum(n: number): string {
 
 export default function ResultView({ result, onReset }: Props) {
   const { profile, deliverables, limits } = result;
-  const { bio_suggestion, top_post, worst_post, next_post_suggestion } = deliverables;
+  const { bio_suggestion, top_post, worst_post } = deliverables;
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
 
   return (
@@ -107,43 +105,6 @@ export default function ResultView({ result, onReset }: Props) {
       {/* 4. Weekly Content Plan */}
       {deliverables.weekly_content_plan && (
         <WeeklyContentSection plan={deliverables.weekly_content_plan} />
-      )}
-
-      {/* 5. Next Post Suggestion */}
-      {next_post_suggestion && (
-        <section className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-            <Lightbulb className="w-5 h-5 text-accent" />
-            <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Próximo Post
-            </h3>
-          </div>
-          <div className="p-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary uppercase tracking-wider">
-                {next_post_suggestion.format}
-              </span>
-              <span className="text-xs text-muted-foreground">{next_post_suggestion.angle}</span>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Hook</p>
-              <p className="text-foreground font-medium text-sm">"{next_post_suggestion.hook}"</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Roteiro</p>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-foreground/90">
-                {next_post_suggestion.outline.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ol>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Zap className="w-4 h-4 text-accent" />
-              <span className="text-foreground font-medium">CTA:</span>
-              <span className="text-muted-foreground">{next_post_suggestion.cta}</span>
-            </div>
-          </div>
-        </section>
       )}
 
       {/* Reset */}
