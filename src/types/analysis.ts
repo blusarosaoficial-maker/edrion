@@ -108,6 +108,31 @@ export interface NextPostSuggestion {
   angle: string;
 }
 
+export interface ScriptScene {
+  numero: number;
+  instrucao: string;
+  duracao_estimada: string;
+}
+
+export interface ContentScript {
+  dia: number;
+  dia_semana: string;
+  titulo: string;
+  tema: string;
+  framework: string;
+  formato: string;
+  hook: string;
+  cenas: ScriptScene[];
+  cta: string;
+  legenda_sugerida: string;
+  hashtags_sugeridas: string[];
+}
+
+export interface WeeklyContentPlan {
+  scripts: ContentScript[];
+  estrategia_semanal: string;
+}
+
 export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
@@ -115,6 +140,7 @@ export interface AnalysisResult {
     top_post: PostData;
     worst_post: PostData;
     next_post_suggestion?: NextPostSuggestion;
+    weekly_content_plan?: WeeklyContentPlan;
     posts_analysis?: PostData[];
     competitors_analysis?: unknown[];
     strategic_score?: unknown;

@@ -1215,6 +1215,249 @@ Execute a analise completa para ambos os posts.`;
   }
 }
 
+// ── Weekly Content Plan ──────────────────────────────────────
+
+interface AIScriptScene {
+  numero: number;
+  instrucao: string;
+  duracao_estimada: string;
+}
+
+interface AIContentScript {
+  dia: number;
+  dia_semana: string;
+  titulo: string;
+  tema: string;
+  framework: string;
+  formato: string;
+  hook: string;
+  cenas: AIScriptScene[];
+  cta: string;
+  legenda_sugerida: string;
+  hashtags_sugeridas: string[];
+  score_interno: number;
+}
+
+interface AIWeeklyContentResult {
+  estrategia_semanal: string;
+  roteiros: AIContentScript[];
+}
+
+const weeklyContentSystemPrompt = `Voce e uma especialista senior em estrategia de conteudo para Instagram, roteirista de videos virais e planejadora editorial para criadores brasileiros.
+
+<missao>
+Crie 7 roteiros de video (1 semana de conteudo) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
+</missao>
+
+<contexto_viral>
+DADOS CRUCIAIS DE PERFORMANCE EM 2025-2026:
+- 71% dos espectadores decidem nos primeiros 3 segundos (Hook e OBRIGATORIO)
+- Videos de 15-30s tem taxas de conclusao 2x maiores que videos longos
+- Conteudo autenticidade/lo-fi performa 60% melhor que super produzido
+- Algoritmo prioriza Salvamentos e Compartilhamentos acima de Likes
+- Variedade de formatos na semana maximiza alcance algoritmico
+- Cada dia DEVE usar um framework/angulo DIFERENTE para manter variedade
+
+FRAMEWORKS DISPONÍVEIS (use TODOS ao longo da semana, sem repetir):
+1. Hook-Value-CTA: Gancho (3s) → Valor (15-30s) → CTA (3-5s) — padrao para Reels educativos
+2. PAS (Problem-Agitate-Solution): Apresente problema → Agite a dor → Entregue solucao — para conteudo de transformacao
+3. BAB (Before-After-Bridge): Mostre o antes → Mostre o depois → Revele o caminho — para resultados/testimoniais
+4. AIDA (Attention-Interest-Desire-Action): Capte atencao → Gere interesse → Crie desejo → Direcione acao — para vendas/servicos
+5. Storytelling: Historia pessoal/caso real → Licao → CTA — para conexao e autoridade
+6. Mito vs Realidade: Derrube crenca comum → Mostre a verdade → CTA — para educacao
+7. Lista/Ranking: "X coisas que..." → Itens com valor → CTA — para salvamentos
+</contexto_viral>
+
+<regras_roteiro>
+1. CADA roteiro deve ter: hook (0-3s), 3-5 cenas com instrucoes claras de gravacao, CTA final
+2. Instrucoes de cena devem ser ESPECIFICAS e GRAVAVEIS: "Olhe para a camera e diga X", "Mostre Y na tela", "Corte para B-roll de Z"
+3. Os 7 dias DEVEM cobrir angulos diferentes: educativo, entretenimento, autoridade, bastidores, transformacao, comunidade, venda soft
+4. Pelo menos 5 roteiros devem ser formato Reel e pelo menos 1 carrossel
+5. Hooks devem ser provocativos, criar curiosidade ou identificacao IMEDIATA
+6. CTAs devem variar: "comente X", "salve para depois", "envie para alguem", "link na bio"
+7. Legendas sugeridas devem ter storytelling, valor e CTA escrito
+8. Hashtags: 5-10 por post, mix de nicho especifico + descoberta
+9. NUNCA invente dados, numeros ou cases que nao existam no perfil
+10. Tom deve ser compativel com o perfil analisado
+11. Cada roteiro deve ser autoavaliado com score_interno de 1-10
+
+DISTRIBUICAO SEMANAL RECOMENDADA:
+- Segunda: Conteudo educativo (autoridade)
+- Terca: Bastidores/dia-a-dia (conexao)
+- Quarta: Mito vs Realidade ou Lista (salvamentos)
+- Quinta: Storytelling/case (emocao)
+- Sexta: Conteudo leve/entretenimento (alcance)
+- Sabado: Transformacao/resultado (prova social)
+- Domingo: CTA soft/comunidade (engajamento)
+</regras_roteiro>
+
+<auto_avaliacao>
+Antes de retornar cada roteiro, avalie internamente:
+- Hook: Prende em 3 segundos? (0-2 pontos)
+- Instrucoes: Sao claras e gravaveis? (0-2 pontos)
+- Alinhamento: Serve o objetivo do perfil? (0-2 pontos)
+- Potencial viral: Gera saves/shares? (0-2 pontos)
+- Originalidade: Nao e generico? (0-2 pontos)
+Se score_interno < 8, REFACA o roteiro internamente antes de retornar.
+</auto_avaliacao>`;
+
+const weeklyContentSchema = {
+  type: "object" as const,
+  properties: {
+    estrategia_semanal: {
+      type: "string" as const,
+      description: "Visao geral da estrategia da semana em 1-2 frases",
+    },
+    roteiros: {
+      type: "array" as const,
+      items: {
+        type: "object" as const,
+        properties: {
+          dia: { type: "number" as const },
+          dia_semana: { type: "string" as const, enum: ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"] },
+          titulo: { type: "string" as const, description: "Titulo curto do roteiro (max 60 chars)" },
+          tema: { type: "string" as const, description: "Angulo estrategico deste conteudo" },
+          framework: { type: "string" as const, enum: ["Hook-Value-CTA", "PAS", "BAB", "AIDA", "Storytelling", "Mito vs Realidade", "Lista/Ranking"] },
+          formato: { type: "string" as const, enum: ["reel", "carrossel"] },
+          hook: { type: "string" as const, description: "Frase de abertura que prende em 3 segundos" },
+          cenas: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                numero: { type: "number" as const },
+                instrucao: { type: "string" as const, description: "Instrucao detalhada e gravavel para esta cena" },
+                duracao_estimada: { type: "string" as const },
+              },
+              required: ["numero", "instrucao", "duracao_estimada"],
+            },
+          },
+          cta: { type: "string" as const, description: "Call-to-action final" },
+          legenda_sugerida: { type: "string" as const, description: "Legenda completa sugerida com storytelling e CTA" },
+          hashtags_sugeridas: {
+            type: "array" as const,
+            items: { type: "string" as const },
+          },
+          score_interno: { type: "number" as const, description: "Auto-avaliacao interna 1-10" },
+        },
+        required: ["dia", "dia_semana", "titulo", "tema", "framework", "formato", "hook", "cenas", "cta", "legenda_sugerida", "hashtags_sugeridas", "score_interno"],
+      },
+    },
+  },
+  required: ["estrategia_semanal", "roteiros"],
+};
+
+async function generateWeeklyContent(
+  profile: ReturnType<typeof normalizeProfile>,
+  nicho: string,
+  objetivo: string,
+  captions: string[],
+  topPostInsights: string,
+  worstPostInsights: string,
+): Promise<AIWeeklyContentResult | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return null;
+
+  const legendas = captions.length > 0
+    ? captions.map(c => `- "${c.slice(0, 300)}"`).join("\n")
+    : "(sem legendas disponiveis)";
+
+  const userMessage = `Crie 7 roteiros de video (1 semana) para @${profile.handle}.
+
+PERFIL:
+- Nicho: ${nicho}
+- Objetivo: ${objetivo.toUpperCase()}
+- Bio: "${profile.bio_text}"
+- Seguidores: ${profile.followers}
+
+INSIGHTS DA ANALISE (o que funciona no perfil):
+${topPostInsights}
+
+INSIGHTS DA ANALISE (o que NAO funciona):
+${worstPostInsights}
+
+LEGENDAS RECENTES (referencia de tom e temas):
+${legendas}
+
+Gere 7 roteiros usando frameworks DIFERENTES, com auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50000);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: weeklyContentSystemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_weekly_content",
+              description: "Retorna 7 roteiros de video para 1 semana de conteudo",
+              parameters: weeklyContentSchema,
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "generate_weekly_content" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("OpenAI Weekly Content error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error("OpenAI Weekly: no tool call");
+      return null;
+    }
+
+    return JSON.parse(toolCall.function.arguments) as AIWeeklyContentResult;
+  } catch (err) {
+    console.error("generateWeeklyContent error:", (err as Error).message);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function applyWeeklyQualityGate(
+  result: AIWeeklyContentResult,
+): { scripts: Array<{ dia: number; dia_semana: string; titulo: string; tema: string; framework: string; formato: string; hook: string; cenas: AIScriptScene[]; cta: string; legenda_sugerida: string; hashtags_sugeridas: string[] }>; estrategia_semanal: string } {
+  const scripts = result.roteiros.map((r) => ({
+    dia: r.dia,
+    dia_semana: r.dia_semana,
+    titulo: r.titulo,
+    tema: r.tema,
+    framework: r.framework,
+    formato: r.formato,
+    hook: r.hook,
+    cenas: r.cenas,
+    cta: r.cta,
+    legenda_sugerida: r.legenda_sugerida,
+    hashtags_sugeridas: r.hashtags_sugeridas.map(
+      (h) => h.startsWith("#") ? h : `#${h}`
+    ),
+  }));
+
+  return {
+    scripts,
+    estrategia_semanal: result.estrategia_semanal,
+  };
+}
+
 // ── Result builders ──────────────────────────────────────────
 
 async function buildFreeResult(
@@ -1311,13 +1554,28 @@ async function buildFreeResult(
     transcription_skipped: worstTranscript.skipped_reason || null,
   };
 
-  // Proxy thumbnails for top and worst posts (parallel)
-  const [topThumb, worstThumb] = await Promise.all([
+  // Build post insights for weekly content generation
+  const topPostInsights = postsAiResult?.top_post_analysis
+    ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
+    : `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}.`;
+
+  const worstPostInsights = postsAiResult?.worst_post_analysis
+    ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
+    : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
+
+  // Phase 3: Weekly content + thumbnail proxying in parallel
+  const [weeklyContentResult, topThumb, worstThumb] = await Promise.all([
+    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights),
     proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin),
     proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin),
   ]);
   topPostData.thumb_url = topThumb;
   worstPostData.thumb_url = worstThumb;
+
+  // Process weekly content through quality gate (strips score_interno)
+  const weeklyPlan = weeklyContentResult
+    ? applyWeeklyQualityGate(weeklyContentResult)
+    : null;
 
   return {
     profile,
@@ -1326,6 +1584,7 @@ async function buildFreeResult(
       top_post: topPostData || null,
       worst_post: worstPostData || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
+      weekly_content_plan: weeklyPlan,
     },
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
     plan: "free" as const,

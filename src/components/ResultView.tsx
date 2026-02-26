@@ -10,7 +10,6 @@ import {
   RotateCcw,
   CheckCircle2,
   Zap,
-  Lock,
   Trophy,
   Medal,
   Circle,
@@ -19,6 +18,7 @@ import {
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
+import WeeklyContentSection from "@/components/WeeklyContentSection";
 
 interface Props {
   result: AnalysisResult;
@@ -32,7 +32,7 @@ function formatNum(n: number): string {
 }
 
 export default function ResultView({ result, onReset }: Props) {
-  const { profile, deliverables, limits, plan } = result;
+  const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post, next_post_suggestion } = deliverables;
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
 
@@ -104,21 +104,21 @@ export default function ResultView({ result, onReset }: Props) {
         />
       )}
 
-      {/* 4. Next Post Suggestion — blurred for free */}
+      {/* 4. Weekly Content Plan */}
+      {deliverables.weekly_content_plan && (
+        <WeeklyContentSection plan={deliverables.weekly_content_plan} />
+      )}
+
+      {/* 5. Next Post Suggestion */}
       {next_post_suggestion && (
-        <section className="rounded-xl border border-border bg-card overflow-hidden relative">
+        <section className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
             <Lightbulb className="w-5 h-5 text-accent" />
             <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Próximo Post
             </h3>
-            {plan === "free" && (
-              <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
-                <Lock className="w-3 h-3" /> Premium
-              </span>
-            )}
           </div>
-          <div className={`p-5 space-y-4 ${plan === "free" ? "blur-sm select-none pointer-events-none" : ""}`}>
+          <div className="p-5 space-y-4">
             <div className="flex items-center gap-3">
               <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary uppercase tracking-wider">
                 {next_post_suggestion.format}
@@ -143,15 +143,6 @@ export default function ResultView({ result, onReset }: Props) {
               <span className="text-muted-foreground">{next_post_suggestion.cta}</span>
             </div>
           </div>
-          {plan === "free" && (
-            <div className="absolute inset-0 top-14 flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <Lock className="w-6 h-6 text-primary mx-auto" />
-                <p className="text-sm font-semibold text-foreground">Desbloqueie com Premium</p>
-                <p className="text-xs text-muted-foreground">R$19,90</p>
-              </div>
-            </div>
-          )}
         </section>
       )}
 
