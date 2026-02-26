@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
 import { LogIn, LogOut } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import HistoryPanel from "@/components/HistoryPanel";
 
 type AppState = "form" | "loading" | "result" | "upgrade";
 
@@ -176,25 +178,60 @@ const Index = () => {
 
       <main className="container max-w-4xl py-8 px-4">
         {state === "form" && !showAuthModal && (
-          <div className="flex flex-col items-center gap-10">
-            <div className="text-center space-y-4 max-w-lg">
-              <h1
-                className="text-3xl md:text-4xl font-bold text-gradient-brand"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                EDRION, a Inteligência que evolui seu perfil.
-              </h1>
-              <p className="text-muted-foreground text-base md:text-lg">
-                Receba sugestão de bio, análise dos melhores e piores posts e ideias para o próximo conteúdo, em segundos.
+          user ? (
+            <Tabs defaultValue="nova-analise" className="w-full">
+              <TabsList className="grid w-full max-w-xs mx-auto grid-cols-2 mb-8">
+                <TabsTrigger value="nova-analise">Nova Análise</TabsTrigger>
+                <TabsTrigger value="historico">Histórico</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="nova-analise">
+                <div className="flex flex-col items-center gap-10">
+                  <div className="text-center space-y-4 max-w-lg">
+                    <h1
+                      className="text-3xl md:text-4xl font-bold text-gradient-brand"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      EDRION, a Inteligência que evolui seu perfil.
+                    </h1>
+                    <p className="text-muted-foreground text-base md:text-lg">
+                      Receba sugestão de bio, análise dos melhores e piores posts e ideias para o próximo conteúdo, em segundos.
+                    </p>
+                  </div>
+
+                  <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+
+                  <p className="text-muted-foreground text-xs text-center max-w-sm">
+                    Não compartilhamos dados. Análise 100% automática de perfis públicos.
+                  </p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="historico">
+                <HistoryPanel />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="flex flex-col items-center gap-10">
+              <div className="text-center space-y-4 max-w-lg">
+                <h1
+                  className="text-3xl md:text-4xl font-bold text-gradient-brand"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  EDRION, a Inteligência que evolui seu perfil.
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Receba sugestão de bio, análise dos melhores e piores posts e ideias para o próximo conteúdo, em segundos.
+                </p>
+              </div>
+
+              <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+
+              <p className="text-muted-foreground text-xs text-center max-w-sm">
+                Não compartilhamos dados. Análise 100% automática de perfis públicos.
               </p>
             </div>
-
-            <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
-
-            <p className="text-muted-foreground text-xs text-center max-w-sm">
-              Não compartilhamos dados. Análise 100% automática de perfis públicos.
-            </p>
-          </div>
+          )
         )}
 
         {state === "result" && result && (

@@ -21,6 +21,7 @@ import WeeklyContentSection from "@/components/WeeklyContentSection";
 interface Props {
   result: AnalysisResult;
   onReset: () => void;
+  resetLabel?: string;
 }
 
 function formatNum(n: number): string {
@@ -29,7 +30,7 @@ function formatNum(n: number): string {
   return n.toString();
 }
 
-export default function ResultView({ result, onReset }: Props) {
+export default function ResultView({ result, onReset, resetLabel }: Props) {
   const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post } = deliverables;
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
@@ -114,7 +115,7 @@ export default function ResultView({ result, onReset }: Props) {
           className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border bg-secondary text-foreground font-medium hover:bg-muted transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
-          Nova análise
+          {resetLabel || "Nova análise"}
         </button>
       </div>
     </div>
