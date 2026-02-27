@@ -195,7 +195,7 @@ const Index = () => {
                       EDRION, a Inteligência que evolui seu perfil.
                     </h1>
                     <p className="text-muted-foreground text-base md:text-lg">
-                      Receba sugestão de bio, análise dos melhores e piores posts e ideias para o próximo conteúdo, em segundos.
+                      Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                     </p>
                   </div>
 
@@ -221,7 +221,7 @@ const Index = () => {
                   EDRION, a Inteligência que evolui seu perfil.
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg">
-                  Receba sugestão de bio, análise dos melhores e piores posts e ideias para o próximo conteúdo, em segundos.
+                  Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                 </p>
               </div>
 
