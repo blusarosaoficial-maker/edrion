@@ -1,5 +1,6 @@
 import { Check, Lock, Shield, Sparkles } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,11 @@ const BENEFITS = [
   "Estratégia semanal personalizada",
 ];
 
-function UpgradeContent({ onClose }: { onClose: () => void }) {
+function UpgradeContent({ onClose, userEmail }: { onClose: () => void; userEmail?: string }) {
+  const checkoutUrl = userEmail && HOTMART_CHECKOUT_URL !== "#"
+    ? `${HOTMART_CHECKOUT_URL}?email=${encodeURIComponent(userEmail)}`
+    : HOTMART_CHECKOUT_URL;
+
   return (
     <div className="flex flex-col items-center gap-5 px-6 pb-8 pt-2 text-center">
       <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -69,7 +74,7 @@ function UpgradeContent({ onClose }: { onClose: () => void }) {
       </div>
 
       <button
-        onClick={() => window.open(HOTMART_CHECKOUT_URL, "_blank")}
+        onClick={() => window.open(checkoutUrl, "_blank")}
         className="w-full h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
       >
         <Lock className="w-4 h-4" />
@@ -93,12 +98,13 @@ function UpgradeContent({ onClose }: { onClose: () => void }) {
 
 export default function UpgradeModal({ isOpen, onClose }: Props) {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
 
   if (isMobile) {
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DrawerContent className="max-h-[90vh]">
-          <UpgradeContent onClose={onClose} />
+          <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} />
         </DrawerContent>
       </Drawer>
     );
@@ -108,7 +114,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md p-0 border-border bg-background">
         <DialogTitle className="sr-only">Desbloquear análise completa</DialogTitle>
-        <UpgradeContent onClose={onClose} />
+        <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} />
       </DialogContent>
     </Dialog>
   );

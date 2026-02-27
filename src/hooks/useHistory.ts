@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/types/analysis";
@@ -17,11 +18,41 @@ export interface HistoryEntry {
 
 export function useHistory(searchQuery: string = "") {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Realtime subscription — auto-refresh when analysis_result is updated (e.g., unlock)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("analysis-unlock")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "analysis_result",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["history", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   return useQuery<HistoryEntry[]>({
     queryKey: ["history", user?.id, searchQuery],
     queryFn: async () => {
       if (!user) return [];
+
+      // 90-day retention filter
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
       let query = supabase
         .from("analysis_result")
@@ -29,6 +60,7 @@ export function useHistory(searchQuery: string = "") {
           "id, handle, result_json, created_at, analysis_request!inner(nicho, objetivo)"
         )
         .eq("user_id", user.id)
+        .gte("created_at", ninetyDaysAgo.toISOString())
         .order("created_at", { ascending: false });
 
       if (searchQuery.trim()) {

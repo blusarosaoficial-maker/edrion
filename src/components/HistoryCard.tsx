@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Users, ChevronRight } from "lucide-react";
+import { Users, ChevronRight, Lock, Sparkles } from "lucide-react";
 import type { HistoryEntry } from "@/hooks/useHistory";
 
 interface Props {
@@ -36,9 +36,20 @@ export default function HistoryCard({ entry, onClick }: Props) {
           }}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-foreground font-semibold text-sm truncate">
-            {entry.full_name}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-foreground font-semibold text-sm truncate">
+              {entry.full_name}
+            </p>
+            {entry.result.plan === "premium" ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                <Sparkles className="w-2.5 h-2.5" /> Completa
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 shrink-0">
+                <Lock className="w-2.5 h-2.5" /> PRO
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground text-xs">@{entry.handle}</p>
         </div>
         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />

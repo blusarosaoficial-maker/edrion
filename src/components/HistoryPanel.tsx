@@ -56,15 +56,20 @@ export default function HistoryPanel() {
       )}
 
       {!isLoading && entries && entries.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {entries.map((entry) => (
-            <HistoryCard
-              key={entry.id}
-              entry={entry}
-              onClick={() => setSelectedEntry(entry)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {entries.map((entry) => (
+              <HistoryCard
+                key={entry.id}
+                entry={entry}
+                onClick={() => setSelectedEntry(entry)}
+              />
+            ))}
+          </div>
+          <p className="text-muted-foreground/50 text-[10px] text-center">
+            Análises ficam disponíveis por 90 dias.
+          </p>
+        </>
       )}
     </div>
   );

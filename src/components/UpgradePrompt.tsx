@@ -1,4 +1,5 @@
 import { Lock, ArrowLeft, Sparkles, Check, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   onBack: () => void;
@@ -15,6 +16,11 @@ const BENEFITS = [
 ];
 
 export default function UpgradePrompt({ onBack }: Props) {
+  const { user } = useAuth();
+  const checkoutUrl = user?.email && HOTMART_CHECKOUT_URL !== "#"
+    ? `${HOTMART_CHECKOUT_URL}?email=${encodeURIComponent(user.email)}`
+    : HOTMART_CHECKOUT_URL;
+
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6 py-12 text-center">
       <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -58,7 +64,7 @@ export default function UpgradePrompt({ onBack }: Props) {
       </div>
 
       <button
-        onClick={() => window.open(HOTMART_CHECKOUT_URL, "_blank")}
+        onClick={() => window.open(checkoutUrl, "_blank")}
         className="w-full h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
       >
         <Lock className="w-4 h-4" />

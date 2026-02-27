@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.auto-confirm-user]
 verify_jwt = false
+
+[functions.edrion-hotmart-webhook]
+verify_jwt = false

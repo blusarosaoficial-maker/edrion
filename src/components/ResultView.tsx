@@ -126,6 +126,21 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
 
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
 
+      {/* WhatsApp support for premium users */}
+      {isPremium && (
+        <div className="text-center">
+          <a
+            href="https://wa.me/NUMERO_PLACEHOLDER"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Falar com suporte
+          </a>
+        </div>
+      )}
+
       {/* Reset */}
       <div className="text-center pt-4">
         <button

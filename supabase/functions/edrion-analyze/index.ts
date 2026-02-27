@@ -1773,7 +1773,7 @@ Deno.serve(async (req) => {
     // ── [6] Authenticated → check plan limits ────────────────
     const { data: userProfile } = await supabaseAdmin
       .from("users_profiles")
-      .select("plan, free_analysis_used")
+      .select("plan, free_analysis_used, analysis_credits")
       .eq("id", userId)
       .single();
 
@@ -1784,18 +1784,27 @@ Deno.serve(async (req) => {
         email: "",
         plan: "free",
         free_analysis_used: false,
+        analysis_credits: 0,
       });
     }
 
     const plan = userProfile?.plan || "free";
     const freeUsed = userProfile?.free_analysis_used || false;
+    const credits = userProfile?.analysis_credits || 0;
+    let useCredit = false;
 
     if (plan === "free" && freeUsed) {
-      return json({ code: "FREE_LIMIT_REACHED" }, 403);
+      if (credits > 0) {
+        // User has credits — allow analysis (will be saved as premium)
+        useCredit = true;
+      } else {
+        return json({ code: "FREE_LIMIT_REACHED" }, 403);
+      }
     }
 
     // ── [7] Build result ─────────────────────────────────────
-    const result = plan === "premium"
+    // If using credit, build as premium (user paid in advance)
+    const result = (plan === "premium" || useCredit)
       ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin)
       : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
 
@@ -1807,7 +1816,7 @@ Deno.serve(async (req) => {
         handle: cleanHandle,
         nicho: nicho!,
         objetivo: objetivo!,
-        plan_at_time: plan,
+        plan_at_time: useCredit ? "credit" : plan,
       })
       .select("id")
       .single();
@@ -1818,11 +1827,19 @@ Deno.serve(async (req) => {
         handle: cleanHandle,
         result_json: result,
         user_id: userId,
+        unlocked_at: useCredit ? new Date().toISOString() : null,
       });
     }
 
-    // ── [9] Mark free as used ────────────────────────────────
-    if (plan === "free") {
+    // ── [9] Update user profile ────────────────────────────
+    if (useCredit) {
+      // Consume 1 credit
+      await supabaseAdmin
+        .from("users_profiles")
+        .update({ analysis_credits: credits - 1 })
+        .eq("id", userId);
+    } else if (plan === "free") {
+      // Mark free analysis as used
       await supabaseAdmin
         .from("users_profiles")
         .update({ free_analysis_used: true })
