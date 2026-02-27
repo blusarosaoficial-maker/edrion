@@ -1,7 +1,18 @@
-import { Lock, ArrowLeft, Sparkles, Check, Shield } from "lucide-react";
+import { Check, Lock, Shield, Sparkles } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
 
 interface Props {
-  onBack: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const HOTMART_CHECKOUT_URL = "#"; // TODO: substituir pelo link real do checkout Hotmart
@@ -14,22 +25,22 @@ const BENEFITS = [
   "Estratégia semanal personalizada",
 ];
 
-export default function UpgradePrompt({ onBack }: Props) {
+function UpgradeContent({ onClose }: { onClose: () => void }) {
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-5 px-6 pb-8 pt-2 text-center">
       <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
         <Sparkles className="w-7 h-7 text-amber-400" />
       </div>
 
       <div className="space-y-2">
         <h2
-          className="text-2xl font-bold text-gradient-brand"
+          className="text-xl font-bold text-foreground"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          Você já utilizou sua análise gratuita.
+          Sua análise completa está pronta
         </h2>
         <p className="text-muted-foreground text-sm">
-          Desbloqueie a análise completa e transforme seus resultados no Instagram.
+          Falta só um passo para desbloquear todos os detalhes e transformar seus resultados no Instagram.
         </p>
       </div>
 
@@ -44,7 +55,7 @@ export default function UpgradePrompt({ onBack }: Props) {
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 pt-1">
         <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
           50% OFF
         </span>
@@ -71,12 +82,34 @@ export default function UpgradePrompt({ onBack }: Props) {
       </div>
 
       <button
-        onClick={onBack}
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+        onClick={onClose}
+        className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
-        Voltar
+        Continuar com análise gratuita
       </button>
     </div>
+  );
+}
+
+export default function UpgradeModal({ isOpen, onClose }: Props) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DrawerContent className="max-h-[90vh]">
+          <UpgradeContent onClose={onClose} />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-0 border-border bg-background">
+        <DialogTitle className="sr-only">Desbloquear análise completa</DialogTitle>
+        <UpgradeContent onClose={onClose} />
+      </DialogContent>
+    </Dialog>
   );
 }

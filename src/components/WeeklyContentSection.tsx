@@ -9,6 +9,7 @@ import {
   Check,
   Film,
   Clapperboard,
+  Lock,
 } from "lucide-react";
 import {
   Collapsible,
@@ -19,6 +20,8 @@ import type { WeeklyContentPlan, ContentScript } from "@/types/analysis";
 
 interface Props {
   plan: WeeklyContentPlan;
+  locked?: boolean;
+  onLockedClick?: () => void;
 }
 
 const DAY_COLORS: Record<number, string> = {
@@ -51,7 +54,7 @@ const FRAMEWORK_BADGE: Record<string, string> = {
   "Lista/Ranking": "bg-violet-500/10 text-violet-400",
 };
 
-export default function WeeklyContentSection({ plan }: Props) {
+export default function WeeklyContentSection({ plan, locked, onLockedClick }: Props) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   return (
@@ -71,21 +74,98 @@ export default function WeeklyContentSection({ plan }: Props) {
             {plan.estrategia_semanal}
           </p>
         </div>
+        {locked && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-auto">
+            <Lock className="w-2.5 h-2.5" /> PRO
+          </span>
+        )}
       </div>
 
-      <div className="space-y-3">
-        {plan.scripts.map((script) => (
-          <DayCard
-            key={script.dia}
-            script={script}
-            isExpanded={expandedDay === script.dia}
-            onToggle={() =>
-              setExpandedDay(expandedDay === script.dia ? null : script.dia)
-            }
-          />
-        ))}
-      </div>
+      {locked ? (
+        <div className="relative">
+          <div className="space-y-3 opacity-60 pointer-events-none select-none">
+            {plan.scripts.map((script) => (
+              <LockedDayCard key={script.dia} script={script} />
+            ))}
+          </div>
+          <div
+            onClick={onLockedClick}
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background/90 flex flex-col items-center justify-center cursor-pointer rounded-xl"
+          >
+            <div className="flex flex-col items-center gap-2 p-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Lock className="w-6 h-6 text-amber-400" />
+              </div>
+              <span className="text-sm font-medium text-foreground">
+                Desbloquear plano completo
+              </span>
+              <span className="text-xs text-muted-foreground">
+                7 roteiros prontos com hooks, legendas e hashtags
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {plan.scripts.map((script) => (
+            <DayCard
+              key={script.dia}
+              script={script}
+              isExpanded={expandedDay === script.dia}
+              onToggle={() =>
+                setExpandedDay(expandedDay === script.dia ? null : script.dia)
+              }
+            />
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+function LockedDayCard({ script }: { script: ContentScript }) {
+  const colorClass = DAY_COLORS[script.dia] || DAY_COLORS[1];
+  const accentClass = DAY_ACCENT[script.dia] || DAY_ACCENT[1];
+  const frameworkBadge =
+    FRAMEWORK_BADGE[script.framework] || "bg-primary/10 text-primary";
+
+  return (
+    <div
+      className={`rounded-xl border bg-gradient-to-r ${colorClass} p-4`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-card border border-border flex flex-col items-center justify-center shrink-0">
+          <span className={`text-[10px] font-bold ${accentClass}`}>Dia</span>
+          <span className="text-foreground font-bold text-sm leading-none">
+            {script.dia}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-foreground/40 font-semibold text-sm">
+            ━━━━━━━━━━━━━━━━━
+          </p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-xs text-muted-foreground">
+              {script.dia_semana}
+            </span>
+            <span className="text-border">·</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${frameworkBadge}`}
+            >
+              {script.framework}
+            </span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-secondary text-muted-foreground">
+              {script.formato === "reel" ? (
+                <Film className="w-2.5 h-2.5" />
+              ) : (
+                <Layers className="w-2.5 h-2.5" />
+              )}
+              {script.formato}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

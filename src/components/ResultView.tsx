@@ -12,11 +12,13 @@ import {
   Medal,
   Circle,
   Search,
+  Lock,
 } from "lucide-react";
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
+import UpgradeModal from "@/components/UpgradeModal";
 
 interface Props {
   result: AnalysisResult;
@@ -33,7 +35,9 @@ function formatNum(n: number): string {
 export default function ResultView({ result, onReset, resetLabel }: Props) {
   const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post } = deliverables;
+  const isPremium = result.plan === "premium";
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
@@ -83,14 +87,22 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
           icon={<ThumbsUp className="w-5 h-5 text-primary" />}
           post={top_post}
           accentClass="border-primary/30"
-          onClickAnalysis={() => setSelectedPost({ post: top_post, variant: "top" })}
+          locked={!isPremium}
+          onClickAnalysis={() => {
+            if (isPremium) setSelectedPost({ post: top_post, variant: "top" });
+            else setShowUpgrade(true);
+          }}
         />
         <PostCard
           title="Worst Post"
           icon={<ThumbsDown className="w-5 h-5 text-destructive" />}
           post={worst_post}
           accentClass="border-destructive/30"
-          onClickAnalysis={() => setSelectedPost({ post: worst_post, variant: "worst" })}
+          locked={!isPremium}
+          onClickAnalysis={() => {
+            if (isPremium) setSelectedPost({ post: worst_post, variant: "worst" });
+            else setShowUpgrade(true);
+          }}
         />
       </div>
 
@@ -105,8 +117,14 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
 
       {/* 4. Weekly Content Plan */}
       {deliverables.weekly_content_plan && (
-        <WeeklyContentSection plan={deliverables.weekly_content_plan} />
+        <WeeklyContentSection
+          plan={deliverables.weekly_content_plan}
+          locked={!isPremium}
+          onLockedClick={() => setShowUpgrade(true)}
+        />
       )}
+
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
 
       {/* Reset */}
       <div className="text-center pt-4">
@@ -141,12 +159,14 @@ function PostCard({
   icon,
   post,
   accentClass,
+  locked,
   onClickAnalysis,
 }: {
   title: string;
   icon: React.ReactNode;
   post: PostData;
   accentClass: string;
+  locked?: boolean;
   onClickAnalysis: () => void;
 }) {
   const tier = post.analysis?.classificacao || post.tier;
@@ -160,7 +180,12 @@ function PostCard({
           {title}
         </h3>
         {tierBadge(tier)}
-        {score !== undefined && (
+        {locked && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-auto">
+            <Lock className="w-2.5 h-2.5" /> PRO
+          </span>
+        )}
+        {!locked && score !== undefined && (
           <span className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full ${
             score >= 7 ? "bg-primary/10 text-primary" : score >= 4 ? "bg-yellow-500/10 text-yellow-600" : "bg-destructive/10 text-destructive"
           }`}>
@@ -178,7 +203,7 @@ function PostCard({
           />
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span className="text-white text-xs font-medium backdrop-blur-sm px-2 py-0.5 rounded">
-              Toque para ver analise
+              {locked ? "Toque para desbloquear" : "Toque para ver analise"}
             </span>
           </div>
         </div>
@@ -201,9 +226,15 @@ function PostCard({
           >
             Ver no Instagram <ExternalLink className="w-3 h-3" />
           </a>
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:text-primary/80 transition-colors">
-            <Search className="w-3 h-3" /> Ver Analise Completa &rarr;
-          </span>
+          {locked ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400">
+              <Lock className="w-3 h-3" /> Desbloquear Análise
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:text-primary/80 transition-colors">
+              <Search className="w-3 h-3" /> Ver Analise Completa &rarr;
+            </span>
+          )}
         </div>
       </div>
     </section>
