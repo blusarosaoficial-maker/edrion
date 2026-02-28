@@ -196,6 +196,7 @@ const Index = () => {
 
   const handleLogout = async () => {
     setShowUserMenu(false);
+    handleReset();
     await supabase.auth.signOut();
     toast.success("Você saiu da sua conta");
   };
