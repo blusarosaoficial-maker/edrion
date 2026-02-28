@@ -124,7 +124,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
         />
       )}
 
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} result={result} />
 
       {/* WhatsApp support for premium users */}
       {isPremium && (

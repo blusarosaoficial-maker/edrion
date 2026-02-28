@@ -355,7 +355,7 @@ const Index = () => {
         {state === "upgrade" && (
           <>
             {user && <NavTabs current="resultado" />}
-            <UpgradePrompt onBack={handleReset} />
+            <UpgradePrompt onBack={handleReset} result={result || undefined} />
           </>
         )}
       </main>

@@ -1,4 +1,4 @@
-import { Check, Lock, Shield, Sparkles } from "lucide-react";
+import { Check, Lock, Shield, Sparkles, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -10,42 +10,74 @@ import {
   Drawer,
   DrawerContent,
 } from "@/components/ui/drawer";
+import type { AnalysisResult } from "@/types/analysis";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  result?: AnalysisResult;
 }
 
 const HOTMART_CHECKOUT_URL = "#"; // TODO: substituir pelo link real do checkout Hotmart
 
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return n.toString();
+}
+
 const BENEFITS = [
-  "Análise detalhada do melhor e pior post",
-  "Rubrica completa com nota em 5 critérios",
-  "Plano de conteúdo com 7 roteiros prontos",
-  "Hooks, legendas e hashtags para copiar",
-  "Estratégia semanal personalizada",
+  "Descubra por que seu melhor post performou — e como replicar",
+  "Saiba exatamente o que evitar: análise completa do seu pior post",
+  "Sua bio reescrita e otimizada (pronta para copiar e colar)",
+  "Plano de 7 dias com roteiros completos para o seu nicho",
+  "Hooks, legendas e hashtags prontos para usar",
 ];
 
-function UpgradeContent({ onClose, userEmail }: { onClose: () => void; userEmail?: string }) {
+function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; userEmail?: string; result?: AnalysisResult }) {
   const checkoutUrl = userEmail && HOTMART_CHECKOUT_URL !== "#"
     ? `${HOTMART_CHECKOUT_URL}?email=${encodeURIComponent(userEmail)}`
     : HOTMART_CHECKOUT_URL;
 
+  const profile = result?.profile;
+
   return (
     <div className="flex flex-col items-center gap-5 px-6 pb-8 pt-2 text-center">
-      <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
-        <Sparkles className="w-7 h-7 text-amber-400" />
-      </div>
+      {/* Personalized profile header */}
+      {profile ? (
+        <div className="flex items-center gap-3 w-full bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
+          <img
+            src={profile.avatar_url}
+            alt={profile.handle}
+            className="w-12 h-12 rounded-full border-2 border-primary/30 object-cover"
+          />
+          <div className="text-left min-w-0 flex-1">
+            <p className="text-foreground font-semibold text-sm truncate">@{profile.handle}</p>
+            <p className="text-muted-foreground text-xs flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {formatNum(profile.followers)} seguidores
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
+          <Sparkles className="w-7 h-7 text-amber-400" />
+        </div>
+      )}
 
       <div className="space-y-2">
         <h2
           className="text-xl font-bold text-foreground"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          Sua análise completa está pronta
+          {profile
+            ? `@${profile.handle}, seu relatório está pronto.`
+            : "Sua análise completa está pronta"}
         </h2>
         <p className="text-muted-foreground text-sm">
-          Falta só um passo para desbloquear todos os detalhes e transformar seus resultados no Instagram.
+          {profile
+            ? "Analisamos seu perfil e encontramos oportunidades reais de crescimento."
+            : "Falta só um passo para desbloquear todos os detalhes e transformar seus resultados no Instagram."}
         </p>
       </div>
 
@@ -71,6 +103,9 @@ function UpgradeContent({ onClose, userEmail }: { onClose: () => void; userEmail
         <span className="text-muted-foreground text-xs">
           Pagamento único · sem assinatura
         </span>
+        <span className="text-muted-foreground/60 text-[11px]">
+          Cartão ou Pix
+        </span>
       </div>
 
       <button
@@ -78,7 +113,7 @@ function UpgradeContent({ onClose, userEmail }: { onClose: () => void; userEmail
         className="w-full h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
       >
         <Lock className="w-4 h-4" />
-        DESBLOQUEAR AGORA
+        Desbloquear Meu Relatório
       </button>
 
       <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -96,7 +131,7 @@ function UpgradeContent({ onClose, userEmail }: { onClose: () => void; userEmail
   );
 }
 
-export default function UpgradeModal({ isOpen, onClose }: Props) {
+export default function UpgradeModal({ isOpen, onClose, result }: Props) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
 
@@ -104,7 +139,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
     return (
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DrawerContent className="max-h-[90vh]">
-          <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} />
+          <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} result={result} />
         </DrawerContent>
       </Drawer>
     );
@@ -114,7 +149,7 @@ export default function UpgradeModal({ isOpen, onClose }: Props) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md p-0 border-border bg-background">
         <DialogTitle className="sr-only">Desbloquear análise completa</DialogTitle>
-        <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} />
+        <UpgradeContent onClose={onClose} userEmail={user?.email || undefined} result={result} />
       </DialogContent>
     </Dialog>
   );
