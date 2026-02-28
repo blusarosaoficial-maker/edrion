@@ -87,9 +87,9 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
             className="w-full h-12 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
             disabled={isLoading}
           >
-            <option value="" className="text-muted-foreground">Selecione o nicho</option>
+            <option value="" style={{ background: "#11151C", color: "#9ca3af" }}>Selecione o nicho</option>
             {NICHOS.map((n) => (
-              <option key={n.value} value={n.value}>{n.label}</option>
+              <option key={n.value} value={n.value} style={{ background: "#11151C", color: "#e0e4eb" }}>{n.label}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 pointer-events-none" />
@@ -107,9 +107,9 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
             className="w-full h-12 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
             disabled={isLoading}
           >
-            <option value="" className="text-muted-foreground">Selecione o objetivo</option>
+            <option value="" style={{ background: "#11151C", color: "#9ca3af" }}>Selecione o objetivo</option>
             {OBJETIVOS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value} style={{ background: "#11151C", color: "#e0e4eb" }}>{o.label}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 pointer-events-none" />
