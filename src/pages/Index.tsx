@@ -183,7 +183,9 @@ const Index = () => {
     setResult(null);
     setIsDone(false);
     setProfileSnapshot(null);
-  }, []);
+    // Force fresh fetch when switching to history
+    queryClient.invalidateQueries({ queryKey: ["history"] });
+  }, [queryClient]);
 
   const handleLogout = async () => {
     setShowUserMenu(false);

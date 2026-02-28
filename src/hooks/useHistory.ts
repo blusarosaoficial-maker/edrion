@@ -20,22 +20,22 @@ export function useHistory(searchQuery: string = "") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Realtime subscription — auto-refresh when analysis_result is updated (e.g., unlock)
+  // Realtime subscription — auto-refresh on INSERT or UPDATE (new analysis or unlock)
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel("analysis-unlock")
+      .channel("analysis-changes")
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "analysis_result",
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["history", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["history"] });
         },
       )
       .subscribe();
@@ -97,6 +97,6 @@ export function useHistory(searchQuery: string = "") {
         .filter((entry): entry is HistoryEntry => entry !== null);
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 1000,
   });
 }
