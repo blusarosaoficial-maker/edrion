@@ -54,11 +54,11 @@ export function useHistory(searchQuery: string = "") {
       const ninetyDaysAgo = new Date();
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
+      // Query results — no join, simple flat query
+      // RLS policy "Users read own results direct" ensures only user's rows return
       let query = supabase
         .from("analysis_result")
-        .select(
-          "id, handle, result_json, created_at, analysis_request!inner(nicho, objetivo)"
-        )
+        .select("id, handle, result_json, created_at, request_id")
         .eq("user_id", user.id)
         .gte("created_at", ninetyDaysAgo.toISOString())
         .order("created_at", { ascending: false });
@@ -69,16 +69,35 @@ export function useHistory(searchQuery: string = "") {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("[useHistory] query error:", error.message, error.details, error.hint);
+        throw error;
+      }
 
-      return (data || [])
+      if (!data || data.length === 0) return [];
+
+      // Step 2: Fetch nicho/objetivo from analysis_request in batch
+      const requestIds = [...new Set(data.map((r) => r.request_id).filter(Boolean))];
+      let requestMap: Record<string, { nicho: string; objetivo: string }> = {};
+
+      if (requestIds.length > 0) {
+        const { data: requests } = await supabase
+          .from("analysis_request")
+          .select("id, nicho, objetivo")
+          .in("id", requestIds);
+
+        if (requests) {
+          requestMap = Object.fromEntries(
+            requests.map((r) => [r.id, { nicho: r.nicho, objetivo: r.objetivo }])
+          );
+        }
+      }
+
+      return data
         .map((row) => {
           try {
             const result = row.result_json as unknown as AnalysisResult;
-            const req = row.analysis_request as unknown as {
-              nicho: string;
-              objetivo: string;
-            } | null;
+            const req = row.request_id ? requestMap[row.request_id] : null;
             return {
               id: row.id,
               handle: row.handle,
@@ -97,6 +116,6 @@ export function useHistory(searchQuery: string = "") {
         .filter((entry): entry is HistoryEntry => entry !== null);
     },
     enabled: !!user,
-    staleTime: 10 * 1000,
+    staleTime: 5 * 1000,
   });
 }
