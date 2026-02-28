@@ -58,9 +58,9 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-5">
+    <form onSubmit={handleSubmit} className="w-full space-y-3">
       {/* Handle */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">Perfil do Instagram</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 text-sm select-none">@</span>
@@ -69,22 +69,22 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
             placeholder="seuperfil"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            className="w-full h-12 pl-8 pr-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
+            className="w-full h-11 pl-8 pr-4 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground text-[15px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
             disabled={isLoading}
           />
-          <Instagram className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/40" />
+          <Instagram className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
         </div>
-        {errors.handle && <p className="text-sm text-destructive">{errors.handle}</p>}
+        {errors.handle && <p className="text-xs text-destructive">{errors.handle}</p>}
       </div>
 
       {/* Nicho */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">Nicho</label>
         <div className="relative">
           <select
             value={nicho}
             onChange={(e) => setNicho(e.target.value)}
-            className="w-full h-12 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
+            className="w-full h-11 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground text-[15px] appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
             disabled={isLoading}
           >
             <option value="" style={{ background: "#11151C", color: "#9ca3af" }}>Selecione o nicho</option>
@@ -94,17 +94,17 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 pointer-events-none" />
         </div>
-        {errors.nicho && <p className="text-sm text-destructive">{errors.nicho}</p>}
+        {errors.nicho && <p className="text-xs text-destructive">{errors.nicho}</p>}
       </div>
 
       {/* Objetivo */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">Objetivo principal</label>
         <div className="relative">
           <select
             value={objetivo}
             onChange={(e) => setObjetivo(e.target.value)}
-            className="w-full h-12 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
+            className="w-full h-11 px-4 pr-10 rounded-xl border border-white/[0.08] bg-white/[0.04] text-foreground text-[15px] appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
             disabled={isLoading}
           >
             <option value="" style={{ background: "#11151C", color: "#9ca3af" }}>Selecione o objetivo</option>
@@ -114,14 +114,14 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 pointer-events-none" />
         </div>
-        {errors.objetivo && <p className="text-sm text-destructive">{errors.objetivo}</p>}
+        {errors.objetivo && <p className="text-xs text-destructive">{errors.objetivo}</p>}
       </div>
 
       {/* CTA */}
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full h-12 rounded-full bg-gradient-brand text-primary-foreground font-semibold text-sm tracking-wide flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-11 rounded-full bg-gradient-brand text-primary-foreground font-semibold text-sm tracking-wide flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Sparkles className="w-4 h-4" />
         Analisar perfil

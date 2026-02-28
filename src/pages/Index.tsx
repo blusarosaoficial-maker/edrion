@@ -153,7 +153,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="container max-w-4xl flex justify-end items-center py-4 px-4">
+      <header className="container max-w-4xl flex justify-end items-center py-3 px-4">
         {user ? (
           <button
             onClick={handleLogout}
@@ -180,29 +180,29 @@ const Index = () => {
         {state === "form" && !showAuthModal && (
           user ? (
             <Tabs defaultValue="nova-analise" className="w-full">
-              <TabsList className="inline-flex h-10 items-center rounded-full bg-white/[0.05] p-1 mx-auto mb-10">
+              <TabsList className="inline-flex h-9 items-center rounded-full bg-white/[0.05] p-1 mx-auto mb-6">
                 <TabsTrigger value="nova-analise" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Nova Análise</TabsTrigger>
                 <TabsTrigger value="historico" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Histórico</TabsTrigger>
               </TabsList>
 
               <TabsContent value="nova-analise">
-                <div className="relative flex flex-col items-center gap-16 md:gap-20 pt-12 md:pt-20 pb-16">
+                <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-4 md:pt-8 pb-6">
                   <div className="hero-glow" aria-hidden="true" />
 
-                  <div className="text-center space-y-6 max-w-2xl relative z-10">
+                  <div className="text-center space-y-3 max-w-2xl relative z-10">
                     <h1
-                      className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]"
+                      className="text-[clamp(1.75rem,4vw+0.5rem,3.5rem)] font-bold tracking-tight leading-[1.1]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       <span className="text-white">EDRION, a Inteligência que </span>
                       <span className="text-gradient-brand">evolui seu perfil.</span>
                     </h1>
-                    <p className="text-muted-foreground/80 text-base md:text-lg max-w-md mx-auto">
+                    <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
                       Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                     </p>
                   </div>
 
-                  <div className="glass-card rounded-2xl p-6 md:p-8 w-full max-w-md mx-auto relative z-10">
+                  <div className="glass-card rounded-2xl p-5 md:p-6 w-full max-w-md mx-auto relative z-10">
                     <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
                   </div>
 
@@ -217,23 +217,23 @@ const Index = () => {
               </TabsContent>
             </Tabs>
           ) : (
-            <div className="relative flex flex-col items-center gap-16 md:gap-20 pt-12 md:pt-20 pb-16">
+            <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-6 md:pt-10 pb-6">
               <div className="hero-glow" aria-hidden="true" />
 
-              <div className="text-center space-y-6 max-w-2xl relative z-10">
+              <div className="text-center space-y-3 max-w-2xl relative z-10">
                 <h1
-                  className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]"
+                  className="text-[clamp(1.75rem,4vw+0.5rem,3.5rem)] font-bold tracking-tight leading-[1.1]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   <span className="text-white">EDRION, a Inteligência que </span>
                   <span className="text-gradient-brand">evolui seu perfil.</span>
                 </h1>
-                <p className="text-muted-foreground/80 text-base md:text-lg max-w-md mx-auto">
+                <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
                   Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                 </p>
               </div>
 
-              <div className="glass-card rounded-2xl p-6 md:p-8 w-full max-w-md mx-auto relative z-10">
+              <div className="glass-card rounded-2xl p-5 md:p-6 w-full max-w-md mx-auto relative z-10">
                 <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
               </div>
 
