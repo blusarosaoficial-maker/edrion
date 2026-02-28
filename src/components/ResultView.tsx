@@ -83,7 +83,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
       {/* 2 & 3. Top & Worst Post */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <PostCard
-          title="Top Post"
+          title="Melhor Post"
           icon={<ThumbsUp className="w-5 h-5 text-primary" />}
           post={top_post}
           accentClass="border-primary/30"
@@ -94,7 +94,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
           }}
         />
         <PostCard
-          title="Worst Post"
+          title="Pior Post"
           icon={<ThumbsDown className="w-5 h-5 text-destructive" />}
           post={worst_post}
           accentClass="border-destructive/30"
