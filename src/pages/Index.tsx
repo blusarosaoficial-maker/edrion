@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import AnalyzeForm from "@/components/AnalyzeForm";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
@@ -23,6 +24,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const Index = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AppState>("form");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDone, setIsDone] = useState(false);
@@ -88,6 +90,8 @@ const Index = () => {
       }
       setResult(response.data!);
       setIsDone(true);
+      // Invalidate history cache so new analysis shows up
+      queryClient.invalidateQueries({ queryKey: ["history"] });
       setTimeout(() => {
         if (!abortRef.current) setState("result");
       }, 4500);
@@ -95,7 +99,7 @@ const Index = () => {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
-  }, []);
+  }, [queryClient]);
 
   const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
     runAnalysis(handle, nicho, objetivo);
@@ -122,6 +126,7 @@ const Index = () => {
       setResult(pendingResult);
       setPendingResult(null);
       setPendingInputs(null);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
       setState("result");
       return;
     }
@@ -132,7 +137,7 @@ const Index = () => {
       setPendingInputs(null);
       runAnalysis(handle, nicho, objetivo);
     }
-  }, [pendingResult, pendingInputs, runAnalysis]);
+  }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
