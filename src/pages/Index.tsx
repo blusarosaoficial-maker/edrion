@@ -70,6 +70,13 @@ const Index = () => {
       }
     }
 
+    // Block non-logged users who already have a pending analysis — force login first
+    if (!user && pendingResult) {
+      setPendingInputs({ handle, nicho, objetivo });
+      setShowAuthModal(true);
+      return;
+    }
+
     setState("loading");
     setIsDone(false);
     setProfileSnapshot(null);
@@ -127,7 +134,7 @@ const Index = () => {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
-  }, [queryClient, user]);
+  }, [queryClient, user, pendingResult]);
 
   const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
     runAnalysis(handle, nicho, objetivo);
