@@ -119,6 +119,40 @@ export async function saveResult(
   }
 }
 
+// ── Check user credits (client-side pre-check) ─────────────────
+
+export async function checkUserCredits(): Promise<{
+  canAnalyze: boolean;
+  plan: string;
+  freeUsed: boolean;
+  credits: number;
+}> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
+
+    const { data: profile } = await supabase
+      .from("users_profiles")
+      .select("plan, free_analysis_used, analysis_credits")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile) return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
+
+    const plan = profile.plan || "free";
+    const freeUsed = profile.free_analysis_used || false;
+    const credits = profile.analysis_credits || 0;
+
+    if (plan === "premium") return { canAnalyze: true, plan, freeUsed, credits };
+    if (!freeUsed) return { canAnalyze: true, plan, freeUsed, credits };
+    if (credits > 0) return { canAnalyze: true, plan, freeUsed, credits };
+
+    return { canAnalyze: false, plan, freeUsed, credits };
+  } catch {
+    return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
+  }
+}
+
 // ── Mock (dev fallback) ────────────────────────────────────────
 
 function rand(min: number, max: number): number {

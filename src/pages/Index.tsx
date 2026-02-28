@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import AnalyzeForm from "@/components/AnalyzeForm";
@@ -6,11 +6,11 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
 import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile, saveResult } from "@/services/analyze";
+import { analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, ChevronDown, User as UserIcon } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HistoryPanel from "@/components/HistoryPanel";
 
@@ -22,10 +22,21 @@ const ERROR_MESSAGES: Record<string, string> = {
   timeout: "O Instagram pode estar instável agora. Tente novamente em alguns minutos.",
 };
 
+function getInitials(email: string): string {
+  const name = email.split("@")[0];
+  const parts = name.split(/[._-]+/).filter(Boolean).slice(0, 2);
+  return parts.map((p) => p[0]).join("").toUpperCase() || "?";
+}
+
+function getDisplayName(email: string): string {
+  return email.split("@")[0];
+}
+
 const Index = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [state, setState] = useState<AppState>("form");
+  const [activeTab, setActiveTab] = useState("nova-analise");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileData | null>(null);
@@ -33,9 +44,32 @@ const Index = () => {
   const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
   const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
   const [currentHandle, setCurrentHandle] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const abortRef = useRef(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showUserMenu]);
 
   const runAnalysis = useCallback(async (handle: string, nicho: string, objetivo: string) => {
+    // Pre-check credits for logged-in users
+    if (user) {
+      const creditCheck = await checkUserCredits();
+      if (!creditCheck.canAnalyze) {
+        setState("upgrade");
+        return;
+      }
+    }
+
     setState("loading");
     setIsDone(false);
     setProfileSnapshot(null);
@@ -48,16 +82,13 @@ const Index = () => {
       if (abortRef.current) return;
 
       if (!response.success) {
-        // AUTH_REQUIRED with pending result: scraping done, needs login
         if (response.error === "auth_required" && response.pendingResult) {
           setPendingResult(response.pendingResult);
           setPendingInputs({ handle, nicho, objetivo });
-          // Show profile data in loading overlay
           if (response.pendingResult.profile) {
             setProfileSnapshot(response.pendingResult.profile);
           }
           setIsDone(true);
-          // Small delay then open auth modal
           setTimeout(() => {
             if (!abortRef.current) {
               setShowAuthModal(true);
@@ -66,7 +97,6 @@ const Index = () => {
           return;
         }
 
-        // AUTH_REQUIRED without pending result (shouldn't happen with new flow)
         if (response.error === "auth_required") {
           setState("form");
           setPendingInputs({ handle, nicho, objetivo });
@@ -84,13 +114,11 @@ const Index = () => {
         return;
       }
 
-      // Success — show result
       if (response.data?.profile) {
         setProfileSnapshot(response.data.profile);
       }
       setResult(response.data!);
       setIsDone(true);
-      // Invalidate history cache so new analysis shows up
       queryClient.invalidateQueries({ queryKey: ["history"] });
       setTimeout(() => {
         if (!abortRef.current) setState("result");
@@ -99,7 +127,7 @@ const Index = () => {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
-  }, [queryClient]);
+  }, [queryClient, user]);
 
   const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
     runAnalysis(handle, nicho, objetivo);
@@ -108,7 +136,6 @@ const Index = () => {
   const handleAuthSuccess = useCallback(async () => {
     setShowAuthModal(false);
 
-    // If we have a pending result from scraping, save it
     if (pendingResult && pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
       const saveResponse = await saveResult(handle, nicho, objetivo, pendingResult);
@@ -122,7 +149,6 @@ const Index = () => {
         }
       }
 
-      // Show the result
       setResult(pendingResult);
       setPendingResult(null);
       setPendingInputs(null);
@@ -131,7 +157,6 @@ const Index = () => {
       return;
     }
 
-    // Fallback: re-run analysis if no pending result
     if (pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
       setPendingInputs(null);
@@ -142,6 +167,7 @@ const Index = () => {
   const handleReset = useCallback(() => {
     abortRef.current = true;
     setState("form");
+    setActiveTab("nova-analise");
     setResult(null);
     setIsDone(false);
     setProfileSnapshot(null);
@@ -150,23 +176,87 @@ const Index = () => {
     setShowAuthModal(false);
   }, []);
 
+  const handleGoToHistory = useCallback(() => {
+    abortRef.current = true;
+    setState("form");
+    setActiveTab("historico");
+    setResult(null);
+    setIsDone(false);
+    setProfileSnapshot(null);
+  }, []);
+
   const handleLogout = async () => {
+    setShowUserMenu(false);
     await supabase.auth.signOut();
     toast.success("Você saiu da sua conta");
   };
 
+  // Navigation tabs component (reused across views)
+  const NavTabs = ({ current }: { current: "nova-analise" | "historico" | "resultado" }) => (
+    <div className="flex justify-center mb-6">
+      <div className="inline-flex h-9 items-center rounded-full bg-white/[0.05] p-1">
+        <button
+          onClick={() => { handleReset(); setActiveTab("nova-analise"); }}
+          className={`rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+            current === "nova-analise" ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Nova Análise
+        </button>
+        <button
+          onClick={handleGoToHistory}
+          className={`rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+            current === "historico" ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Histórico
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="container max-w-4xl flex justify-end items-center py-3 px-4">
+      <header className="container max-w-4xl flex justify-between items-center py-3 px-4">
+        <span
+          className="text-sm font-bold tracking-tight text-white/80"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          EDRION
+        </span>
+
         {user ? (
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowUserMenu((prev) => !prev)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-brand flex items-center justify-center">
+                <span className="text-[10px] font-bold text-white">{getInitials(user.email || "")}</span>
+              </div>
+              <span className="text-sm text-foreground/80 truncate max-w-[120px] hidden sm:inline">
+                {getDisplayName(user.email || "")}
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#11151C] border border-white/[0.08] shadow-xl py-1 z-50">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <p className="text-xs text-muted-foreground">Logado como</p>
+                  <p className="text-sm text-foreground truncate mt-0.5">{user.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/[0.05] transition-colors flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <button
             onClick={() => setShowAuthModal(true)}
@@ -184,13 +274,10 @@ const Index = () => {
       <main className="container max-w-2xl px-4">
         {state === "form" && !showAuthModal && (
           user ? (
-            <Tabs defaultValue="nova-analise" className="w-full">
-              <TabsList className="inline-flex h-9 items-center rounded-full bg-white/[0.05] p-1 mx-auto mb-6">
-                <TabsTrigger value="nova-analise" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Nova Análise</TabsTrigger>
-                <TabsTrigger value="historico" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Histórico</TabsTrigger>
-              </TabsList>
+            <>
+              <NavTabs current={activeTab as "nova-analise" | "historico"} />
 
-              <TabsContent value="nova-analise">
+              {activeTab === "nova-analise" && (
                 <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-4 md:pt-8 pb-6">
                   <div className="hero-glow" aria-hidden="true" />
 
@@ -215,12 +302,12 @@ const Index = () => {
                     Não compartilhamos dados. Análise 100% automática de perfis públicos.
                   </p>
                 </div>
-              </TabsContent>
+              )}
 
-              <TabsContent value="historico">
+              {activeTab === "historico" && (
                 <HistoryPanel />
-              </TabsContent>
-            </Tabs>
+              )}
+            </>
           ) : (
             <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-6 md:pt-10 pb-6">
               <div className="hero-glow" aria-hidden="true" />
@@ -250,11 +337,17 @@ const Index = () => {
         )}
 
         {state === "result" && result && (
-          <ResultView result={result} onReset={handleReset} />
+          <>
+            {user && <NavTabs current="resultado" />}
+            <ResultView result={result} onReset={handleReset} />
+          </>
         )}
 
         {state === "upgrade" && (
-          <UpgradePrompt onBack={handleReset} />
+          <>
+            {user && <NavTabs current="resultado" />}
+            <UpgradePrompt onBack={handleReset} />
+          </>
         )}
       </main>
     </div>

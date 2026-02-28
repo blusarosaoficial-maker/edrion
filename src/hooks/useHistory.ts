@@ -64,7 +64,8 @@ export function useHistory(searchQuery: string = "") {
         .order("created_at", { ascending: false });
 
       if (searchQuery.trim()) {
-        query = query.ilike("handle", `%${searchQuery.trim()}%`);
+        const q = searchQuery.trim().replace(/^@/, "").toLowerCase();
+        query = query.ilike("handle", `%${q}%`);
       }
 
       const { data, error } = await query;
