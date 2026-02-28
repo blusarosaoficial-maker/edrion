@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Lightbulb,
 } from "lucide-react";
 import type { BioSuggestion, BioCriteria, BioDiagnostic } from "@/types/analysis";
 import {
@@ -81,7 +80,7 @@ function RubricItem({ label, value, compareValue }: { label: string; value: numb
 
 export default function BioAnalysisSection({ bio }: Props) {
   const hasAI = bio.score !== undefined;
-  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagOpen, setDiagOpen] = useState(true);
   const bioTooLong = bio.suggested_bio.length > 149;
 
   return (
@@ -132,10 +131,13 @@ export default function BioAnalysisSection({ bio }: Props) {
         {/* Diagnostic analysis (collapsible) */}
         {hasAI && bio.diagnostic && (
           <Collapsible open={diagOpen} onOpenChange={setDiagOpen}>
-            <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-3 rounded-lg bg-secondary border border-border hover:bg-secondary/80 transition-colors">
-              <Lightbulb className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-sm font-medium text-foreground flex-1">Análise Diagnóstica</span>
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${diagOpen ? "rotate-180" : ""}`} />
+            <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-3 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
+              <Zap className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-foreground">Raio-X da sua Bio</span>
+                <p className="text-xs text-muted-foreground">Entenda o que sua bio comunica</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform shrink-0 ${diagOpen ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 space-y-2">
               {DIAGNOSTIC_LABELS.map(({ key, label }) => (
