@@ -176,32 +176,37 @@ const Index = () => {
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
       <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => { setShowAuthModal(false); setPendingInputs(null); setPendingResult(null); setState("form"); }} />
 
-      <main className="container max-w-4xl py-8 px-4">
+      <main className="container max-w-2xl px-4">
         {state === "form" && !showAuthModal && (
           user ? (
             <Tabs defaultValue="nova-analise" className="w-full">
-              <TabsList className="grid w-full max-w-xs mx-auto grid-cols-2 mb-8">
-                <TabsTrigger value="nova-analise">Nova Análise</TabsTrigger>
-                <TabsTrigger value="historico">Histórico</TabsTrigger>
+              <TabsList className="inline-flex h-10 items-center rounded-full bg-white/[0.05] p-1 mx-auto mb-10">
+                <TabsTrigger value="nova-analise" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Nova Análise</TabsTrigger>
+                <TabsTrigger value="historico" className="rounded-full px-5 text-sm data-[state=active]:bg-white/10 data-[state=active]:shadow-none">Histórico</TabsTrigger>
               </TabsList>
 
               <TabsContent value="nova-analise">
-                <div className="flex flex-col items-center gap-10">
-                  <div className="text-center space-y-4 max-w-lg">
+                <div className="relative flex flex-col items-center gap-16 md:gap-20 pt-12 md:pt-20 pb-16">
+                  <div className="hero-glow" aria-hidden="true" />
+
+                  <div className="text-center space-y-6 max-w-2xl relative z-10">
                     <h1
-                      className="text-3xl md:text-4xl font-bold text-gradient-brand"
+                      className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
-                      EDRION, a Inteligência que evolui seu perfil.
+                      <span className="text-white">EDRION, a Inteligência que </span>
+                      <span className="text-gradient-brand">evolui seu perfil.</span>
                     </h1>
-                    <p className="text-muted-foreground text-base md:text-lg">
+                    <p className="text-muted-foreground/80 text-base md:text-lg max-w-md mx-auto">
                       Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                     </p>
                   </div>
 
-                  <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+                  <div className="glass-card rounded-2xl p-6 md:p-8 w-full max-w-md mx-auto relative z-10">
+                    <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+                  </div>
 
-                  <p className="text-muted-foreground text-xs text-center max-w-sm">
+                  <p className="text-muted-foreground/40 text-[11px] text-center relative z-10">
                     Não compartilhamos dados. Análise 100% automática de perfis públicos.
                   </p>
                 </div>
@@ -212,22 +217,27 @@ const Index = () => {
               </TabsContent>
             </Tabs>
           ) : (
-            <div className="flex flex-col items-center gap-10">
-              <div className="text-center space-y-4 max-w-lg">
+            <div className="relative flex flex-col items-center gap-16 md:gap-20 pt-12 md:pt-20 pb-16">
+              <div className="hero-glow" aria-hidden="true" />
+
+              <div className="text-center space-y-6 max-w-2xl relative z-10">
                 <h1
-                  className="text-3xl md:text-4xl font-bold text-gradient-brand"
+                  className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  EDRION, a Inteligência que evolui seu perfil.
+                  <span className="text-white">EDRION, a Inteligência que </span>
+                  <span className="text-gradient-brand">evolui seu perfil.</span>
                 </h1>
-                <p className="text-muted-foreground text-base md:text-lg">
+                <p className="text-muted-foreground/80 text-base md:text-lg max-w-md mx-auto">
                   Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
                 </p>
               </div>
 
-              <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+              <div className="glass-card rounded-2xl p-6 md:p-8 w-full max-w-md mx-auto relative z-10">
+                <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
+              </div>
 
-              <p className="text-muted-foreground text-xs text-center max-w-sm">
+              <p className="text-muted-foreground/40 text-[11px] text-center relative z-10">
                 Não compartilhamos dados. Análise 100% automática de perfis públicos.
               </p>
             </div>

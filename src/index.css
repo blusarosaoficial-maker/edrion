@@ -124,6 +124,33 @@
     box-shadow: var(--glow-brand-strong);
   }
 
+  /* Hero ambient glow */
+  .hero-glow {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(
+      ellipse,
+      rgba(106, 92, 255, 0.12) 0%,
+      rgba(168, 85, 247, 0.06) 40%,
+      transparent 70%
+    );
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    background: rgba(17, 21, 28, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+
   /* Progress bar shimmer */
   @keyframes shimmer {
     0% { background-position: -200% 0; }
