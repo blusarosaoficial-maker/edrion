@@ -15,8 +15,9 @@ function json(body: unknown, status: number) {
 
 // ── PURCHASE_APPROVED handler ──────────────────────────────────
 
+// deno-lint-ignore no-explicit-any
 async function handlePurchaseApproved(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   buyerEmail: string,
   webhookEventId: string,
 ) {
@@ -108,8 +109,9 @@ async function handlePurchaseApproved(
 
 // ── PURCHASE_REFUNDED handler ──────────────────────────────────
 
+// deno-lint-ignore no-explicit-any
 async function handlePurchaseRefunded(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   transactionCode: string,
   webhookEventId: string,
 ) {
