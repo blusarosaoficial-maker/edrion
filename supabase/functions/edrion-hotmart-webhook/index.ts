@@ -33,8 +33,9 @@ async function handlePurchaseApproved(
     return;
   }
 
+  // deno-lint-ignore no-explicit-any
   const matchedUser = usersData?.users?.find(
-    (u) => u.email?.toLowerCase().trim() === email,
+    (u: any) => u.email?.toLowerCase().trim() === email,
   );
 
   if (!matchedUser) {
@@ -61,7 +62,8 @@ async function handlePurchaseApproved(
     .limit(10);
 
   // Filter for plan:"free" in result_json
-  const lockedAnalysis = lockedResults?.find((r) => {
+  // deno-lint-ignore no-explicit-any
+  const lockedAnalysis = lockedResults?.find((r: any) => {
     const resultJson = r.result_json as Record<string, unknown> | null;
     return resultJson?.plan === "free";
   });

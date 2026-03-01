@@ -25,8 +25,8 @@ const BENEFITS = [
 
 export default function UpgradePrompt({ onBack, result }: Props) {
   const { user } = useAuth();
-  const checkoutUrl = user?.email && HOTMART_CHECKOUT_URL !== "#"
-    ? `${HOTMART_CHECKOUT_URL}?email=${encodeURIComponent(user.email)}`
+  const checkoutUrl = user?.email
+    ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(user.email)}`
     : HOTMART_CHECKOUT_URL;
 
   const profile = result?.profile;
