@@ -65,6 +65,19 @@ const Index = () => {
     if (user) {
       const creditCheck = await checkUserCredits();
       if (!creditCheck.canAnalyze) {
+        // Fetch last analysis to personalize upgrade screen
+        if (!result) {
+          const { data: lastRow } = await supabase
+            .from("analysis_result")
+            .select("result_json")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          if (lastRow?.result_json) {
+            setResult(lastRow.result_json as unknown as AnalysisResult);
+          }
+        }
         setState("upgrade");
         return;
       }
@@ -112,6 +125,19 @@ const Index = () => {
         }
 
         if (response.error === "free_limit") {
+          // Fetch last analysis to personalize upgrade screen
+          if (!result && user) {
+            const { data: lastRow } = await supabase
+              .from("analysis_result")
+              .select("result_json")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+            if (lastRow?.result_json) {
+              setResult(lastRow.result_json as unknown as AnalysisResult);
+            }
+          }
           setState("upgrade");
           return;
         }
@@ -149,9 +175,10 @@ const Index = () => {
 
       if (!saveResponse.success) {
         if (saveResponse.error === "free_limit") {
-          setState("upgrade");
+          setResult(pendingResult);
           setPendingResult(null);
           setPendingInputs(null);
+          setState("upgrade");
           return;
         }
       }
