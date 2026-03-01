@@ -51,6 +51,7 @@ export type Database = {
           id: string
           request_id: string
           result_json: Json
+          unlocked_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -59,6 +60,7 @@ export type Database = {
           id?: string
           request_id: string
           result_json: Json
+          unlocked_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -67,6 +69,7 @@ export type Database = {
           id?: string
           request_id?: string
           result_json?: Json
+          unlocked_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -81,6 +84,7 @@ export type Database = {
       }
       users_profiles: {
         Row: {
+          analysis_credits: number
           created_at: string
           email: string
           free_analysis_used: boolean
@@ -88,6 +92,7 @@ export type Database = {
           plan: string
         }
         Insert: {
+          analysis_credits?: number
           created_at?: string
           email: string
           free_analysis_used?: boolean
@@ -95,6 +100,7 @@ export type Database = {
           plan?: string
         }
         Update: {
+          analysis_credits?: number
           created_at?: string
           email?: string
           free_analysis_used?: boolean
