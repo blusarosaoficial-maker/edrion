@@ -18,7 +18,7 @@ interface Props {
   result?: AnalysisResult;
 }
 
-const HOTMART_CHECKOUT_URL = "#"; // TODO: substituir pelo link real do checkout Hotmart
+const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?bid=1772370414415";
 
 function formatNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
