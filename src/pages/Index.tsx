@@ -60,6 +60,40 @@ const Index = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, [showUserMenu]);
 
+  // Auto-refresh result when analysis_result is updated (e.g., Hotmart unlock)
+  useEffect(() => {
+    if (!user) return;
+    if (state !== "upgrade" && state !== "result") return;
+
+    const channel = supabase
+      .channel("purchase-unlock")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "analysis_result",
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const updated = payload.new as { result_json?: unknown };
+          const resultJson = updated.result_json as AnalysisResult | undefined;
+          if (resultJson?.plan === "premium") {
+            setResult(resultJson);
+            if (state === "upgrade") {
+              setState("result");
+              toast.success("Compra confirmada! Análise completa liberada.");
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, state]);
+
   const runAnalysis = useCallback(async (handle: string, nicho: string, objetivo: string) => {
     // Pre-check credits for logged-in users
     if (user) {
