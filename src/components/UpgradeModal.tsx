@@ -35,8 +35,8 @@ const BENEFITS = [
 ];
 
 function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; userEmail?: string; result?: AnalysisResult }) {
-  const checkoutUrl = userEmail && HOTMART_CHECKOUT_URL !== "#"
-    ? `${HOTMART_CHECKOUT_URL}?email=${encodeURIComponent(userEmail)}`
+  const checkoutUrl = userEmail
+    ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
     : HOTMART_CHECKOUT_URL;
 
   const profile = result?.profile;

@@ -82,6 +82,80 @@ export type Database = {
           },
         ]
       }
+      hotmart_transactions: {
+        Row: {
+          analysis_result_id: string | null
+          buyer_email: string
+          buyer_name: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          offer_code: string | null
+          payment_type: string | null
+          price_currency: string | null
+          price_value: number | null
+          processed: boolean
+          processed_at: string | null
+          product_id: number | null
+          product_name: string | null
+          raw_payload: Json | null
+          transaction_code: string
+          user_id: string | null
+          webhook_event_id: string
+        }
+        Insert: {
+          analysis_result_id?: string | null
+          buyer_email?: string
+          buyer_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          offer_code?: string | null
+          payment_type?: string | null
+          price_currency?: string | null
+          price_value?: number | null
+          processed?: boolean
+          processed_at?: string | null
+          product_id?: number | null
+          product_name?: string | null
+          raw_payload?: Json | null
+          transaction_code?: string
+          user_id?: string | null
+          webhook_event_id: string
+        }
+        Update: {
+          analysis_result_id?: string | null
+          buyer_email?: string
+          buyer_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          offer_code?: string | null
+          payment_type?: string | null
+          price_currency?: string | null
+          price_value?: number | null
+          processed?: boolean
+          processed_at?: string | null
+          product_id?: number | null
+          product_name?: string | null
+          raw_payload?: Json | null
+          transaction_code?: string
+          user_id?: string | null
+          webhook_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotmart_transactions_analysis_result_id_fkey"
+            columns: ["analysis_result_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_result"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users_profiles: {
         Row: {
           analysis_credits: number
@@ -114,7 +188,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_analysis_credits: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
