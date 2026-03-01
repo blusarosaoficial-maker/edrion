@@ -193,11 +193,19 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
 
-    // 1. Validate hottok
+    console.log("Webhook received — event:", body.event, "id:", body.id);
+
+    // 1. Validate hottok (can come in body or header)
     const expectedHottok = Deno.env.get("HOTMART_HOTTOK");
-    if (expectedHottok && body.hottok !== expectedHottok) {
-      console.warn("Invalid hottok received");
-      return json({ code: "UNAUTHORIZED" }, 401);
+    if (expectedHottok) {
+      const receivedHottok =
+        body.hottok ||
+        req.headers.get("x-hotmart-hottok") ||
+        req.headers.get("X-Hotmart-Hottok");
+      if (receivedHottok !== expectedHottok) {
+        console.warn("Invalid hottok received:", receivedHottok);
+        return json({ code: "UNAUTHORIZED" }, 401);
+      }
     }
 
     const supabaseAdmin = createClient(
@@ -206,14 +214,33 @@ Deno.serve(async (req) => {
     );
 
     // 2. Extract webhook data
-    const webhookEventId = body.id;
+    const webhookEventId = body.id || crypto.randomUUID();
     const eventType = body.event;
     const purchase = body.data?.purchase;
     const buyer = body.data?.buyer;
 
-    if (!webhookEventId || !eventType) {
-      return json({ code: "VALIDATION_ERROR", message: "Missing id or event" }, 422);
+    if (!eventType) {
+      console.error("Missing event type in webhook body:", JSON.stringify(body).slice(0, 500));
+      return json({ code: "VALIDATION_ERROR", message: "Missing event" }, 422);
     }
+
+    // Extract buyer email — Hotmart may send in different locations
+    const buyerEmail = (
+      buyer?.email ||
+      buyer?.checkout_phone ||
+      body.data?.email ||
+      "unknown"
+    ).toString().toLowerCase().trim();
+
+    // Extract transaction code — may be in different paths
+    const transactionCode = (
+      purchase?.transaction ||
+      purchase?.order_date ||
+      body.data?.purchase?.transaction ||
+      "unknown"
+    ).toString();
+
+    console.log("Parsed — event:", eventType, "buyer:", buyerEmail, "tx:", transactionCode);
 
     // 3. Idempotency — insert transaction, conflict = already processed
     const { error: insertError } = await supabaseAdmin
@@ -221,14 +248,14 @@ Deno.serve(async (req) => {
       .insert({
         webhook_event_id: webhookEventId,
         event_type: eventType,
-        transaction_code: purchase?.transaction || "unknown",
-        buyer_email: (buyer?.email || "unknown").toLowerCase().trim(),
-        buyer_name: buyer?.name || null,
-        product_id: body.data?.product?.id || null,
+        transaction_code: transactionCode,
+        buyer_email: buyerEmail,
+        buyer_name: buyer?.name || buyer?.first_name || null,
+        product_id: body.data?.product?.id ? Number(body.data.product.id) : null,
         product_name: body.data?.product?.name || null,
-        offer_code: purchase?.offer?.code || null,
-        price_value: purchase?.price?.value || null,
-        price_currency: purchase?.price?.currency_value || "BRL",
+        offer_code: purchase?.offer?.code || body.data?.offer?.code || null,
+        price_value: purchase?.price?.value || purchase?.original_offer_price?.value || null,
+        price_currency: purchase?.price?.currency_value || purchase?.original_offer_price?.currency_code || "BRL",
         payment_type: purchase?.payment?.type || null,
         raw_payload: body,
       });
@@ -246,16 +273,16 @@ Deno.serve(async (req) => {
     // 4. Process based on event type
     console.log(`Processing webhook: ${eventType} (${webhookEventId})`);
 
-    if (eventType === "PURCHASE_APPROVED") {
+    if (eventType === "PURCHASE_APPROVED" || eventType === "PURCHASE_COMPLETE") {
       await handlePurchaseApproved(
         supabaseAdmin,
-        buyer?.email || "",
+        buyerEmail,
         webhookEventId,
       );
     } else if (eventType === "PURCHASE_REFUNDED") {
       await handlePurchaseRefunded(
         supabaseAdmin,
-        purchase?.transaction || "",
+        transactionCode,
         webhookEventId,
       );
     } else {
