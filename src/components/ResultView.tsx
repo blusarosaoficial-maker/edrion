@@ -13,6 +13,7 @@ import {
   Circle,
   Search,
   Lock,
+  Crown,
 } from "lucide-react";
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
@@ -55,6 +56,17 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
             </h2>
             {profile.is_verified && (
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+            )}
+            {isPremium && (
+              <span
+                className="premium-badge inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-full text-amber-950 shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, #D4AF37, #F5D060)",
+                  boxShadow: "0 0 8px rgba(212, 175, 55, 0.3), 0 0 16px rgba(245, 208, 96, 0.12)",
+                }}
+              >
+                <Crown className="w-3 h-3" /> PRO
+              </span>
             )}
           </div>
           <p className="text-muted-foreground text-sm">@{profile.handle}</p>
