@@ -61,9 +61,9 @@ const Index = () => {
   }, [showUserMenu]);
 
   // Auto-refresh result when analysis_result is updated (e.g., Hotmart unlock)
+  // Runs whenever user is logged in — works regardless of current screen
   useEffect(() => {
     if (!user) return;
-    if (state !== "upgrade" && state !== "result") return;
 
     const channel = supabase
       .channel("purchase-unlock")
@@ -80,10 +80,9 @@ const Index = () => {
           const resultJson = updated.result_json as AnalysisResult | undefined;
           if (resultJson?.plan === "premium") {
             setResult(resultJson);
-            if (state === "upgrade") {
-              setState("result");
-              toast.success("Compra confirmada! Análise completa liberada.");
-            }
+            setState("result");
+            queryClient.invalidateQueries({ queryKey: ["history"] });
+            toast.success("Compra confirmada! Análise completa liberada.");
           }
         },
       )
@@ -92,7 +91,7 @@ const Index = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, state]);
+  }, [user, queryClient]);
 
   const runAnalysis = useCallback(async (handle: string, nicho: string, objetivo: string) => {
     // Pre-check credits for logged-in users
