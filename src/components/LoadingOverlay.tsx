@@ -84,11 +84,9 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
 
     if (progress < 40) setProgress(45);
 
-    doneTimerRef.current = setTimeout(() => {
-      setProgress(100);
-      setPhase("done");
-      setShowDone(true);
-    }, 3500);
+    setProgress(100);
+    setPhase("done");
+    setShowDone(true);
 
     return () => clearTimeout(doneTimerRef.current);
   }, [isDone, isOpen]);

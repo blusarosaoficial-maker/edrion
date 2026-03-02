@@ -186,9 +186,7 @@ const Index = () => {
       setResult(response.data!);
       setIsDone(true);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      setTimeout(() => {
-        if (!abortRef.current) setState("result");
-      }, 4500);
+      setState("result");
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
