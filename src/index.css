@@ -1,0 +1,289 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* EDRION Design System — 100% Dark Mode Premium
+   All colors in HSL. Gradient: #6A5CFF → #A855F7 → #FF3DAE */
+
+@layer base {
+  :root {
+    /* bg_primary #0B0E13 */
+    --background: 220 28% 6%;
+    --foreground: 220 40% 93%;
+
+    /* bg_surface #11151C */
+    --card: 220 26% 9%;
+    --card-foreground: 220 40% 93%;
+
+    --popover: 220 26% 9%;
+    --popover-foreground: 220 40% 93%;
+
+    /* Brand gradient anchor — purple core */
+    --primary: 250 100% 68%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Surface elevated */
+    --secondary: 220 22% 12%;
+    --secondary-foreground: 220 40% 93%;
+
+    --muted: 220 18% 15%;
+    --muted-foreground: 210 14% 66%;
+
+    --accent: 270 91% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    /* border #232A35 */
+    --border: 216 20% 17%;
+    --input: 216 20% 17%;
+    --ring: 250 100% 68%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 26% 9%;
+    --sidebar-foreground: 220 40% 93%;
+    --sidebar-primary: 250 100% 68%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 22% 12%;
+    --sidebar-accent-foreground: 220 40% 93%;
+    --sidebar-border: 216 20% 17%;
+    --sidebar-ring: 250 100% 68%;
+
+    /* EDRION custom tokens */
+    --gradient-brand: linear-gradient(135deg, #6A5CFF 0%, #A855F7 50%, #FF3DAE 100%);
+    --glow-brand: 0 0 20px rgba(106, 92, 255, 0.3), 0 0 40px rgba(168, 85, 247, 0.15);
+    --glow-brand-strong: 0 0 24px rgba(106, 92, 255, 0.5), 0 0 48px rgba(255, 61, 174, 0.2);
+  }
+
+  /* Force dark — no light mode */
+  .dark {
+    --background: 220 28% 6%;
+    --foreground: 220 40% 93%;
+    --card: 220 26% 9%;
+    --card-foreground: 220 40% 93%;
+    --popover: 220 26% 9%;
+    --popover-foreground: 220 40% 93%;
+    --primary: 250 100% 68%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 22% 12%;
+    --secondary-foreground: 220 40% 93%;
+    --muted: 220 18% 15%;
+    --muted-foreground: 210 14% 66%;
+    --accent: 270 91% 65%;
+    --accent-foreground: 0 0% 100%;
+    --border: 216 20% 17%;
+    --input: 216 20% 17%;
+    --ring: 250 100% 68%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --sidebar-background: 220 26% 9%;
+    --sidebar-foreground: 220 40% 93%;
+    --sidebar-primary: 250 100% 68%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 22% 12%;
+    --sidebar-accent-foreground: 220 40% 93%;
+    --sidebar-border: 216 20% 17%;
+    --sidebar-ring: 250 100% 68%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* EDRION Gradient utilities */
+@layer utilities {
+  .bg-gradient-brand {
+    background: var(--gradient-brand);
+  }
+
+  .text-gradient-brand {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-brand {
+    box-shadow: var(--glow-brand);
+  }
+
+  .glow-brand-strong {
+    box-shadow: var(--glow-brand-strong);
+  }
+
+  /* Hero ambient glow */
+  .hero-glow {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(
+      ellipse,
+      rgba(106, 92, 255, 0.12) 0%,
+      rgba(168, 85, 247, 0.06) 40%,
+      transparent 70%
+    );
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  /* Select dropdown options — force dark */
+  select option {
+    background: #11151C;
+    color: #e0e4eb;
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    background: rgba(17, 21, 28, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Progress bar shimmer */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .shimmer-bar {
+    background: linear-gradient(
+      90deg,
+      #6A5CFF 0%,
+      #A855F7 25%,
+      #FF3DAE 50%,
+      #A855F7 75%,
+      #6A5CFF 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+
+  /* Pulse glow for loading */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px rgba(106, 92, 255, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(255, 61, 174, 0.2); }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* === AI Profile Scanner === */
+
+  .ai-scanner {
+    position: relative;
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Core — icon container with breathing glow */
+  .ai-scanner-core {
+    position: relative;
+    z-index: 10;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: rgba(106, 92, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: scanner-breathe 2.5s ease-in-out infinite;
+  }
+
+  @keyframes scanner-breathe {
+    0%, 100% {
+      box-shadow: 0 0 12px rgba(106, 92, 255, 0.5);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 24px rgba(168, 85, 247, 0.7), 0 0 48px rgba(255, 61, 174, 0.3);
+      transform: scale(1.05);
+    }
+  }
+
+  /* Inner ring — 3/4 arc, rotates forward */
+  .ai-scanner-ring-inner {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: #6A5CFF;
+    border-right-color: #A855F7;
+    border-bottom-color: #FF3DAE;
+    animation: scanner-spin 3s linear infinite;
+  }
+
+  @keyframes scanner-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Outer ring — dashed, rotates reverse */
+  .ai-scanner-ring-outer {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(168, 85, 247, 0.3);
+    animation: scanner-spin 8s linear infinite reverse;
+  }
+
+  /* Radar pulse waves — expanding circles */
+  @keyframes scanner-pulse-expand {
+    0% {
+      transform: scale(0.5);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.8);
+      opacity: 0;
+    }
+  }
+
+  .ai-scanner-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(106, 92, 255, 0.4);
+    animation: scanner-pulse-expand 3s ease-out infinite;
+  }
+
+  .ai-scanner-pulse-delayed {
+    animation-delay: 1.5s;
+  }
+
+  /* Premium badge entrance */
+  @keyframes badge-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .premium-badge {
+    animation: badge-enter 0.4s ease-out;
+  }
+}
