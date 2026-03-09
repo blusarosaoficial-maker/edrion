@@ -358,7 +358,7 @@ const Index = () => {
                       <span className="text-gradient-brand">evolui seu perfil.</span>
                     </h1>
                     <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
-                      Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
+                      Descubra o que funciona (e o que não funciona) no seu perfil. Receba sugestão de bio, análise de posts e um plano com roteiros prontos.
                     </p>
                   </div>
 
@@ -389,7 +389,7 @@ const Index = () => {
                   <span className="text-gradient-brand">evolui seu perfil.</span>
                 </h1>
                 <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
-                  Receba sugestão de bio, análise dos melhores e piores posts e um plano semanal com 7 roteiros prontos, em segundos.
+                  Descubra o que funciona (e o que não funciona) no seu perfil. Receba sugestão de bio, análise de posts e um plano com roteiros prontos.
                 </p>
               </div>
 

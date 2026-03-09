@@ -124,7 +124,7 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
         className="w-full h-11 rounded-full bg-gradient-brand text-primary-foreground font-semibold text-sm tracking-wide flex items-center justify-center gap-2 glow-brand hover:glow-brand-strong transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Sparkles className="w-4 h-4" />
-        Analisar perfil
+        Analisar meu perfil grátis
       </button>
     </form>
   );
