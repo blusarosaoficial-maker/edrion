@@ -97,6 +97,10 @@ const Index = () => {
     // Pre-check credits for logged-in users
     if (user) {
       const creditCheck = await checkUserCredits();
+      if (creditCheck.blocked) {
+        toast.error("Acesso indisponível. Este e-mail está associado a uma conta que recebeu reembolso.");
+        return;
+      }
       if (!creditCheck.canAnalyze) {
         // Fetch last analysis to personalize upgrade screen
         if (!result) {

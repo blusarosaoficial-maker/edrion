@@ -115,6 +115,7 @@ async function handlePurchaseApproved(
 async function handlePurchaseRefunded(
   supabaseAdmin: any,
   transactionCode: string,
+  buyerEmail: string,
   webhookEventId: string,
 ) {
   // Find the original PURCHASE_APPROVED transaction
@@ -151,6 +152,32 @@ async function handlePurchaseRefunded(
 
       console.log(`Re-locked analysis ${originalTx.analysis_result_id} due to refund`);
     }
+  }
+
+  // Auto-block the email on refund
+  const email = buyerEmail.toLowerCase().trim();
+  if (email && email !== "unknown") {
+    await supabaseAdmin
+      .from("blocked_users")
+      .upsert(
+        {
+          email,
+          user_id: originalTx?.user_id || null,
+          reason: "refund",
+          notes: `Auto-blocked: refund on transaction ${transactionCode}`,
+        },
+        { onConflict: "email" },
+      );
+
+    // Ban user in Supabase Auth (if user exists)
+    if (originalTx?.user_id) {
+      await supabaseAdmin.auth.admin.updateUserById(originalTx.user_id, {
+        ban_duration: "876000h",
+      });
+      console.log(`Banned user ${originalTx.user_id} due to refund`);
+    }
+
+    console.log(`Blocked email ${email} due to refund`);
   }
 
   // Link user_id and mark processed
@@ -285,6 +312,7 @@ Deno.serve(async (req) => {
       await handlePurchaseRefunded(
         supabaseAdmin,
         transactionCode,
+        buyerEmail,
         webhookEventId,
       );
     } else {

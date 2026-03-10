@@ -126,10 +126,19 @@ export async function checkUserCredits(): Promise<{
   plan: string;
   freeUsed: boolean;
   credits: number;
+  blocked?: boolean;
 }> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
+
+    // Check if user email is blocked
+    if (user.email) {
+      const isBlocked = await checkBlockedEmail(user.email);
+      if (isBlocked) {
+        return { canAnalyze: false, plan: "blocked", freeUsed: true, credits: 0, blocked: true };
+      }
+    }
 
     const { data: profile } = await supabase
       .from("users_profiles")
@@ -148,6 +157,23 @@ export async function checkUserCredits(): Promise<{
     return { canAnalyze: false, plan, freeUsed, credits: 0 };
   } catch {
     return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
+  }
+}
+
+// ── Check blocked email ────────────────────────────────────────
+
+export async function checkBlockedEmail(email: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc("is_email_blocked", {
+      p_email: email,
+    });
+    if (error) {
+      console.error("Error checking blocked email:", error);
+      return false;
+    }
+    return data === true;
+  } catch {
+    return false;
   }
 }
 

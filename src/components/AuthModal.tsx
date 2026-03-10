@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mail, Lock, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Sparkles, Eye, EyeOff, ShieldX } from "lucide-react";
+import { checkBlockedEmail } from "@/services/analyze";
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   // Listen for auth state change
   useEffect(() => {
@@ -40,6 +42,14 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
 
     setLoading(true);
     try {
+      // Check if email is blocked
+      const isBlocked = await checkBlockedEmail(email);
+      if (isBlocked) {
+        setBlocked(true);
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       // onAuthStateChange will trigger onSuccess
@@ -69,6 +79,14 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
 
     setLoading(true);
     try {
+      // Check if email is blocked
+      const isBlocked = await checkBlockedEmail(email);
+      if (isBlocked) {
+        setBlocked(true);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -107,7 +125,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
       setLoading(false);
       setMode("login");
       setShowPassword(false);
-      
+      setBlocked(false);
     }
   }, [isOpen]);
 
@@ -128,6 +146,29 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
+        {blocked ? (
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center">
+              <ShieldX className="w-7 h-7 text-red-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-foreground">Acesso indisponível</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+                Este e-mail está associado a uma conta que recebeu reembolso. Conforme nossos termos, o acesso à plataforma foi desativado.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Precisa de ajuda? Entre em contato com nosso suporte.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-2 px-6 h-10 rounded-lg border border-border text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        ) : (
         <>
 
             <form onSubmit={mode === "login" ? handleLogin : handleSignup} className="space-y-4 mt-2">
@@ -231,6 +272,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
               Não compartilhamos seus dados. Sem spam.
             </p>
           </>
+        )}
 
       </DialogContent>
     </Dialog>
