@@ -142,7 +142,7 @@ export async function checkUserCredits(): Promise<{
 
     const { data: profile } = await supabase
       .from("users_profiles")
-      .select("plan, free_analysis_used")
+      .select("plan, free_analysis_used, analysis_credits")
       .eq("id", user.id)
       .single();
 
@@ -150,11 +150,14 @@ export async function checkUserCredits(): Promise<{
 
     const plan = profile.plan || "free";
     const freeUsed = profile.free_analysis_used || false;
+    const credits = profile.analysis_credits || 0;
 
-    if (plan === "premium") return { canAnalyze: true, plan, freeUsed, credits: 0 };
-    if (!freeUsed) return { canAnalyze: true, plan, freeUsed, credits: 0 };
+    // Free analysis not yet used
+    if (!freeUsed) return { canAnalyze: true, plan, freeUsed, credits };
+    // Has purchased credits available
+    if (credits > 0) return { canAnalyze: true, plan, freeUsed, credits };
 
-    return { canAnalyze: false, plan, freeUsed, credits: 0 };
+    return { canAnalyze: false, plan, freeUsed, credits };
   } catch {
     return { canAnalyze: true, plan: "free", freeUsed: false, credits: 0 };
   }

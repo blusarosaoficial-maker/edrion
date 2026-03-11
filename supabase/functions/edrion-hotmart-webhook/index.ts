@@ -96,11 +96,9 @@ async function handlePurchaseApproved(
     console.log(`Added 1 credit for user ${userId} (no locked analysis found)`);
   }
 
-  // 4. Reset free_analysis_used so user can do another free analysis
-  await supabaseAdmin
-    .from("users_profiles")
-    .update({ free_analysis_used: false })
-    .eq("id", userId);
+  // 4. DO NOT reset free_analysis_used — each purchase unlocks ONE analysis only.
+  // The user's free analysis was already consumed; purchases unlock via credits or
+  // direct analysis unlock above. Resetting would give a free extra analysis.
 
   // 5. Mark transaction as processed
   await supabaseAdmin
