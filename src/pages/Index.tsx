@@ -350,19 +350,19 @@ const Index = () => {
               <NavTabs current={activeTab as "nova-analise" | "historico"} />
 
               {activeTab === "nova-analise" && (
-                <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-4 md:pt-8 pb-6">
+                <div className="relative flex flex-col items-center gap-5 md:gap-7 pt-4 md:pt-8 pb-6">
                   <div className="hero-glow" aria-hidden="true" />
 
-                  <div className="text-center space-y-3 max-w-2xl relative z-10">
+                  <div className="text-center space-y-3 max-w-lg relative z-10">
                     <h1
-                      className="text-[clamp(1.75rem,4vw+0.5rem,3.5rem)] font-bold tracking-tight leading-[1.1]"
+                      className="text-[clamp(1.6rem,4vw+0.5rem,2.75rem)] font-bold tracking-tight leading-[1.15]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
-                      <span className="text-white">EDRION, a Inteligência que </span>
-                      <span className="text-gradient-brand">evolui seu perfil.</span>
+                      <span className="text-white">Descubra sua nota no Instagram </span>
+                      <span className="text-gradient-brand">em 30 segundos</span>
                     </h1>
-                    <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
-                      Descubra o que funciona (e o que não funciona) no seu perfil. Receba sugestão de bio, análise de posts e um plano com roteiros prontos.
+                    <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
+                      Análise gratuita de bio, posts e estratégia com plano de ação personalizado.
                     </p>
                   </div>
 
@@ -370,9 +370,14 @@ const Index = () => {
                     <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
                   </div>
 
-                  <p className="text-muted-foreground/40 text-[11px] text-center relative z-10">
-                    Não compartilhamos dados. Análise 100% automática de perfis públicos.
-                  </p>
+                  <div className="flex items-center gap-2 text-muted-foreground/40 text-[11px] relative z-10">
+                    <div className="flex -space-x-1.5">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border border-background" />
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
+                    </div>
+                    <span>2.847 perfis analisados · 100% automático</span>
+                  </div>
                 </div>
               )}
 
@@ -381,19 +386,19 @@ const Index = () => {
               )}
             </>
           ) : (
-            <div className="relative flex flex-col items-center gap-6 md:gap-8 pt-6 md:pt-10 pb-6">
+            <div className="relative flex flex-col items-center gap-5 md:gap-7 pt-6 md:pt-10 pb-6">
               <div className="hero-glow" aria-hidden="true" />
 
-              <div className="text-center space-y-3 max-w-2xl relative z-10">
+              <div className="text-center space-y-3 max-w-lg relative z-10">
                 <h1
-                  className="text-[clamp(1.75rem,4vw+0.5rem,3.5rem)] font-bold tracking-tight leading-[1.1]"
+                  className="text-[clamp(1.6rem,4vw+0.5rem,2.75rem)] font-bold tracking-tight leading-[1.15]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  <span className="text-white">EDRION, a Inteligência que </span>
-                  <span className="text-gradient-brand">evolui seu perfil.</span>
+                  <span className="text-white">Descubra sua nota no Instagram </span>
+                  <span className="text-gradient-brand">em 30 segundos</span>
                 </h1>
-                <p className="text-muted-foreground/80 text-sm md:text-base max-w-md mx-auto">
-                  Descubra o que funciona (e o que não funciona) no seu perfil. Receba sugestão de bio, análise de posts e um plano com roteiros prontos.
+                <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
+                  Análise gratuita de bio, posts e estratégia com plano de ação personalizado.
                 </p>
               </div>
 
@@ -401,9 +406,14 @@ const Index = () => {
                 <AnalyzeForm onSubmit={handleSubmit} isLoading={false} />
               </div>
 
-              <p className="text-muted-foreground/40 text-[11px] text-center relative z-10">
-                Não compartilhamos dados. Análise 100% automática de perfis públicos.
-              </p>
+              <div className="flex items-center gap-2 text-muted-foreground/40 text-[11px] relative z-10">
+                <div className="flex -space-x-1.5">
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border border-background" />
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
+                </div>
+                <span>2.847 perfis analisados · 100% automático</span>
+              </div>
             </div>
           )
         )}
