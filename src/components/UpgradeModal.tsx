@@ -10,6 +10,7 @@ import {
   Drawer,
   DrawerContent,
 } from "@/components/ui/drawer";
+import { appendUtmToCheckout } from "@/utils/hotmartUtm";
 import type { AnalysisResult } from "@/types/analysis";
 
 interface Props {
@@ -35,9 +36,10 @@ const BENEFITS = [
 ];
 
 function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; userEmail?: string; result?: AnalysisResult }) {
-  const checkoutUrl = userEmail
+  const baseUrl = userEmail
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
     : HOTMART_CHECKOUT_URL;
+  const checkoutUrl = appendUtmToCheckout(baseUrl);
 
   const profile = result?.profile;
 

@@ -1,5 +1,6 @@
 import { Lock, ArrowLeft, Sparkles, Check, Shield, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { appendUtmToCheckout } from "@/utils/hotmartUtm";
 import type { AnalysisResult } from "@/types/analysis";
 
 interface Props {
@@ -25,9 +26,10 @@ const BENEFITS = [
 
 export default function UpgradePrompt({ onBack, result }: Props) {
   const { user } = useAuth();
-  const checkoutUrl = user?.email
+  const baseUrl = user?.email
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(user.email)}`
     : HOTMART_CHECKOUT_URL;
+  const checkoutUrl = appendUtmToCheckout(baseUrl);
 
   const profile = result?.profile;
 
