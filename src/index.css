@@ -286,4 +286,15 @@
   .premium-badge {
     animation: badge-enter 0.4s ease-out;
   }
+
+  /* Health gauge arc animation */
+  @keyframes gauge-fill {
+    from {
+      stroke-dashoffset: 188.5;
+    }
+  }
+
+  .gauge-arc {
+    animation: gauge-fill 1.2s ease-out;
+  }
 }
