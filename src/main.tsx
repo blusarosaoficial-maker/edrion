@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { captureUtms } from "./utils/hotmartUtm";
+
+// Persist UTMs from landing URL before SPA navigation loses them
+captureUtms();
 
 // Quando um deploy substitui os chunks JS, usuarios com a versao antiga
 // recebem erro ao tentar carregar modulos que nao existem mais.

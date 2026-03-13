@@ -1,6 +1,8 @@
-import { Lock, ArrowLeft, Sparkles, Check, Shield, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Lock, ArrowLeft, Sparkles, Check, Shield, Users, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { appendUtmToCheckout } from "@/utils/hotmartUtm";
+import { trackInitiateCheckout } from "@/utils/pixel";
 import type { AnalysisResult } from "@/types/analysis";
 
 interface Props {
@@ -24,8 +26,36 @@ const BENEFITS = [
   "Hooks, legendas e hashtags prontos para usar",
 ];
 
+function useCountdown() {
+  const PROMO_KEY = "edrion_promo_start";
+  const PROMO_DURATION = 24 * 60 * 60 * 1000;
+  const [timeLeft, setTimeLeft] = useState("23:59:59");
+
+  useEffect(() => {
+    if (!sessionStorage.getItem(PROMO_KEY)) {
+      sessionStorage.setItem(PROMO_KEY, String(Date.now()));
+    }
+
+    const tick = () => {
+      const start = Number(sessionStorage.getItem(PROMO_KEY) || Date.now());
+      const remaining = Math.max(0, PROMO_DURATION - (Date.now() - start));
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return timeLeft;
+}
+
 export default function UpgradePrompt({ onBack, result }: Props) {
   const { user } = useAuth();
+  const timeLeft = useCountdown();
   const baseUrl = user?.email
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(user.email)}`
     : HOTMART_CHECKOUT_URL;
@@ -84,6 +114,14 @@ export default function UpgradePrompt({ onBack, result }: Props) {
         ))}
       </div>
 
+      {/* Countdown timer */}
+      <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-amber-500/5 border border-amber-500/15">
+        <Clock className="w-4 h-4 text-amber-400" />
+        <span className="text-sm text-muted-foreground">
+          Preço promocional expira em <strong className="text-amber-400 font-mono">{timeLeft}</strong>
+        </span>
+      </div>
+
       <div className="flex flex-col items-center gap-1">
         <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
           50% OFF
@@ -101,7 +139,7 @@ export default function UpgradePrompt({ onBack, result }: Props) {
       </div>
 
       <button
-        onClick={() => window.open(checkoutUrl, "_blank")}
+        onClick={() => { trackInitiateCheckout(); window.open(checkoutUrl, "_blank"); }}
         className="w-full h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
       >
         <Lock className="w-4 h-4" />

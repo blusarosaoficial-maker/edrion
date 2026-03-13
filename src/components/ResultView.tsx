@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -14,12 +14,17 @@ import {
   Search,
   Lock,
   Crown,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
 import UpgradeModal from "@/components/UpgradeModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { appendUtmToCheckout } from "@/utils/hotmartUtm";
+import { trackInitiateCheckout } from "@/utils/pixel";
 
 interface Props {
   result: AnalysisResult;
@@ -33,7 +38,10 @@ function formatNum(n: number): string {
   return n.toString();
 }
 
+const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?bid=1772370414415";
+
 export default function ResultView({ result, onReset, resetLabel }: Props) {
+  const { user } = useAuth();
   const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post } = deliverables;
   const isPremium = result.plan === "premium";
@@ -91,6 +99,9 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
 
       {/* 1. Bio Suggestion (now with AI analysis) */}
       <BioAnalysisSection bio={bio_suggestion} />
+
+      {/* Inline upgrade banner for free users */}
+      {!isPremium && <InlineUpgradeBanner handle={profile.handle} userEmail={user?.email} />}
 
       {/* 2 & 3. Top & Worst Post */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -207,16 +218,16 @@ function PostCard({
           {title}
         </h3>
         {tierBadge(tier)}
-        {locked && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 ml-auto">
-            <Lock className="w-2.5 h-2.5" /> PRO
-          </span>
-        )}
-        {!locked && score !== undefined && (
+        {score !== undefined && (
           <span className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full ${
             score >= 7 ? "bg-primary/10 text-primary" : score >= 4 ? "bg-yellow-500/10 text-yellow-600" : "bg-destructive/10 text-destructive"
           }`}>
             {score}/10
+          </span>
+        )}
+        {locked && (
+          <span className={`${score === undefined ? "ml-auto" : ""} inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20`}>
+            <Lock className="w-2.5 h-2.5" /> PRO
           </span>
         )}
       </div>
@@ -264,6 +275,80 @@ function PostCard({
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+function useCountdown() {
+  const PROMO_KEY = "edrion_promo_start";
+  const PROMO_DURATION = 24 * 60 * 60 * 1000;
+  const [timeLeft, setTimeLeft] = useState("23:59:59");
+
+  useEffect(() => {
+    if (!sessionStorage.getItem(PROMO_KEY)) {
+      sessionStorage.setItem(PROMO_KEY, String(Date.now()));
+    }
+
+    const tick = () => {
+      const start = Number(sessionStorage.getItem(PROMO_KEY) || Date.now());
+      const remaining = Math.max(0, PROMO_DURATION - (Date.now() - start));
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return timeLeft;
+}
+
+function InlineUpgradeBanner({ handle, userEmail }: { handle: string; userEmail?: string | null }) {
+  const timeLeft = useCountdown();
+  const baseUrl = userEmail
+    ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
+    : HOTMART_CHECKOUT_URL;
+  const checkoutUrl = appendUtmToCheckout(baseUrl);
+
+  return (
+    <section className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-5 md:p-6 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5 text-amber-400" />
+        </div>
+        <div>
+          <h3
+            className="text-foreground font-bold text-base"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            @{handle}, seu diagnóstico revelou oportunidades.
+          </h3>
+          <p className="text-muted-foreground text-sm mt-1">
+            Desbloqueie a análise completa dos seus posts, plano de 7 dias com roteiros prontos e mais.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <button
+          onClick={() => { trackInitiateCheckout(); window.open(checkoutUrl, "_blank"); }}
+          className="w-full sm:w-auto h-11 px-6 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
+        >
+          <Lock className="w-4 h-4" />
+          Desbloquear por R$25,97
+        </button>
+        <div className="flex items-center gap-1.5 text-muted-foreground/70 text-xs">
+          <Clock className="w-3.5 h-3.5" />
+          <span>Preço promocional expira em <strong className="text-amber-400">{timeLeft}</strong></span>
+        </div>
+      </div>
+
+      <p className="text-muted-foreground/50 text-[11px] text-center sm:text-left">
+        Pagamento único · sem assinatura · garantia de 7 dias
+      </p>
     </section>
   );
 }

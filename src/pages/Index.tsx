@@ -10,8 +10,10 @@ import { analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
-import { LogIn, LogOut, ChevronDown, User as UserIcon } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { LogIn, LogOut, ChevronDown } from "lucide-react";
+import { trackLead, trackPurchase } from "@/utils/pixel";
+import { getAnalyzedCount, formatCount } from "@/utils/counter";
+// Tabs components kept available for future use
 import HistoryPanel from "@/components/HistoryPanel";
 
 type AppState = "form" | "loading" | "result" | "upgrade";
@@ -82,6 +84,7 @@ const Index = () => {
             setResult(resultJson);
             setState("result");
             queryClient.invalidateQueries({ queryKey: ["history"] });
+            trackPurchase();
             toast.success("Compra confirmada! Análise completa liberada.");
           }
         },
@@ -132,6 +135,7 @@ const Index = () => {
     setProfileSnapshot(null);
     setCurrentHandle(handle);
     abortRef.current = false;
+    trackLead();
 
     try {
       const response = await analyzeProfile(handle, nicho, objetivo);
@@ -376,7 +380,7 @@ const Index = () => {
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
                     </div>
-                    <span>2.847 perfis analisados · 100% automático</span>
+                    <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático</span>
                   </div>
                 </div>
               )}

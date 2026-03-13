@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Mail, Lock, Sparkles, Eye, EyeOff, ShieldX } from "lucide-react";
 import { checkBlockedEmail } from "@/services/analyze";
+import { trackCompleteRegistration } from "@/utils/pixel";
 
 interface Props {
   isOpen: boolean;
@@ -108,6 +109,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
       // Sign in immediately
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
+      trackCompleteRegistration();
       // onAuthStateChange will trigger onSuccess
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar conta");

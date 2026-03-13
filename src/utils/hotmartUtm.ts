@@ -1,42 +1,67 @@
-const HOTMART_PREFIXES = [
-  "https://payment.hotmart.com",
-  "https://pay.hotmart.com",
-  "https://go.hotmart.com",
-];
+const UTM_STORAGE_KEY = "edrion_utms";
+
+interface StoredUtms {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_term: string;
+  utm_content: string;
+  all_params: string;
+}
 
 /**
- * Captures UTM params from the current page URL and appends them
- * (plus the Hotmart sck param) to a Hotmart checkout URL.
+ * Capture UTMs from the current URL and persist to sessionStorage.
+ * Call this once on app init (e.g., in main.tsx or App.tsx).
+ */
+export function captureUtms(): void {
+  try {
+    const url = new URL(window.top?.location.href || window.location.href);
+    const hasAny = url.searchParams.toString();
+    if (!hasAny) return;
+
+    const utms: StoredUtms = {
+      utm_source: url.searchParams.get("utm_source") || "",
+      utm_medium: url.searchParams.get("utm_medium") || "",
+      utm_campaign: url.searchParams.get("utm_campaign") || "",
+      utm_term: url.searchParams.get("utm_term") || "",
+      utm_content: url.searchParams.get("utm_content") || "",
+      all_params: url.searchParams.toString(),
+    };
+
+    sessionStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utms));
+  } catch {
+    // silent — private browsing may block sessionStorage
+  }
+}
+
+function getStoredUtms(): StoredUtms | null {
+  try {
+    const raw = sessionStorage.getItem(UTM_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Appends stored UTM params + sck to a Hotmart checkout URL.
+ * Uses sessionStorage (persisted from initial landing) so UTMs
+ * survive SPA navigation, login, and signup flows.
  */
 export function appendUtmToCheckout(checkoutUrl: string): string {
   try {
-    const pageUrl = new URL(window.top?.location.href || window.location.href);
-    const params = new URLSearchParams();
+    const stored = getStoredUtms();
+    if (!stored || !stored.all_params) return checkoutUrl;
 
-    // Forward all query params from the landing page
-    pageUrl.searchParams.forEach((value, key) => {
-      params.set(key, value);
-    });
+    const separator = checkoutUrl.includes("?") ? "&" : "?";
+    let url = `${checkoutUrl}${separator}${stored.all_params}`;
 
-    // Build sck (source tracking) from UTMs
-    const utmSource = pageUrl.searchParams.get("utm_source") || "";
-    const utmMedium = pageUrl.searchParams.get("utm_medium") || "";
-    const utmCampaign = pageUrl.searchParams.get("utm_campaign") || "";
-    const utmTerm = pageUrl.searchParams.get("utm_term") || "";
-    const utmContent = pageUrl.searchParams.get("utm_content") || "";
-
-    const hasUtms = utmSource || utmMedium || utmCampaign || utmTerm || utmContent;
-
-    if (params.toString()) {
-      const separator = checkoutUrl.includes("?") ? "&" : "?";
-      let url = `${checkoutUrl}${separator}${params.toString()}`;
-      if (hasUtms) {
-        url += `&sck=${utmSource}|${utmMedium}|${utmCampaign}|${utmTerm}|${utmContent}`;
-      }
-      return url;
+    const hasUtms = stored.utm_source || stored.utm_medium || stored.utm_campaign || stored.utm_term || stored.utm_content;
+    if (hasUtms) {
+      url += `&sck=${stored.utm_source}|${stored.utm_medium}|${stored.utm_campaign}|${stored.utm_term}|${stored.utm_content}`;
     }
 
-    return checkoutUrl;
+    return url;
   } catch {
     return checkoutUrl;
   }
