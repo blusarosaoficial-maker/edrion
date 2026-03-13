@@ -29,8 +29,7 @@ import WeeklyContentSection from "@/components/WeeklyContentSection";
 import StoriesSection from "@/components/StoriesSection";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { appendUtmToCheckout } from "@/utils/hotmartUtm";
-import { trackInitiateCheckout } from "@/utils/pixel";
+
 
 interface Props {
   result: AnalysisResult;
@@ -44,7 +43,6 @@ function formatNum(n: number): string {
   return n.toString();
 }
 
-const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?bid=1772370414415";
 
 function computeHealthScore(result: AnalysisResult): number {
   const scores: number[] = [];
@@ -163,9 +161,9 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
       {!isPremium && (
         <InlineUpgradeBanner
           handle={profile.handle}
-          userEmail={user?.email}
           topScore={top_post.analysis?.nota_geral}
           worstScore={worst_post.analysis?.nota_geral}
+          onUpgrade={() => setShowUpgrade(true)}
         />
       )}
 
@@ -205,7 +203,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
       )}
 
       {/* Final CTA for free users — after everything */}
-      {!isPremium && <FinalCTA handle={profile.handle} userEmail={user?.email} />}
+      {!isPremium && <FinalCTA handle={profile.handle} onUpgrade={() => setShowUpgrade(true)} />}
 
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} result={result} />
 
@@ -482,7 +480,7 @@ function PostCard({
           {post.metrics.views > 0 && (
             <MetricItem icon={<Eye className="w-3.5 h-3.5" />} label="Views" value={formatNum(post.metrics.views)} />
           )}
-          <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Score" value={post.metrics.engagement_score.toFixed(4)} />
+          <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Engajamento" value={(post.metrics.engagement_score * 100).toFixed(2) + "%"} />
         </div>
         <div className="flex items-center justify-between">
           <a
@@ -542,20 +540,15 @@ function useCountdown() {
 
 function InlineUpgradeBanner({
   handle,
-  userEmail,
   topScore,
   worstScore,
+  onUpgrade,
 }: {
   handle: string;
-  userEmail?: string | null;
   topScore?: number;
   worstScore?: number;
+  onUpgrade: () => void;
 }) {
-  const baseUrl = userEmail
-    ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
-    : HOTMART_CHECKOUT_URL;
-  const checkoutUrl = appendUtmToCheckout(baseUrl);
-
   const hasScores = topScore !== undefined && worstScore !== undefined;
   const scoreDiff = hasScores ? Math.abs(topScore - worstScore).toFixed(1) : null;
 
@@ -596,7 +589,7 @@ function InlineUpgradeBanner({
       </div>
 
       <button
-        onClick={() => { trackInitiateCheckout(); window.open(checkoutUrl, "_blank"); }}
+        onClick={onUpgrade}
         className="w-full h-11 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
       >
         Ver analise completa
@@ -608,12 +601,8 @@ function InlineUpgradeBanner({
 
 /* ─── Final CTA (after everything, urgency + social proof) ── */
 
-function FinalCTA({ handle, userEmail }: { handle: string; userEmail?: string | null }) {
+function FinalCTA({ handle, onUpgrade }: { handle: string; onUpgrade: () => void }) {
   const timeLeft = useCountdown();
-  const baseUrl = userEmail
-    ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
-    : HOTMART_CHECKOUT_URL;
-  const checkoutUrl = appendUtmToCheckout(baseUrl);
 
   return (
     <section className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background to-orange-500/5 p-6 space-y-5">
@@ -636,7 +625,7 @@ function FinalCTA({ handle, userEmail }: { handle: string; userEmail?: string | 
         </div>
 
         <button
-          onClick={() => { trackInitiateCheckout(); window.open(checkoutUrl, "_blank"); }}
+          onClick={onUpgrade}
           className="w-full max-w-sm h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
         >
           <Lock className="w-4 h-4" />
