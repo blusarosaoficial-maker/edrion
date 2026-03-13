@@ -134,6 +134,25 @@ export interface WeeklyContentPlan {
   estrategia_semanal: string;
 }
 
+export interface StorySequence {
+  dia: number;
+  tema: string;
+  objetivo: string;
+  slides: StorySlide[];
+}
+
+export interface StorySlide {
+  numero: number;
+  tipo: "texto" | "enquete" | "quiz" | "caixa_perguntas" | "video_selfie" | "foto" | "countdown" | "link";
+  conteudo: string;
+  instrucao_visual?: string;
+}
+
+export interface StoriesPlan {
+  sequences: StorySequence[];
+  estrategia_stories: string;
+}
+
 export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
@@ -142,6 +161,7 @@ export interface AnalysisResult {
     worst_post: PostData;
     next_post_suggestion?: NextPostSuggestion;
     weekly_content_plan?: WeeklyContentPlan;
+    stories_plan?: StoriesPlan;
     posts_analysis?: PostData[];
     competitors_analysis?: unknown[];
     strategic_score?: unknown;

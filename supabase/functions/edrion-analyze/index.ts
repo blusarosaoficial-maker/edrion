@@ -1485,6 +1485,205 @@ function applyWeeklyQualityGate(
   };
 }
 
+// ── Stories generation ────────────────────────────────────────
+
+interface AIStorySlide {
+  numero: number;
+  tipo: "texto" | "enquete" | "quiz" | "caixa_perguntas" | "video_selfie" | "foto" | "countdown" | "link";
+  conteudo: string;
+  instrucao_visual?: string;
+}
+
+interface AIStorySequence {
+  dia: number;
+  tema: string;
+  objetivo: string;
+  slides: AIStorySlide[];
+}
+
+interface AIStoriesResult {
+  estrategia_stories: string;
+  sequences: AIStorySequence[];
+}
+
+const storiesSystemPrompt = `Voce e uma especialista senior em estrategia de Stories para Instagram, especializada em criadores brasileiros.
+
+<missao>
+Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia deve ter 3-5 slides usando recursos nativos do Instagram Stories. Toda resposta DEVE ser enviada exclusivamente via tool call.
+</missao>
+
+<contexto_stories>
+DADOS CRUCIAIS DE STORIES EM 2025-2026:
+- Stories tem 2x mais alcance que posts no feed para seguidores existentes
+- Interatividade (enquetes, quiz, caixa de perguntas) aumenta em 40% o alcance do proximo story
+- Stories de video selfie tem 60% mais retencao que stories estaticos
+- Sequencias de 3-5 slides tem melhor taxa de conclusao (nao cansar, nao perder)
+- Consistencia diaria aumenta posicao no topo do feed de stories
+- Enquetes binárias ("Sim/Nao", "Concordo/Discordo") tem 3x mais respostas que abertas
+
+TIPOS DE SLIDE DISPONIVEIS:
+1. texto: Texto sobre fundo colorido ou imagem — para afirmacoes, dicas rapidas, provocacoes
+2. enquete: Enquete com 2 opcoes — para gerar interacao e conhecer audiencia
+3. quiz: Quiz com opcoes — para educar de forma divertida
+4. caixa_perguntas: Caixa "Me pergunte" — para gerar conteudo a partir das duvidas
+5. video_selfie: Video de rosto falando — para conexao e autenticidade
+6. foto: Foto com texto overlay — para bastidores, resultados, antes/depois
+7. countdown: Countdown para evento/lancamento — para criar antecipacao
+8. link: Story com link (sticker) — para direcionar trafego
+</contexto_stories>
+
+<regras>
+1. CADA sequencia deve ter 3-5 slides, usando pelo menos 2 tipos diferentes de slide
+2. Comece cada sequencia com um slide que PRENDE (video_selfie provocativo ou texto impactante)
+3. SEMPRE inclua pelo menos 1 slide interativo (enquete, quiz ou caixa_perguntas) por sequencia
+4. Os 30 dias devem cobrir: educacao, bastidores, comunidade, prova social, entretenimento, venda soft
+5. Varie os temas — nao repita o mesmo angulo em dias consecutivos
+6. Tom deve ser conversacional, como falar com amigo — Stories e informal
+7. instrucao_visual e OBRIGATORIA para slides de foto e video_selfie
+8. conteudo para enquete deve incluir as opcoes (ex: "Voce ja fez isso? | Sim | Nao")
+9. conteudo para quiz deve incluir pergunta + opcoes + resposta certa marcada com (V)
+10. NUNCA invente dados ou numeros do perfil
+</regras>`;
+
+const storiesSchema = {
+  type: "object" as const,
+  properties: {
+    estrategia_stories: {
+      type: "string" as const,
+      description: "Visao geral da estrategia de Stories do mes em 1-2 frases",
+    },
+    sequences: {
+      type: "array" as const,
+      items: {
+        type: "object" as const,
+        properties: {
+          dia: { type: "number" as const },
+          tema: { type: "string" as const, description: "Tema do dia (max 40 chars)" },
+          objetivo: { type: "string" as const, description: "Objetivo do story: engajamento, autoridade, vendas, conexao, etc." },
+          slides: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                numero: { type: "number" as const },
+                tipo: { type: "string" as const, enum: ["texto", "enquete", "quiz", "caixa_perguntas", "video_selfie", "foto", "countdown", "link"] },
+                conteudo: { type: "string" as const, description: "Texto/script do slide. Para enquete: inclua opcoes. Para quiz: inclua pergunta + opcoes + (V) na correta. Para video: inclua fala literal." },
+                instrucao_visual: { type: "string" as const, description: "Instrucao de producao: fundo, filtro, posicao de texto, etc." },
+              },
+              required: ["numero", "tipo", "conteudo"],
+            },
+          },
+        },
+        required: ["dia", "tema", "objetivo", "slides"],
+      },
+    },
+  },
+  required: ["estrategia_stories", "sequences"],
+};
+
+async function generateStories(
+  profile: ReturnType<typeof normalizeProfile>,
+  nicho: string,
+  objetivo: string,
+  captions: string[],
+  topPostInsights: string,
+): Promise<AIStoriesResult | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    console.warn("generateStories: OPENAI_API_KEY not set, skipping");
+    return null;
+  }
+  console.log(`generateStories: starting for @${profile.handle}, nicho=${nicho}`);
+
+  const legendas = captions.length > 0
+    ? captions.map(c => `- "${c.slice(0, 200)}"`).join("\n")
+    : "(sem legendas disponiveis)";
+
+  const userMessage = `Crie 30 sequencias de Stories (1 por dia do mes) para @${profile.handle}.
+
+PERFIL:
+- Nicho: ${nicho}
+- Objetivo: ${objetivo.toUpperCase()}
+- Bio: "${profile.bio_text}"
+- Seguidores: ${profile.followers}
+
+INSIGHTS DO PERFIL (o que funciona):
+${topPostInsights}
+
+LEGENDAS RECENTES (referencia de tom):
+${legendas}
+
+Gere 30 sequencias variadas, cada uma com 3-5 slides. Use TODOS os tipos de slide ao longo do mes. Garanta que cada sequencia tenha pelo menos 1 elemento interativo.`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: storiesSystemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_stories",
+              description: "Retorna 30 sequencias de Stories para 1 mes de conteudo",
+              parameters: storiesSchema,
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "generate_stories" } },
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("OpenAI Stories error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error("OpenAI Stories: no tool call. Response:", JSON.stringify(data?.choices?.[0]?.message || {}).slice(0, 500));
+      return null;
+    }
+
+    const parsed = JSON.parse(toolCall.function.arguments) as AIStoriesResult;
+    console.log(`generateStories: success, ${parsed.sequences?.length || 0} sequences generated`);
+    return parsed;
+  } catch (err) {
+    console.error("generateStories error:", (err as Error).message);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function applyStoriesQualityGate(result: AIStoriesResult): {
+  sequences: Array<{ dia: number; tema: string; objetivo: string; slides: AIStorySlide[] }>;
+  estrategia_stories: string;
+} {
+  return {
+    sequences: result.sequences.map((s) => ({
+      dia: s.dia,
+      tema: s.tema,
+      objetivo: s.objetivo,
+      slides: s.slides,
+    })),
+    estrategia_stories: result.estrategia_stories,
+  };
+}
+
 // ── Result builders ──────────────────────────────────────────
 
 async function buildFreeResult(
@@ -1590,10 +1789,12 @@ async function buildFreeResult(
     ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
     : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
 
-  // Phase 3: Weekly content + thumbnail proxying in parallel (isolated so failures don't cascade)
-  const [weeklyContentResult, thumbnails] = await Promise.all([
+  // Phase 3: Weekly content + Stories + thumbnail proxying in parallel (isolated so failures don't cascade)
+  const [weeklyContentResult, storiesResult, thumbnails] = await Promise.all([
     generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
       .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
+    generateStories(profile, nicho, objetivo, captions, topPostInsights)
+      .catch((err) => { console.error("generateStories crashed:", err); return null; }),
     Promise.all([
       proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
         .catch(() => topPostData.thumb_url),
@@ -1611,6 +1812,12 @@ async function buildFreeResult(
     : null;
   console.log(`buildFreeResult: weeklyPlan=${weeklyPlan ? `OK (${weeklyPlan.scripts.length} scripts)` : "NULL"}`);
 
+  // Process stories through quality gate
+  const storiesPlan = storiesResult
+    ? applyStoriesQualityGate(storiesResult)
+    : null;
+  console.log(`buildFreeResult: storiesPlan=${storiesPlan ? `OK (${storiesPlan.sequences.length} sequences)` : "NULL"}`);
+
   return {
     profile,
     deliverables: {
@@ -1619,6 +1826,7 @@ async function buildFreeResult(
       worst_post: worstPostData || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
       weekly_content_plan: weeklyPlan,
+      stories_plan: storiesPlan,
     },
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
     plan: "free" as const,

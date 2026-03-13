@@ -26,6 +26,7 @@ import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
+import StoriesSection from "@/components/StoriesSection";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { appendUtmToCheckout } from "@/utils/hotmartUtm";
@@ -189,6 +190,15 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
       {deliverables.weekly_content_plan && (
         <WeeklyContentSection
           plan={deliverables.weekly_content_plan}
+          locked={!isPremium}
+          onLockedClick={() => setShowUpgrade(true)}
+        />
+      )}
+
+      {/* 5. Stories Plan (30 sequences) */}
+      {deliverables.stories_plan && (
+        <StoriesSection
+          plan={deliverables.stories_plan}
           locked={!isPremium}
           onLockedClick={() => setShowUpgrade(true)}
         />

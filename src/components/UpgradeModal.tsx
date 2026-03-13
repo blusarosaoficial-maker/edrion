@@ -32,6 +32,7 @@ const BENEFITS = [
   "Saiba exatamente o que evitar: análise completa do seu pior post",
   "Sua bio reescrita e otimizada (pronta para copiar e colar)",
   "Plano de 7 dias com roteiros completos para o seu nicho",
+  "30 sequências de Stories prontas (1 por dia do mês)",
   "Hooks, legendas e hashtags prontos para usar",
 ];
 
