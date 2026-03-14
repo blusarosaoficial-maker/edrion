@@ -206,7 +206,7 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
       {deliverables.weekly_content_plan && (
         <WeeklyContentSection
           plan={deliverables.weekly_content_plan}
-          locked={!isPremium}
+          locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
         />
       )}
@@ -215,7 +215,7 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
       {deliverables.stories_plan && (
         <StoriesSection
           plan={deliverables.stories_plan}
-          locked={!isPremium}
+          locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
         />
       )}
