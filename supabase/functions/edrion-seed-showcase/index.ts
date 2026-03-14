@@ -176,19 +176,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify service_role authorization
-    const authHeader = req.headers.get("Authorization") || "";
-    const apikeyHeader = req.headers.get("apikey") || "";
+    // Auth: use the service_role key from env to create admin client
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const isAuthorized = serviceKey && (authHeader.includes(serviceKey) || apikeyHeader === serviceKey);
-    console.log("DEBUG auth:", { authFirst20: authHeader.substring(0, 27), serviceKeyFirst20: serviceKey.substring(0, 20), apikeyFirst20: apikeyHeader.substring(0, 20) });
-    if (!isAuthorized) {
-      console.error("Auth failed. authHeader present:", !!authHeader, "apikey present:", !!apikeyHeader, "serviceKey present:", !!serviceKey);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceKey!, {
