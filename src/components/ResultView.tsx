@@ -35,6 +35,7 @@ interface Props {
   result: AnalysisResult;
   onReset: () => void;
   resetLabel?: string;
+  isShowcase?: boolean;
 }
 
 function formatNum(n: number): string {
@@ -64,7 +65,7 @@ function healthLabel(score: number): { text: string; color: string; bg: string }
   return { text: "Precisa melhorar", color: "text-destructive", bg: "from-red-500 to-orange-500" };
 }
 
-export default function ResultView({ result, onReset, resetLabel }: Props) {
+export default function ResultView({ result, onReset, resetLabel, isShowcase }: Props) {
   const { user } = useAuth();
   const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post } = deliverables;
@@ -74,6 +75,13 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
 
   const healthScore = computeHealthScore(result);
   const health = healthLabel(healthScore);
+
+  // In showcase mode, "upgrade" actions scroll to top to encourage own analysis
+  const handleShowcaseUpgrade = () => {
+    onReset();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const onUpgradeAction = isShowcase ? handleShowcaseUpgrade : () => setShowUpgrade(true);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
@@ -119,7 +127,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
       </div>
 
       {/* Profile Health Score */}
-      <ProfileHealthScore score={healthScore} health={health} isPremium={isPremium} onUpgrade={() => setShowUpgrade(true)} />
+      <ProfileHealthScore score={healthScore} health={health} isPremium={isPremium} onUpgrade={onUpgradeAction} />
 
       {limits && (
         <p className="text-muted-foreground text-xs text-center">
@@ -141,7 +149,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
           showPositiveFactors={!isPremium}
           onClickAnalysis={() => {
             if (isPremium) setSelectedPost({ post: top_post, variant: "top" });
-            else setShowUpgrade(true);
+            else onUpgradeAction();
           }}
         />
         <PostCard
@@ -152,26 +160,31 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
           locked={!isPremium}
           onClickAnalysis={() => {
             if (isPremium) setSelectedPost({ post: worst_post, variant: "worst" });
-            else setShowUpgrade(true);
+            else onUpgradeAction();
           }}
         />
       </div>
 
       {/* Inline upgrade CTA for free users — after posts, curiosity-driven */}
-      {!isPremium && (
+      {!isPremium && !isShowcase && (
         <InlineUpgradeBanner
           handle={profile.handle}
           topScore={top_post.analysis?.nota_geral}
           worstScore={worst_post.analysis?.nota_geral}
-          onUpgrade={() => setShowUpgrade(true)}
+          onUpgrade={onUpgradeAction}
         />
+      )}
+
+      {/* Showcase CTA — encourage own analysis */}
+      {isShowcase && (
+        <ShowcaseCTA onAnalyze={handleShowcaseUpgrade} handle={profile.handle} />
       )}
 
       {/* Blurred next post suggestion for free users */}
       {!isPremium && deliverables.next_post_suggestion && (
         <BlurredNextPost
           suggestion={deliverables.next_post_suggestion}
-          onUpgrade={() => setShowUpgrade(true)}
+          onUpgrade={onUpgradeAction}
         />
       )}
 
@@ -189,7 +202,7 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
         <WeeklyContentSection
           plan={deliverables.weekly_content_plan}
           locked={!isPremium}
-          onLockedClick={() => setShowUpgrade(true)}
+          onLockedClick={onUpgradeAction}
         />
       )}
 
@@ -198,14 +211,35 @@ export default function ResultView({ result, onReset, resetLabel }: Props) {
         <StoriesSection
           plan={deliverables.stories_plan}
           locked={!isPremium}
-          onLockedClick={() => setShowUpgrade(true)}
+          onLockedClick={onUpgradeAction}
         />
       )}
 
       {/* Final CTA for free users — after everything */}
-      {!isPremium && <FinalCTA handle={profile.handle} onUpgrade={() => setShowUpgrade(true)} />}
+      {!isPremium && !isShowcase && <FinalCTA handle={profile.handle} onUpgrade={onUpgradeAction} />}
 
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} result={result} />
+      {/* Showcase final CTA */}
+      {isShowcase && (
+        <section className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 p-6 space-y-4 text-center">
+          <p className="text-lg font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Quer ver a análise do <span className="text-gradient-brand">seu perfil</span>?
+          </p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Essa foi a análise de @{profile.handle}. Descubra o que está travando o <strong>seu</strong> crescimento com uma análise gratuita.
+          </p>
+          <button
+            onClick={handleShowcaseUpgrade}
+            className="w-full max-w-sm mx-auto h-12 rounded-lg bg-gradient-brand text-white font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg"
+          >
+            Analisar meu perfil — grátis
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </section>
+      )}
+
+      {!isShowcase && (
+        <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} result={result} />
+      )}
 
       {/* WhatsApp support for premium users */}
       {isPremium && (
@@ -643,6 +677,38 @@ function FinalCTA({ handle, onUpgrade }: { handle: string; onUpgrade: () => void
           <span>Garantia 7 dias</span>
         </div>
       </div>
+    </section>
+  );
+}
+
+/* ─── Showcase CTA (replaces upgrade banner in showcase mode) ─ */
+
+function ShowcaseCTA({ onAnalyze, handle }: { onAnalyze: () => void; handle: string }) {
+  return (
+    <section className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 p-5 md:p-6 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h3
+            className="text-foreground font-bold text-base"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Essa é a análise de @{handle}. E a sua?
+          </h3>
+          <p className="text-muted-foreground text-sm mt-1">
+            Descubra o que está travando o seu crescimento com uma análise gratuita de bio, posts e estratégia.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onAnalyze}
+        className="w-full h-11 rounded-lg bg-gradient-brand text-white font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg"
+      >
+        Analisar meu perfil — grátis
+        <ArrowRight className="w-4 h-4" />
+      </button>
     </section>
   );
 }

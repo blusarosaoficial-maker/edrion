@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, TrendingUp, ArrowRight, Eye, Lock } from "lucide-react";
+import { Users, TrendingUp, ArrowRight, Eye, Lock, CheckCircle2 } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -16,108 +16,119 @@ export interface ShowcaseProfile {
   followers: number;
   engagement: number;
   healthScore: number;
+  is_verified: boolean;
 }
 
 const SHOWCASE_PROFILES: ShowcaseProfile[] = [
   {
-    handle: "bianca",
+    handle: "biaborges",
     name: "Bianca Andrade",
     niche: "empreendedorismo",
     nicheLabel: "Empreendedorismo",
-    avatar_url: "https://ui-avatars.com/api/?name=Bianca+Andrade&background=6A5CFF&color=fff&size=128&bold=true",
-    followers: 19_000_000,
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/biaborges.jpg",
+    followers: 19_200_000,
     engagement: 2.8,
     healthScore: 82,
+    is_verified: true,
   },
   {
     handle: "thiago.nigro",
     name: "Thiago Nigro",
     niche: "financas",
     nicheLabel: "Educação Financeira",
-    avatar_url: "https://ui-avatars.com/api/?name=Thiago+Nigro&background=A855F7&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/thiago.nigro.jpg",
     followers: 9_400_000,
     engagement: 3.1,
     healthScore: 87,
+    is_verified: true,
   },
   {
     handle: "francinyehlke",
     name: "Franciny Ehlke",
     niche: "beleza",
     nicheLabel: "Beleza & Lifestyle",
-    avatar_url: "https://ui-avatars.com/api/?name=Franciny+Ehlke&background=FF3DAE&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/francinyehlke.jpg",
     followers: 19_000_000,
     engagement: 3.2,
     healthScore: 85,
+    is_verified: true,
   },
   {
     handle: "camilacoutinho",
     name: "Camila Coutinho",
     niche: "moda",
     nicheLabel: "Moda",
-    avatar_url: "https://ui-avatars.com/api/?name=Camila+Coutinho&background=F59E0B&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/camilacoutinho.jpg",
     followers: 3_000_000,
     engagement: 2.5,
     healthScore: 79,
+    is_verified: true,
   },
   {
     handle: "mohindi",
     name: "Mohamad Hindi",
     niche: "gastronomia",
     nicheLabel: "Gastronomia",
-    avatar_url: "https://ui-avatars.com/api/?name=Mohamad+Hindi&background=10B981&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/mohindi.jpg",
     followers: 1_000_000,
     engagement: 4.1,
     healthScore: 88,
+    is_verified: true,
   },
   {
     handle: "nortonmello",
     name: "Norton Mello",
     niche: "fitness",
     nicheLabel: "Fitness",
-    avatar_url: "https://ui-avatars.com/api/?name=Norton+Mello&background=EF4444&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/nortonmello.jpg",
     followers: 837_000,
     engagement: 3.8,
     healthScore: 84,
+    is_verified: false,
   },
   {
-    handle: "whinderssonnunes",
+    handle: "waborges",
     name: "Whindersson Nunes",
     niche: "entretenimento",
     nicheLabel: "Entretenimento",
-    avatar_url: "https://ui-avatars.com/api/?name=Whindersson+Nunes&background=8B5CF6&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/waborges.jpg",
     followers: 56_000_000,
     engagement: 3.5,
     healthScore: 91,
+    is_verified: true,
   },
   {
     handle: "manualdomundo",
     name: "Manual do Mundo",
     niche: "educacao",
     nicheLabel: "Educação",
-    avatar_url: "https://ui-avatars.com/api/?name=Manual+do+Mundo&background=3B82F6&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/manualdomundo.jpg",
     followers: 3_000_000,
     engagement: 4.5,
     healthScore: 90,
+    is_verified: true,
   },
   {
     handle: "eduardofeldberg",
     name: "Eduardo Feldberg",
     niche: "financas",
     nicheLabel: "Finanças & Humor",
-    avatar_url: "https://ui-avatars.com/api/?name=Eduardo+Feldberg&background=14B8A6&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/eduardofeldberg.jpg",
     followers: 3_000_000,
     engagement: 3.9,
     healthScore: 86,
+    is_verified: true,
   },
   {
     handle: "virginia",
     name: "Virginia Fonseca",
     niche: "lifestyle",
     nicheLabel: "Lifestyle",
-    avatar_url: "https://ui-avatars.com/api/?name=Virginia+Fonseca&background=EC4899&color=fff&size=128&bold=true",
+    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/virginia.jpg",
     followers: 54_000_000,
     engagement: 2.9,
     healthScore: 89,
+    is_verified: true,
   },
 ];
 
@@ -235,13 +246,21 @@ export default function ShowcaseCarousel({ onProfileClick, onAnalyzeClick }: Pro
                       <img
                         src={profile.avatar_url}
                         alt={profile.name}
-                        className="w-10 h-10 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-cover"
+                        className="w-10 h-10 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-cover bg-muted"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=6A5CFF&color=fff&size=128&bold=true`;
+                        }}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {profile.name}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {profile.name}
+                        </p>
+                        {profile.is_verified && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">
                         @{profile.handle}
                       </p>

@@ -14,9 +14,10 @@ import { LogIn, LogOut, ChevronDown } from "lucide-react";
 import { trackLead, trackPurchase } from "@/utils/pixel";
 import { getAnalyzedCount, formatCount } from "@/utils/counter";
 import HistoryPanel from "@/components/HistoryPanel";
-import ShowcaseCarousel from "@/components/ShowcaseCarousel";
+import ShowcaseCarousel, { SHOWCASE_PROFILES } from "@/components/ShowcaseCarousel";
+import { fetchShowcaseResult } from "@/services/showcase";
 
-type AppState = "form" | "loading" | "result" | "upgrade";
+type AppState = "form" | "loading" | "result" | "upgrade" | "showcase";
 
 const ERROR_MESSAGES: Record<string, string> = {
   private: "Esse perfil é privado. Só conseguimos analisar perfis públicos.",
@@ -47,6 +48,7 @@ const Index = () => {
   const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
   const [currentHandle, setCurrentHandle] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showcaseResult, setShowcaseResult] = useState<AnalysisResult | null>(null);
   const abortRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -267,6 +269,28 @@ const Index = () => {
     toast.success("Você saiu da sua conta");
   };
 
+  const handleShowcaseClick = useCallback(async (handle: string) => {
+    const profile = SHOWCASE_PROFILES.find((p) => p.handle === handle);
+    if (!profile) return;
+    setState("loading");
+    setCurrentHandle(handle);
+    setIsDone(false);
+    try {
+      const result = await fetchShowcaseResult(profile);
+      setShowcaseResult(result);
+      setIsDone(true);
+      setState("showcase");
+    } catch {
+      setState("form");
+      toast.error("Erro ao carregar análise. Tente novamente.");
+    }
+  }, []);
+
+  const handleShowcaseReset = useCallback(() => {
+    setShowcaseResult(null);
+    setState("form");
+  }, []);
+
   // Navigation tabs component (reused across views)
   const NavTabs = ({ current }: { current: "nova-analise" | "historico" | "resultado" }) => (
     <div className="flex justify-center mb-6">
@@ -386,10 +410,7 @@ const Index = () => {
                   {/* Showcase carousel — social proof */}
                   <div className="w-full max-w-2xl relative z-10 mt-4">
                     <ShowcaseCarousel
-                      onProfileClick={() => {
-                        // Scroll to analyze form
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
+                      onProfileClick={handleShowcaseClick}
                       onAnalyzeClick={() => {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
@@ -452,6 +473,15 @@ const Index = () => {
             {user && <NavTabs current="resultado" />}
             <ResultView result={result} onReset={handleReset} />
           </>
+        )}
+
+        {state === "showcase" && showcaseResult && (
+          <ResultView
+            result={showcaseResult}
+            onReset={handleShowcaseReset}
+            resetLabel="Voltar ao portfólio"
+            isShowcase
+          />
         )}
 
         {state === "upgrade" && (
