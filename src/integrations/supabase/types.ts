@@ -82,6 +82,33 @@ export type Database = {
           },
         ]
       }
+      blocked_users: {
+        Row: {
+          blocked_at: string | null
+          email: string
+          id: string
+          notes: string | null
+          reason: string
+          user_id: string | null
+        }
+        Insert: {
+          blocked_at?: string | null
+          email: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          user_id?: string | null
+        }
+        Update: {
+          blocked_at?: string | null
+          email?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       hotmart_transactions: {
         Row: {
           analysis_result_id: string | null
@@ -156,30 +183,6 @@ export type Database = {
           },
         ]
       }
-      showcase_clicks: {
-        Row: {
-          id: string
-          handle: string
-          niche: string
-          user_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          handle: string
-          niche: string
-          user_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          handle?: string
-          niche?: string
-          user_id?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
       users_profiles: {
         Row: {
           analysis_credits: number
@@ -216,6 +219,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      is_email_blocked: { Args: { p_email: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
