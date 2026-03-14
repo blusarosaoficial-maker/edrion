@@ -167,7 +167,8 @@ export async function checkUserCredits(): Promise<{
 
 export async function checkBlockedEmail(email: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc("is_email_blocked", {
+    // deno-lint-ignore no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("is_email_blocked", {
       p_email: email,
     });
     if (error) {

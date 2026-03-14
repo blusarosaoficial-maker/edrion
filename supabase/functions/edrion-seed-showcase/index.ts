@@ -119,7 +119,8 @@ async function uploadImage(
   bucket: string,
   filePath: string,
   imageUrl: string,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
 ): Promise<string> {
   const res = await fetch(imageUrl);
   if (!res.ok) throw new Error(`fetch failed ${res.status} for ${imageUrl}`);
