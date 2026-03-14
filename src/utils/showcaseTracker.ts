@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function trackShowcaseClick(handle: string, niche: string) {
   try {
-    await supabase.from("showcase_clicks").insert({
+    await (supabase.from as any)("showcase_clicks").insert({
       handle,
       niche,
     });
