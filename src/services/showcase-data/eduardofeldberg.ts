@@ -195,6 +195,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 1,
         tema: "Quanto eu ganhei dormindo — prova de autoridade",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Bom dia! Enquanto eu dormia, meu dinheiro rendeu R$342. Enquanto você dormia, o seu rendeu quanto? Se a resposta é 'nada', fica aqui que a gente vai resolver isso.", instrucao_visual: "Selfie matinal casual, texto na tela: 'R$342 enquanto eu dormia 💰'. Tom descontraído." },
           { numero: 2, tipo: "texto", conteudo: "A conta é simples:\n💰 R$300 mil investidos\n📈 13% ao ano (Selic)\n🌙 = R$342/semana SEM FAZER NADA\n\nIsso é R$1.368/mês de renda passiva. Um salário mínimo caindo do céu.", instrucao_visual: "Fundo escuro com números em destaque amarelo, cada linha aparecendo uma por vez." },
@@ -205,6 +206,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 2,
         tema: "Bastidores do @pobreshow — autoridade + entretenimento",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Vocês não fazem ideia do que acontece nos bastidores do Pobre Show. Hoje vou mostrar como a gente transforma finanças em comédia. Vem comigo.", instrucao_visual: "Selfie nos bastidores do estúdio, expressão animada." },
           { numero: 2, tipo: "foto", conteudo: "Esse é o estúdio onde a mágica acontece. 3 câmeras, 2 teleprompters e 1 calculadora que já viu coisas que nenhuma calculadora deveria ver. As contas que a gente faz aqui assustam até o Excel.", instrucao_visual: "Foto panorâmica do estúdio do Pobre Show." },
@@ -215,6 +217,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 3,
         tema: "Quanto custa ser o Neymar por 1 dia",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "QUANTO CUSTA SER O NEYMAR POR 1 DIA?\n\n🏠 Mansão em Paris: R$95.000/dia\n🚗 Garagem (47 carros): R$12.000/dia em seguro\n👔 Personal stylist: R$5.000/dia\n🍽️ Chef particular: R$3.000/dia\n\nTOTAL: R$115.000 POR DIA", instrucao_visual: "Fundo luxuoso com itens aparecendo um a um. Design impactante." },
           { numero: 2, tipo: "quiz", conteudo: "R$115.000 por dia = quanto por ANO?\nA) R$20 milhões\nB) R$32 milhões\nC) R$42 milhões ✅\nD) R$60 milhões", instrucao_visual: "Quiz com números grandes e dramáticos." },
@@ -225,6 +228,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 4,
         tema: "3 investimentos que eu faço TODO mês — sem exceção",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Todo mês, sem falta, eu faço 3 investimentos. Não importa se o mercado caiu, se o dólar subiu, se o mundo tá acabando. ESSES 3 eu faço sempre.", instrucao_visual: "Selfie séria, olhando direto pra câmera. Texto: '3 investimentos OBRIGATÓRIOS 📊'." },
           { numero: 2, tipo: "texto", conteudo: "1️⃣ Tesouro IPCA+ — protege da inflação. O governo me paga pra emprestar dinheiro. Rendimento real de 6-7% ao ano.\n\n2️⃣ CDB de banco digital — 120% CDI, liquidez diária. Minha reserva de oportunidade.\n\n3️⃣ ETF de S&P 500 — dolarizo parte do patrimônio. Se o Brasil der errado, meu dinheiro tá lá fora.", instrucao_visual: "Lista com ícones coloridos para cada investimento, fundo profissional." },
@@ -235,6 +239,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 5,
         tema: "Quiz: você sabe mais de finanças que um aluno do 5º ano?",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "QUIZ: Você sabe mais de finanças que um aluno do 5º ANO? 🎓\n\nEu fiz essas perguntas pra crianças de 10 anos. Vamos ver se você acerta mais que elas.", instrucao_visual: "Fundo divertido com emoji de escola. Design colorido e lúdico." },
           { numero: 2, tipo: "quiz", conteudo: "O que são JUROS COMPOSTOS?\nA) Juros sobre juros ✅\nB) Juros do banco\nC) Juros do cartão\nD) Juros do governo\n\n(87% das crianças acertaram. E você?)", instrucao_visual: "Quiz com design infantil divertido." },
@@ -245,6 +250,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 6,
         tema: "O erro financeiro mais comum dos brasileiros",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "O erro financeiro que 73% dos brasileiros cometem TODO MÊS:\n\nGastar primeiro, guardar o que sobra.\n\nSpoiler: nunca sobra. 🤡", instrucao_visual: "Fundo vermelho com estatística grande. Emoji de palhaço no final." },
           { numero: 2, tipo: "texto", conteudo: "A regra de ouro:\n\nRecebeu o salário → PRIMEIRO investe → DEPOIS gasta o resto.\n\nNão o contrário. NUNCA o contrário.\n\nSe você esperar sobrar, não vai sobrar. O iFood não vai deixar.", instrucao_visual: "Diagrama mostrando a ordem correta: salário → investimento → gastos." },
@@ -255,6 +261,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 7,
         tema: "Domingo de reflexão: por que você tem medo de dinheiro?",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Pergunta séria pro domingo: você tem MEDO de dinheiro?\n\nMedo de investir e perder.\nMedo de ganhar e não saber cuidar.\nMedo de falar de dinheiro com a família.\n\nIsso tem nome: analfabetismo financeiro emocional.", instrucao_visual: "Fundo escuro com texto reflexivo, fonte elegante." },
           { numero: 2, tipo: "enquete", conteudo: "Qual é o seu maior medo com dinheiro?\n📉 Investir e perder tudo\n💸 Nunca conseguir guardar\n🤐 Falar de dinheiro com família\n😰 Não ter dinheiro na velhice", instrucao_visual: "Enquete com fundo neutro e emojis expressivos." },
@@ -265,6 +272,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 8,
         tema: "Quanto custa o estilo de vida da Virgínia Fonseca",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "QUANTO CUSTA ser a Virgínia Fonseca POR MÊS? 💸\n\n🏠 Mansão: R$180.000/mês\n👶 Babás (3): R$21.000/mês\n👗 Roupas/beleza: R$150.000/mês\n🚗 Carros: R$45.000/mês\n✈️ Viagens: R$200.000/mês\n\nTOTAL: ~R$600.000/MÊS", instrucao_visual: "Itens aparecendo um a um com valores. Design glamouroso." },
           { numero: 2, tipo: "quiz", conteudo: "A Virgínia ganha ~R$5M/mês com publi. Se investisse 20%:\nA) R$120 mil/mês de juros\nB) R$200 mil/mês de juros ✅\nC) R$500 mil/mês de juros", instrucao_visual: "Quiz com números impressionantes." },
@@ -275,6 +283,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 9,
         tema: "Desafio: 1 semana sem gastar com besteira",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "DESAFIO: 1 semana sem gastar com besteira. Sem iFood, sem Uber pra 500 metros, sem café de R$15. Quem topa? Eu vou fazer junto.", instrucao_visual: "Selfie animada com texto: 'DESAFIO 7 DIAS SEM BESTEIRA 🔥'" },
           { numero: 2, tipo: "enquete", conteudo: "Você consegue ficar 7 dias sem:\n🍕 iFood/delivery\n🚗 Uber desnecessário\n☕ Café caro\n📱 Compra por impulso online\n\nTopa o desafio?", instrucao_visual: "Enquete com ícones para cada categoria." },
@@ -285,6 +294,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 10,
         tema: "Respondendo as perguntas mais absurdas sobre dinheiro",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Vocês mandaram perguntas sobre dinheiro e... algumas são INCRÍVEIS. Vou responder as melhores (e piores). 😂", instrucao_visual: "Fundo com emojis de pergunta e riso. Design divertido." },
           { numero: 2, tipo: "video_selfie", conteudo: "Pergunta 1: 'Feldberg, se eu investir R$10 por mês, fico rico?' Resposta: Em 30 anos a 13% ao ano, R$10/mês viram R$44.694. Não é 'rico', mas é R$44 mil a mais do que quem não investiu NADA. Todo centavo conta.", instrucao_visual: "Selfie respondendo com cálculo na tela." },
@@ -295,6 +305,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 11,
         tema: "Se o Cristiano Ronaldo investisse o salário de 1 semana...",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Cristiano Ronaldo ganha R$15 MILHÕES POR SEMANA no Al-Nassr. 🤯\n\nPOR SEMANA.\n\nIsso é R$89.000 POR HORA.\nR$1.488 POR MINUTO.\nR$25 POR SEGUNDO.\n\nEle ganha R$25 enquanto você lê esse story.", instrucao_visual: "Números enormes aparecendo em cascata. Fundo dourado luxuoso." },
           { numero: 2, tipo: "texto", conteudo: "Se ele investisse 1 SEMANA de salário (R$15M) no Tesouro Selic:\n\n📈 Rendimento anual: R$1,95 MILHÃO\n📈 Rendimento mensal: R$162.500\n📈 Rendimento diário: R$5.416\n\nR$5 mil POR DIA fazendo NADA. Uma semana de trabalho gerando renda passiva ETERNA.", instrucao_visual: "Cálculos em destaque com ícones de dinheiro crescendo." },
@@ -305,6 +316,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 12,
         tema: "O que fazer com o primeiro salário — guia definitivo",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Se eu pudesse voltar no tempo e dar um conselho pro eu de 18 anos sobre o primeiro salário, seria EXATAMENTE isso:", instrucao_visual: "Fundo com foto antiga (ou estilizada) e texto reflexivo." },
           { numero: 2, tipo: "texto", conteudo: "REGRA DO PRIMEIRO SALÁRIO:\n\n50% → Necessidades (aluguel, comida, transporte)\n30% → Desejos (lazer, mas COM LIMITE)\n20% → Investimentos (ANTES de gastar)\n\nSalário de R$2.000?\n💰 R$1.000 necessidades\n🎮 R$600 desejos\n📈 R$400 investimentos", instrucao_visual: "Diagrama visual tipo pizza com percentuais e valores." },
@@ -315,6 +327,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 13,
         tema: "Quiz relâmpago: finanças pessoais",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "QUIZ RELÂMPAGO! 🔥⚡\n5 perguntas de finanças. Se você acertar 4+, você sabe mais que 90% dos brasileiros. Bora testar?", instrucao_visual: "Fundo energético com raios e fogo. Design de game show." },
           { numero: 2, tipo: "quiz", conteudo: "Qual a taxa Selic atual?\nA) 8,5%\nB) 11%\nC) 13,25%\nD) 14,25% ✅", instrucao_visual: "Quiz com timer visual." },
@@ -326,6 +339,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 14,
         tema: "Domingo: o mito do 'quando eu ganhar mais, eu invisto'",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "A maior MENTIRA que você conta pra si mesmo:\n\n'Quando eu ganhar mais, eu começo a investir.'\n\nSpoiler: você nunca vai 'ganhar mais o suficiente'. Seu gasto SEMPRE acompanha seu salário. Isso tem nome: inflação do estilo de vida.", instrucao_visual: "Fundo escuro com texto provocativo em fonte grande." },
           { numero: 2, tipo: "texto", conteudo: "Prova:\n\nGanhava R$2.000 → gastava R$2.000\nGanhou R$4.000 → gasta R$4.000\nGanhou R$8.000 → gasta R$8.000\n\nO salário dobrou. A sobra? ZERO. Porque os gastos cresceram junto.\n\nA solução: investe PRIMEIRO, gasta o RESTO.", instrucao_visual: "Escada visual mostrando salário vs gasto sempre iguais." },
@@ -336,6 +350,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 15,
         tema: "Mini-aula: o que é renda fixa em 60 segundos",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Renda fixa em 60 segundos. Se depois disso você não entender, pode me xingar nos DMs. Bora:", instrucao_visual: "Selfie com cronômetro na tela. Tom desafiador e divertido." },
           { numero: 2, tipo: "texto", conteudo: "RENDA FIXA = você EMPRESTA dinheiro e recebe JUROS.\n\n🏛️ Pro governo → Tesouro Direto\n🏦 Pro banco → CDB\n🏢 Pra empresa → Debênture\n\nÉ como ser o banco: em vez de PAGAR juros, você RECEBE juros.", instrucao_visual: "Diagrama simples com setas mostrando dinheiro indo e voltando com juros." },
@@ -346,6 +361,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 16,
         tema: "Simulação ao vivo: R$200/mês por 20 anos",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "SIMULAÇÃO AO VIVO 🔴\n\nR$200/mês. 20 anos. Renda fixa a 13%.\n\nPode parecer pouco. Mas os juros compostos não acham pouco. Vem ver o resultado.", instrucao_visual: "Fundo de 'live' com indicador vermelho piscando." },
           { numero: 2, tipo: "texto", conteudo: "Aporte total do seu bolso: R$48.000\n(R$200 × 240 meses)\n\nRendimento dos juros: R$126.580\n\nTOTAL FINAL: R$174.580\n\nOs juros colocaram R$126 MIL. Você colocou R$48 mil. O dinheiro trabalhou 2.6x mais que você. 😂", instrucao_visual: "Calculadora na tela com resultado crescendo. Destaque na diferença entre aporte e juros." },
@@ -356,6 +372,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 17,
         tema: "5 apps que eu uso pra controlar meu dinheiro",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "5 APPS que eu uso pra controlar meu dinheiro (todos GRATUITOS):\n\nSe você não sabe pra onde vai seu dinheiro, essas ferramentas vão te mostrar a verdade dolorosa.", instrucao_visual: "Fundo com ícones de apps e texto direto." },
           { numero: 2, tipo: "texto", conteudo: "1️⃣ Organizze — controle de gastos simples e visual\n2️⃣ Kinvo — acompanhar investimentos\n3️⃣ Calculadora do Cidadão (Banco Central) — simular juros compostos\n4️⃣ Tesouro Direto (app oficial) — investir direto pelo celular\n5️⃣ Planilha Google — sim, a boa e velha planilha funciona MELHOR que 90% dos apps", instrucao_visual: "Lista com screenshots pequenos de cada app." },
@@ -366,6 +383,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 18,
         tema: "O que fazer quando o mercado CAI",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "O mercado caiu 3% e seu tio já tá no grupo da família:\n\n'EU AVISEI! VAI TUDO QUEBRAR! VENDE TUDO!'\n\nCalma, tio. Respira. Deixa eu explicar.", instrucao_visual: "Fundo vermelho de 'pânico' com mensagem de WhatsApp fictícia do tio." },
           { numero: 2, tipo: "texto", conteudo: "O que PARECE:\n📉 'Perdi tudo! O mercado vai acabar!'\n\nO que REALMENTE aconteceu:\n📊 Você não vendeu, então não perdeu nada.\n📈 O mercado cai 3% e sobe 5% o tempo todo.\n🕐 Em 10+ anos, NUNCA deu prejuízo.", instrucao_visual: "Comparativo visual: pânico vs realidade com gráfico de longo prazo." },
@@ -376,6 +394,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 19,
         tema: "Dica de economia: como gastar menos no supermercado",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Você vai ao supermercado comprar ARROZ e volta com R$300 em besteira. Eu sei porque eu também faço isso. Mas descobri 4 truques que cortam 30% da conta.", instrucao_visual: "Selfie em frente a um supermercado (ou cenário simulado). Tom de confissão cômica." },
           { numero: 2, tipo: "texto", conteudo: "4 truques pra gastar 30% MENOS no mercado:\n\n1️⃣ NUNCA vá com fome (parece óbvio mas ninguém faz)\n2️⃣ Faça lista e siga RELIGIOSAMENTE\n3️⃣ Compare preço por KG, não por embalagem\n4️⃣ Evite corredor de snacks como evita o ex\n\nR$300/mês economizados = R$3.600/ano = R$84.000 em 10 anos investidos", instrucao_visual: "Lista com ícones de supermercado e cálculo no final." },
@@ -386,6 +405,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 20,
         tema: "Quanto custa manter um carro vs usar Uber por 1 ano",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "QUANTO CUSTA manter um carro popular por 1 ano:\n\n🚗 Parcela: R$1.800/mês\n⛽ Combustível: R$600/mês\n📋 Seguro: R$250/mês\n🔧 Manutenção: R$200/mês\n🅿️ Estacionamento: R$300/mês\n📝 IPVA + licenciamento: R$200/mês\n\nTOTAL: R$3.350/MÊS = R$40.200/ANO", instrucao_visual: "Lista detalhada com ícones, cada item aparecendo. Total em destaque vermelho." },
           { numero: 2, tipo: "texto", conteudo: "Quanto custa usar Uber todo dia por 1 ano:\n\n🚕 2 corridas/dia × R$25 = R$50/dia\n📅 R$50 × 22 dias úteis = R$1.100/mês\n📅 + fins de semana: R$300/mês\n\nTOTAL: R$1.400/MÊS = R$16.800/ANO\n\nDIFERENÇA: R$23.400/ANO 😱", instrucao_visual: "Comparativo visual: carro em vermelho vs Uber em verde." },
@@ -396,6 +416,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 21,
         tema: "Domingo de educação: o poder dos dividendos",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Imagina receber SALÁRIO de empresas sem trabalhar nelas.\n\nIsso existe. Chama DIVIDENDOS.\n\nE não, não é golpe. É como o capitalismo funciona.", instrucao_visual: "Fundo com notas de dinheiro caindo e texto intrigante." },
           { numero: 2, tipo: "texto", conteudo: "Como funciona:\n\n1️⃣ Você compra ações de uma empresa\n2️⃣ A empresa lucra\n3️⃣ Ela distribui parte do lucro pra você\n4️⃣ O dinheiro CAI NA SUA CONTA\n\nVocê vira sócio. A empresa trabalha. Você recebe.\n\nExemplo real: R$100 mil em ações do Banco do Brasil = ~R$800/mês em dividendos.", instrucao_visual: "Diagrama com setas mostrando o fluxo: compra → empresa lucra → dinheiro volta." },
@@ -406,6 +427,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 22,
         tema: "Prova social: aluno que saiu das dívidas com o que aprendeu aqui",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Recebi essa mensagem ontem e quase chorei (de rir... e de orgulho):\n\n'Feldberg, há 1 ano eu devia R$32 mil. Hoje tô zerado e com R$4 mil investidos. Tudo por causa dos seus vídeos. Obrigado, seu doido.' 😂💰", instrucao_visual: "Print de mensagem (estilizado) com destaque nos números." },
           { numero: 2, tipo: "video_selfie", conteudo: "Esse cara fez 3 coisas que eu ensino aqui: 1) Listou todas as dívidas. 2) Negociou desconto em cada uma. 3) Começou a investir R$200/mês MESMO devendo. Em 12 meses, zerou tudo. Sem mágica. Sem fórmula secreta. Método.", instrucao_visual: "Selfie explicando com emoção genuína." },
@@ -416,6 +438,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 23,
         tema: "Quanto custam os hábitos dos ricos vs dos pobres",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "RICOS vs POBRES — não é sobre salário.\n\n☕ Pobre: café de R$15/dia = R$5.475/ano\n☕ Rico: café de R$2 em casa = R$730/ano\nDiferença investida: R$4.745/ano × 20 anos = R$344.000\n\nO rico não fica rico ganhando mais. Fica rico GASTANDO MELHOR.", instrucao_visual: "Comparativo visual lado a lado com cálculos." },
           { numero: 2, tipo: "texto", conteudo: "Mais comparações:\n\n🚗 Pobre: carro financiado em 60x\n🚗 Rico: carro usado à vista\n\n📱 Pobre: iPhone novo todo ano\n📱 Rico: celular bom por 3 anos\n\n🏠 Pobre: aluguel = 40% do salário\n🏠 Rico: aluguel = 20% do salário\n\nA diferença não é o salário. É a DECISÃO.", instrucao_visual: "Lista comparativa com ícones contrastantes." },
@@ -426,6 +449,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 24,
         tema: "Countdown: live especial sobre investimentos para iniciantes",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "ATENÇÃO: quinta-feira às 20h eu vou fazer uma LIVE especial. Tema: como montar sua primeira carteira de investimentos do ZERO. Tudo ao vivo, com calculadora, com humor e SEM enrolação.", instrucao_visual: "Selfie animada com texto: 'LIVE QUINTA 20H 🔴'" },
           { numero: 2, tipo: "countdown", conteudo: "LIVE: Primeira carteira de investimentos do ZERO 🔴\nQuinta-feira, 20h\n\nAtiva o lembrete pra não perder!", instrucao_visual: "Sticker de countdown com data e hora. Design energético." },
@@ -436,6 +460,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 25,
         tema: "Se o Elon Musk perdesse tudo, quanto tempo levaria pra ficar rico de novo?",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Se o Elon Musk PERDESSE TUDO e começasse do zero no Brasil, ganhando R$3.000/mês...\n\nQuanto tempo levaria pra ficar milionário?\n\nSpoiler: menos do que você imagina. 🧮", instrucao_visual: "Foto estilizada do Musk com texto intrigante e calculadora." },
           { numero: 2, tipo: "texto", conteudo: "Com R$3.000/mês e método Feldberg:\n\n📌 Investe 20% (R$600/mês)\n📌 Renda fixa a 13% ao ano\n📌 Aumenta aporte 10% por ano (promoções, renda extra)\n\nAno 5: R$56.000\nAno 10: R$185.000\nAno 15: R$478.000\nAno 20: R$1.102.000\n\nMILIONÁRIO em 20 anos. Com R$3 mil de salário.", instrucao_visual: "Cálculos crescendo com linha do tempo visual." },
@@ -446,6 +471,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 26,
         tema: "Depoimentos de seguidores que começaram a investir",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "Mensagens que eu recebo TODOS OS DIAS:\n\n'Feldberg, comecei com R$50/mês há 2 anos. Hoje tenho R$1.800 investidos e pela primeira vez na vida tenho reserva de emergência. Obrigado.' 🥹", instrucao_visual: "Print de mensagem estilizado com destaque nos números." },
           { numero: 2, tipo: "texto", conteudo: "Outra mensagem:\n\n'Eu achava que investir era coisa de rico. Depois de assistir seus vídeos, abri conta na corretora e investi R$100. Parecia nada. Hoje tenho R$4.200 e cada mês que passa eu fico mais animado vendo crescer.'\n\nESSES são os stories que me motivam. 💪", instrucao_visual: "Segundo print estilizado com coração e destaque." },
@@ -456,6 +482,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 27,
         tema: "O que eu faria se tivesse 18 anos e R$0",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "Se eu tivesse 18 anos hoje, R$0 na conta e todo o conhecimento que tenho agora, isso é EXATAMENTE o que eu faria:", instrucao_visual: "Selfie com expressão determinada. Texto: 'SE EU TIVESSE 18 ANOS E R$0...'" },
           { numero: 2, tipo: "texto", conteudo: "Mês 1-3: Renda extra QUALQUER coisa\n💰 Freelance, aula particular, revenda\n💰 Meta: R$1.000/mês extra\n💰 100% investido em Tesouro Selic\n\nMês 4-6: Primeira reserva\n💰 R$3.000 na reserva de emergência\n💰 Começo a direcionar 50% pra CDB 120% CDI\n💰 Os outros 50% continuam na reserva", instrucao_visual: "Plano visual em timeline com marcos." },
@@ -466,6 +493,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 28,
         tema: "Calculando ao vivo: quanto rende R$100 mil investido",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "R$100 MIL INVESTIDOS rendem quanto? 🧮\n\nVou fazer a conta AO VIVO com 4 investimentos diferentes. Prepara pra ficar com inveja do seu EU do futuro.", instrucao_visual: "Fundo de 'ao vivo' com calculadora e R$100.000 em destaque." },
           { numero: 2, tipo: "texto", conteudo: "R$100 mil investidos por 1 ano:\n\n🏦 Poupança: R$107.100 (rendeu R$7.100)\n📌 Tesouro Selic: R$114.250 (rendeu R$14.250)\n📊 CDB 120% CDI: R$117.100 (rendeu R$17.100)\n📈 Tesouro IPCA+: R$113.000 + inflação\n\nDiferença poupança vs CDB: R$10.000 em 1 ANO.", instrucao_visual: "Tabela comparativa com valores e destaque na diferença." },
@@ -476,6 +504,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 29,
         tema: "Resumo do mês: o que você aprendeu e próximos passos",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "texto", conteudo: "RESUMO DO MÊS 📊\n\nEsse mês nos stories você aprendeu:\n\n✅ Como juros compostos funcionam\n✅ Quanto celebridades ganham (e gastam)\n✅ Por que sair da poupança\n✅ Como montar uma reserva\n✅ Que R$200/mês viram R$174 mil\n\nSe você aplicou PELO MENOS 1 dessas lições, já tá na frente de 90% das pessoas.", instrucao_visual: "Checklist visual com todos os temas cobertos. Design de resumo." },
           { numero: 2, tipo: "enquete", conteudo: "O que mais te impactou esse mês?\n🧮 Os cálculos com celebridades\n💰 Descobrir que poupança é cilada\n📊 Simulações de investimento\n😂 O humor (e a educação junto)", instrucao_visual: "Enquete de feedback com opções temáticas." },
@@ -486,6 +515,7 @@ export const eduardofeldbergData: ShowcaseProfileData = {
       {
         dia: 30,
         tema: "Desafio final: invista R$50 HOJE e me manda o print",
+        objetivo: "Engajar e educar o público",
         slides: [
           { numero: 1, tipo: "video_selfie", conteudo: "DESAFIO FINAL DO MÊS: invista R$50 HOJE. Cinquenta reais. Um combo do McDonald's. Abre a corretora, compra Tesouro Selic, e me manda o print. EU QUERO VER.", instrucao_visual: "Selfie com energia alta. Texto: 'DESAFIO R$50 HOJE 🔥'. Tom de desafio direto." },
           { numero: 2, tipo: "texto", conteudo: "Por que R$50?\n\n💰 É o preço de um iFood\n💰 Compra Tesouro Selic a partir de R$30\n💰 Em 30 anos a 13%: R$50 viram R$2.235\n💰 Não vai mudar sua vida HOJE\n💰 Mas vai criar o HÁBITO que muda sua vida\n\nO primeiro investimento é o mais difícil. Depois vicia.", instrucao_visual: "Lista motivacional com valores e comparações do dia a dia." },
