@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.edrion-hotmart-webhook]
 verify_jwt = false
+
+[functions.edrion-seed-showcase]
+verify_jwt = false
