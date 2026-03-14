@@ -181,6 +181,7 @@ Deno.serve(async (req) => {
     const apikeyHeader = req.headers.get("apikey") || "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const isAuthorized = serviceKey && (authHeader.includes(serviceKey) || apikeyHeader === serviceKey);
+    console.log("DEBUG auth:", { authFirst20: authHeader.substring(0, 27), serviceKeyFirst20: serviceKey.substring(0, 20), apikeyFirst20: apikeyHeader.substring(0, 20) });
     if (!isAuthorized) {
       console.error("Auth failed. authHeader present:", !!authHeader, "apikey present:", !!apikeyHeader, "serviceKey present:", !!serviceKey);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
