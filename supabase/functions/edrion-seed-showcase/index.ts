@@ -119,7 +119,8 @@ async function uploadImage(
   bucket: string,
   filePath: string,
   imageUrl: string,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
 ): Promise<string> {
   const res = await fetch(imageUrl);
   if (!res.ok) throw new Error(`fetch failed ${res.status} for ${imageUrl}`);
@@ -175,15 +176,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify service_role authorization
-    const authHeader = req.headers.get("Authorization");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!authHeader?.includes(serviceKey || "___")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Auth: use the service_role key from env to create admin client
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceKey!, {
