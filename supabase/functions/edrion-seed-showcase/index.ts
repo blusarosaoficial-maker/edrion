@@ -177,9 +177,12 @@ Deno.serve(async (req) => {
 
   try {
     // Verify service_role authorization
-    const authHeader = req.headers.get("Authorization");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!authHeader?.includes(serviceKey || "___")) {
+    const authHeader = req.headers.get("Authorization") || "";
+    const apikeyHeader = req.headers.get("apikey") || "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const isAuthorized = serviceKey && (authHeader.includes(serviceKey) || apikeyHeader === serviceKey);
+    if (!isAuthorized) {
+      console.error("Auth failed. authHeader present:", !!authHeader, "apikey present:", !!apikeyHeader, "serviceKey present:", !!serviceKey);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
