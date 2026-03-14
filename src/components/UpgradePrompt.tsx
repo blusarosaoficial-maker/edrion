@@ -10,7 +10,7 @@ interface Props {
   result?: AnalysisResult;
 }
 
-const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?bid=1772370414415";
+const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?off=0u08l1gh&bid=1773508783476";
 
 function formatNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
