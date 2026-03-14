@@ -70,6 +70,8 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
   const { profile, deliverables, limits } = result;
   const { bio_suggestion, top_post, worst_post } = deliverables;
   const isPremium = result.plan === "premium";
+  // In showcase mode, treat free-tier content as unlocked to demonstrate value
+  const showFullFreeContent = isShowcase || isPremium;
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -145,10 +147,10 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           icon={<ThumbsUp className="w-5 h-5 text-primary" />}
           post={top_post}
           accentClass="border-primary/30"
-          locked={!isPremium}
+          locked={!showFullFreeContent}
           showPositiveFactors={!isPremium}
           onClickAnalysis={() => {
-            if (isPremium) setSelectedPost({ post: top_post, variant: "top" });
+            if (showFullFreeContent) setSelectedPost({ post: top_post, variant: "top" });
             else onUpgradeAction();
           }}
         />
@@ -157,9 +159,9 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           icon={<ThumbsDown className="w-5 h-5 text-destructive" />}
           post={worst_post}
           accentClass="border-destructive/30"
-          locked={!isPremium}
+          locked={!showFullFreeContent}
           onClickAnalysis={() => {
-            if (isPremium) setSelectedPost({ post: worst_post, variant: "worst" });
+            if (showFullFreeContent) setSelectedPost({ post: worst_post, variant: "worst" });
             else onUpgradeAction();
           }}
         />
@@ -180,12 +182,15 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
         <ShowcaseCTA onAnalyze={handleShowcaseUpgrade} handle={profile.handle} />
       )}
 
-      {/* Blurred next post suggestion for free users */}
-      {!isPremium && deliverables.next_post_suggestion && (
+      {/* Next post suggestion — blurred for free users, visible in showcase */}
+      {!isPremium && !isShowcase && deliverables.next_post_suggestion && (
         <BlurredNextPost
           suggestion={deliverables.next_post_suggestion}
           onUpgrade={onUpgradeAction}
         />
+      )}
+      {isShowcase && deliverables.next_post_suggestion && (
+        <NextPostVisible suggestion={deliverables.next_post_suggestion} />
       )}
 
       {selectedPost && (
@@ -709,6 +714,38 @@ function ShowcaseCTA({ onAnalyze, handle }: { onAnalyze: () => void; handle: str
         Analisar meu perfil — grátis
         <ArrowRight className="w-4 h-4" />
       </button>
+    </section>
+  );
+}
+
+/* ─── Next Post Visible (showcase mode) ────────────────────── */
+
+function NextPostVisible({
+  suggestion,
+}: {
+  suggestion: { format: string; hook: string; outline: string[]; cta: string; angle: string };
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+        <Lightbulb className="w-5 h-5 text-amber-400" />
+        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          Próximo Post Sugerido
+        </h3>
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-primary/10 text-primary">{suggestion.format}</span>
+          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-accent/10 text-accent">{suggestion.angle}</span>
+        </div>
+        <p className="text-sm text-foreground font-medium">"{suggestion.hook}"</p>
+        <div className="space-y-1.5">
+          {suggestion.outline.map((item, i) => (
+            <p key={i} className="text-sm text-foreground/70">{i + 1}. {item}</p>
+          ))}
+        </div>
+        <p className="text-sm text-foreground/60">CTA: {suggestion.cta}</p>
+      </div>
     </section>
   );
 }
