@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Users, TrendingUp, ArrowRight, Eye, Lock, CheckCircle2 } from "lucide-react";
+import { Users, TrendingUp, ArrowRight, Eye, CheckCircle2 } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -25,7 +24,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Bianca Andrade",
     niche: "empreendedorismo",
     nicheLabel: "Empreendedorismo",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/biaborges.jpg",
+    avatar_url: "https://unavatar.io/instagram/biaborges",
     followers: 19_200_000,
     engagement: 2.8,
     healthScore: 82,
@@ -36,7 +35,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Thiago Nigro",
     niche: "financas",
     nicheLabel: "Educação Financeira",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/thiago.nigro.jpg",
+    avatar_url: "https://unavatar.io/instagram/thiago.nigro",
     followers: 9_400_000,
     engagement: 3.1,
     healthScore: 87,
@@ -47,7 +46,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Franciny Ehlke",
     niche: "beleza",
     nicheLabel: "Beleza & Lifestyle",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/francinyehlke.jpg",
+    avatar_url: "https://unavatar.io/instagram/francinyehlke",
     followers: 19_000_000,
     engagement: 3.2,
     healthScore: 85,
@@ -58,7 +57,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Camila Coutinho",
     niche: "moda",
     nicheLabel: "Moda",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/camilacoutinho.jpg",
+    avatar_url: "https://unavatar.io/instagram/camilacoutinho",
     followers: 3_000_000,
     engagement: 2.5,
     healthScore: 79,
@@ -69,7 +68,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Mohamad Hindi",
     niche: "gastronomia",
     nicheLabel: "Gastronomia",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/mohindi.jpg",
+    avatar_url: "https://unavatar.io/instagram/mohindi",
     followers: 1_000_000,
     engagement: 4.1,
     healthScore: 88,
@@ -80,18 +79,18 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Norton Mello",
     niche: "fitness",
     nicheLabel: "Fitness",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/nortonmello.jpg",
+    avatar_url: "https://unavatar.io/instagram/nortonmello",
     followers: 837_000,
     engagement: 3.8,
     healthScore: 84,
     is_verified: false,
   },
   {
-    handle: "waborges",
+    handle: "whinderssonnunes",
     name: "Whindersson Nunes",
     niche: "entretenimento",
     nicheLabel: "Entretenimento",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/waborges.jpg",
+    avatar_url: "https://unavatar.io/instagram/whinderssonnunes",
     followers: 56_000_000,
     engagement: 3.5,
     healthScore: 91,
@@ -102,7 +101,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Manual do Mundo",
     niche: "educacao",
     nicheLabel: "Educação",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/manualdomundo.jpg",
+    avatar_url: "https://unavatar.io/instagram/manualdomundo",
     followers: 3_000_000,
     engagement: 4.5,
     healthScore: 90,
@@ -113,7 +112,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Eduardo Feldberg",
     niche: "financas",
     nicheLabel: "Finanças & Humor",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/eduardofeldberg.jpg",
+    avatar_url: "https://unavatar.io/instagram/eduardofeldberg",
     followers: 3_000_000,
     engagement: 3.9,
     healthScore: 86,
@@ -124,7 +123,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Virginia Fonseca",
     niche: "lifestyle",
     nicheLabel: "Lifestyle",
-    avatar_url: "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public/avatars/virginia.jpg",
+    avatar_url: "https://unavatar.io/instagram/virginia",
     followers: 54_000_000,
     engagement: 2.9,
     healthScore: 89,
@@ -184,15 +183,9 @@ interface Props {
 }
 
 export default function ShowcaseCarousel({ onProfileClick, onAnalyzeClick }: Props) {
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
-
   const handleCardClick = (profile: ShowcaseProfile) => {
     trackShowcaseClick(profile.handle, profile.niche);
-    if (expandedCard === profile.handle) {
-      onProfileClick(profile.handle);
-    } else {
-      setExpandedCard(profile.handle);
-    }
+    onProfileClick(profile.handle);
   };
 
   return (
@@ -224,20 +217,14 @@ export default function ShowcaseCarousel({ onProfileClick, onAnalyzeClick }: Pro
         className="w-full"
       >
         <CarouselContent className="-ml-3">
-          {SHOWCASE_PROFILES.map((profile) => {
-            const isExpanded = expandedCard === profile.handle;
-            return (
+          {SHOWCASE_PROFILES.map((profile) => (
               <CarouselItem
                 key={profile.handle}
                 className="pl-3 basis-[72%] sm:basis-[48%] md:basis-[32%]"
               >
                 <button
                   onClick={() => handleCardClick(profile)}
-                  className={`showcase-card w-full text-left rounded-xl border transition-all duration-300 p-4 space-y-3 ${
-                    isExpanded
-                      ? "border-primary/30 bg-primary/5 scale-[1.02]"
-                      : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
-                  }`}
+                  className="showcase-card w-full text-left rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-primary/30 hover:bg-primary/5 hover:scale-[1.02] transition-all duration-300 p-4 space-y-3"
                 >
                   {/* Avatar + Score Ring */}
                   <div className="flex items-center gap-3">
@@ -306,27 +293,14 @@ export default function ShowcaseCarousel({ onProfileClick, onAnalyzeClick }: Pro
                     </div>
                   </div>
 
-                  {/* Expanded state - CTA */}
-                  {isExpanded && (
-                    <div className="pt-1 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                        <Eye className="w-3.5 h-3.5 text-muted-foreground/60" />
-                        <span className="text-[11px] text-muted-foreground">
-                          Bio, posts e estratégia analisados
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-primary py-2 rounded-lg bg-primary/10 border border-primary/20">
-                          <Lock className="w-3 h-3" />
-                          Ver análise
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  {/* CTA */}
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-primary py-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <Eye className="w-3 h-3" />
+                    Ver análise
+                  </div>
                 </button>
               </CarouselItem>
-            );
-          })}
+            ))}
         </CarouselContent>
       </Carousel>
 

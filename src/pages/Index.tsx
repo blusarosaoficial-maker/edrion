@@ -456,9 +456,7 @@ const Index = () => {
               {/* Showcase carousel — social proof */}
               <div className="w-full max-w-2xl relative z-10 mt-4">
                 <ShowcaseCarousel
-                  onProfileClick={() => {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
+                  onProfileClick={handleShowcaseClick}
                   onAnalyzeClick={() => {
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
