@@ -6,6 +6,8 @@ import {
 } from "@/components/ui/carousel";
 import { trackShowcaseClick } from "@/utils/showcaseTracker";
 
+const STORAGE_BASE = "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public";
+
 export interface ShowcaseProfile {
   handle: string;
   name: string;
@@ -24,7 +26,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Bianca Andrade",
     niche: "empreendedorismo",
     nicheLabel: "Empreendedorismo",
-    avatar_url: "https://unavatar.io/instagram/bianca",
+    avatar_url: `${STORAGE_BASE}/avatars/bianca.jpg`,
     followers: 19_200_000,
     engagement: 0.86,
     healthScore: 72,
@@ -35,7 +37,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Thiago Nigro",
     niche: "financas",
     nicheLabel: "Educação Financeira",
-    avatar_url: "https://unavatar.io/instagram/thiago.nigro",
+    avatar_url: `${STORAGE_BASE}/avatars/thiago.nigro.jpg`,
     followers: 10_200_000,
     engagement: 0.69,
     healthScore: 78,
@@ -46,7 +48,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Franciny Ehlke",
     niche: "beleza",
     nicheLabel: "Beleza & Lifestyle",
-    avatar_url: "https://unavatar.io/instagram/francinyehlke",
+    avatar_url: `${STORAGE_BASE}/avatars/francinyehlke.jpg`,
     followers: 18_700_000,
     engagement: 1.52,
     healthScore: 81,
@@ -57,7 +59,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Camila Coutinho",
     niche: "moda",
     nicheLabel: "Moda",
-    avatar_url: "https://unavatar.io/instagram/camilacoutinho",
+    avatar_url: `${STORAGE_BASE}/avatars/camilacoutinho.jpg`,
     followers: 2_450_000,
     engagement: 0.79,
     healthScore: 68,
@@ -68,7 +70,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Mohamad Hindi",
     niche: "gastronomia",
     nicheLabel: "Gastronomia",
-    avatar_url: "https://unavatar.io/instagram/mohindi",
+    avatar_url: `${STORAGE_BASE}/avatars/mohindi.jpg`,
     followers: 822_000,
     engagement: 1.30,
     healthScore: 83,
@@ -79,7 +81,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Norton Mello",
     niche: "fitness",
     nicheLabel: "Fitness",
-    avatar_url: "https://unavatar.io/instagram/nortonmello",
+    avatar_url: `${STORAGE_BASE}/avatars/nortonmello.jpg`,
     followers: 837_000,
     engagement: 2.10,
     healthScore: 80,
@@ -90,7 +92,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Whindersson Nunes",
     niche: "entretenimento",
     nicheLabel: "Entretenimento",
-    avatar_url: "https://unavatar.io/instagram/whinderssonnunes",
+    avatar_url: `${STORAGE_BASE}/avatars/whinderssonnunes.jpg`,
     followers: 56_500_000,
     engagement: 3.52,
     healthScore: 89,
@@ -101,7 +103,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Manual do Mundo",
     niche: "educacao",
     nicheLabel: "Educação",
-    avatar_url: "https://unavatar.io/instagram/manualdomundo",
+    avatar_url: `${STORAGE_BASE}/avatars/manualdomundo.jpg`,
     followers: 3_000_000,
     engagement: 0.80,
     healthScore: 76,
@@ -112,7 +114,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Eduardo Feldberg",
     niche: "financas",
     nicheLabel: "Finanças & Humor",
-    avatar_url: "https://unavatar.io/instagram/eduardofeldberg",
+    avatar_url: `${STORAGE_BASE}/avatars/eduardofeldberg.jpg`,
     followers: 3_200_000,
     engagement: 1.50,
     healthScore: 82,
@@ -123,7 +125,7 @@ const SHOWCASE_PROFILES: ShowcaseProfile[] = [
     name: "Virginia Fonseca",
     niche: "lifestyle",
     nicheLabel: "Lifestyle",
-    avatar_url: "https://unavatar.io/instagram/virginia",
+    avatar_url: `${STORAGE_BASE}/avatars/virginia.jpg`,
     followers: 54_000_000,
     engagement: 3.50,
     healthScore: 87,
@@ -235,7 +237,14 @@ export default function ShowcaseCarousel({ onProfileClick, onAnalyzeClick }: Pro
                         alt={profile.name}
                         className="w-10 h-10 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-cover bg-muted"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=6A5CFF&color=fff&size=128&bold=true`;
+                          const img = e.target as HTMLImageElement;
+                          const unavatarUrl = `https://unavatar.io/instagram/${profile.handle}`;
+                          const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=6A5CFF&color=fff&size=128&bold=true`;
+                          if (!img.src.includes("unavatar.io")) {
+                            img.src = unavatarUrl;
+                          } else {
+                            img.src = fallbackUrl;
+                          }
                         }}
                       />
                     </div>

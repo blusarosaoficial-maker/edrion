@@ -3,6 +3,8 @@ import type { AnalysisResult } from "@/types/analysis";
 import type { ShowcaseProfile } from "@/components/ShowcaseCarousel";
 import { SHOWCASE_PROFILE_DATA } from "./showcase-data";
 
+const STORAGE_BASE = "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public";
+
 /**
  * Fetch a cached showcase analysis from the database.
  * If not found, builds a complete demo result with real data.
@@ -72,7 +74,7 @@ function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
       top_post: {
         post_id: `${profile.handle}_top`,
         permalink: `https://instagram.com/${profile.handle}`,
-        thumb_url: `https://placehold.co/400x400/1a1a2e/6A5CFF?text=@${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_top.jpg`,
         caption_preview: d.top_caption,
         metrics: {
           likes: d.top_likes,
@@ -98,7 +100,7 @@ function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
       worst_post: {
         post_id: `${profile.handle}_worst`,
         permalink: `https://instagram.com/${profile.handle}`,
-        thumb_url: `https://placehold.co/400x400/1a1a2e/6A5CFF?text=@${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_worst.jpg`,
         caption_preview: d.worst_caption,
         metrics: {
           likes: d.worst_likes,
@@ -172,7 +174,7 @@ function buildFallbackResult(profile: ShowcaseProfile): AnalysisResult {
       top_post: {
         post_id: `${profile.handle}_top`,
         permalink: `https://instagram.com/${profile.handle}`,
-        thumb_url: `https://placehold.co/400x400/1a1a2e/6A5CFF?text=@${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_top.jpg`,
         caption_preview: "Conteúdo de alto engajamento deste perfil.",
         metrics: {
           likes: Math.round(profile.followers * (profile.engagement / 100) * 0.8),
@@ -198,7 +200,7 @@ function buildFallbackResult(profile: ShowcaseProfile): AnalysisResult {
       worst_post: {
         post_id: `${profile.handle}_worst`,
         permalink: `https://instagram.com/${profile.handle}`,
-        thumb_url: `https://placehold.co/400x400/1a1a2e/6A5CFF?text=@${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_worst.jpg`,
         caption_preview: "Post com menor engajamento do perfil.",
         metrics: {
           likes: Math.round(profile.followers * (profile.engagement / 100) * 0.15),

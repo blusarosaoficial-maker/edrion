@@ -485,6 +485,9 @@ function PostCard({
             alt={post.caption_preview}
             className="w-full aspect-square rounded-lg object-cover bg-muted transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://placehold.co/400x400/1a1a2e/6A5CFF?text=${encodeURIComponent(post.caption_preview?.slice(0, 20) || "Post")}`;
+            }}
           />
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span className="text-white text-xs font-medium backdrop-blur-sm px-2 py-0.5 rounded">
