@@ -16,6 +16,7 @@ import {
   Crown,
   Sparkles,
   Clock,
+  ArrowLeft,
   ArrowRight,
   Lightbulb,
   Target,
@@ -87,6 +88,15 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
+      {/* Back navigation */}
+      <button
+        onClick={() => { onReset(); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        {isShowcase ? "Voltar ao portfólio" : "Analisar outro perfil"}
+      </button>
+
       {/* Profile header */}
       <div className="flex items-center gap-4 p-5 rounded-xl border border-border bg-card">
         <img
