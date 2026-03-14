@@ -156,6 +156,30 @@ export type Database = {
           },
         ]
       }
+      showcase_clicks: {
+        Row: {
+          id: string
+          handle: string
+          niche: string
+          user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          handle: string
+          niche: string
+          user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          handle?: string
+          niche?: string
+          user_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       users_profiles: {
         Row: {
           analysis_credits: number

@@ -13,8 +13,8 @@ import type { AnalysisResult, ProfileData } from "@/types/analysis";
 import { LogIn, LogOut, ChevronDown } from "lucide-react";
 import { trackLead, trackPurchase } from "@/utils/pixel";
 import { getAnalyzedCount, formatCount } from "@/utils/counter";
-// Tabs components kept available for future use
 import HistoryPanel from "@/components/HistoryPanel";
+import ShowcaseCarousel from "@/components/ShowcaseCarousel";
 
 type AppState = "form" | "loading" | "result" | "upgrade";
 
@@ -362,11 +362,11 @@ const Index = () => {
                       className="text-[clamp(1.6rem,4vw+0.5rem,2.75rem)] font-bold tracking-tight leading-[1.15]"
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
-                      <span className="text-white">Descubra sua nota no Instagram </span>
-                      <span className="text-gradient-brand">em 30 segundos</span>
+                      <span className="text-white">Você posta todo dia e </span>
+                      <span className="text-gradient-brand">ninguém engaja?</span>
                     </h1>
                     <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
-                      Análise gratuita de bio, posts e estratégia com plano de ação personalizado.
+                      Descubra o que está travando seu crescimento com uma análise gratuita de bio, posts e estratégia.
                     </p>
                   </div>
 
@@ -381,6 +381,19 @@ const Index = () => {
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
                     </div>
                     <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático</span>
+                  </div>
+
+                  {/* Showcase carousel — social proof */}
+                  <div className="w-full max-w-2xl relative z-10 mt-4">
+                    <ShowcaseCarousel
+                      onProfileClick={() => {
+                        // Scroll to analyze form
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      onAnalyzeClick={() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
                   </div>
                 </div>
               )}
@@ -398,11 +411,11 @@ const Index = () => {
                   className="text-[clamp(1.6rem,4vw+0.5rem,2.75rem)] font-bold tracking-tight leading-[1.15]"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  <span className="text-white">Descubra sua nota no Instagram </span>
-                  <span className="text-gradient-brand">em 30 segundos</span>
+                  <span className="text-white">Você posta todo dia e </span>
+                  <span className="text-gradient-brand">ninguém engaja?</span>
                 </h1>
                 <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
-                  Análise gratuita de bio, posts e estratégia com plano de ação personalizado.
+                  Descubra o que está travando seu crescimento com uma análise gratuita de bio, posts e estratégia.
                 </p>
               </div>
 
@@ -416,7 +429,19 @@ const Index = () => {
                   <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
                   <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
                 </div>
-                <span>2.847 perfis analisados · 100% automático</span>
+                <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático</span>
+              </div>
+
+              {/* Showcase carousel — social proof */}
+              <div className="w-full max-w-2xl relative z-10 mt-4">
+                <ShowcaseCarousel
+                  onProfileClick={() => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  onAnalyzeClick={() => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
               </div>
             </div>
           )

@@ -297,4 +297,34 @@
   .gauge-arc {
     animation: gauge-fill 1.2s ease-out;
   }
+
+  /* === Showcase Carousel === */
+
+  @keyframes showcase-score-fill {
+    from {
+      stroke-dashoffset: var(--circumference, 150.8);
+    }
+  }
+
+  .showcase-score-ring {
+    animation: showcase-score-fill 1s ease-out;
+  }
+
+  @keyframes showcase-bar-fill {
+    from {
+      width: 0%;
+    }
+  }
+
+  .showcase-score-bar {
+    animation: showcase-bar-fill 0.8s ease-out;
+  }
+
+  .showcase-card {
+    will-change: transform;
+  }
+
+  .showcase-card:active {
+    transform: scale(0.98);
+  }
 }
