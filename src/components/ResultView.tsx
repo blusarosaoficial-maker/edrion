@@ -618,10 +618,10 @@ function FinalCTA({ handle, onUpgrade }: { handle: string; onUpgrade: () => void
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-            50% OFF
+            40% OFF na sua primeira analise
           </span>
-          <span className="text-muted-foreground line-through text-sm">R$51,94</span>
-          <span className="text-xl font-bold text-foreground">R$25,97</span>
+          <span className="text-muted-foreground line-through text-sm">R$97,00</span>
+          <span className="text-xl font-bold text-foreground">R$57,00</span>
         </div>
 
         <button

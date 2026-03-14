@@ -97,14 +97,14 @@ function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; u
 
       <div className="flex flex-col items-center gap-1 pt-1">
         <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-          50% OFF
+          40% OFF na sua primeira analise
         </span>
         <div className="flex items-baseline gap-2.5">
-          <span className="text-muted-foreground line-through text-base">R$51,94</span>
-          <span className="text-3xl font-bold text-foreground">R$25,97</span>
+          <span className="text-muted-foreground line-through text-base">R$97,00</span>
+          <span className="text-3xl font-bold text-foreground">R$57,00</span>
         </div>
         <span className="text-muted-foreground text-xs">
-          Pagamento único · sem assinatura
+          Pagamento unico · sem assinatura
         </span>
         <span className="text-muted-foreground/60 text-[11px]">
           Cartão ou Pix

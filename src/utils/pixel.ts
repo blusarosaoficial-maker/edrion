@@ -23,7 +23,7 @@ export function trackCompleteRegistration() {
 /** User clicked "Desbloquear" → going to Hotmart checkout */
 export function trackInitiateCheckout(value?: number, currency = "BRL") {
   fire("InitiateCheckout", {
-    value: value ?? 25.97,
+    value: value ?? 57.00,
     currency,
   });
 }
@@ -31,7 +31,7 @@ export function trackInitiateCheckout(value?: number, currency = "BRL") {
 /** Purchase confirmed (called when webhook unlocks analysis) */
 export function trackPurchase(value?: number, currency = "BRL") {
   fire("Purchase", {
-    value: value ?? 25.97,
+    value: value ?? 57.00,
     currency,
   });
 }

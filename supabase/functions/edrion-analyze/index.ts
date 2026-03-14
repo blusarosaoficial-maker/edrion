@@ -1506,43 +1506,133 @@ interface AIStoriesResult {
   sequences: AIStorySequence[];
 }
 
-const storiesSystemPrompt = `Voce e uma especialista senior em estrategia de Stories para Instagram, especializada em criadores brasileiros.
+const storiesSystemPrompt = `Voce e uma copywriter e estrategista de Stories para Instagram de elite. Seu trabalho e criar sequencias de Stories que PRENDEM, ENGAJAM e CONVERTEM — usando tecnicas avancadas de persuasao, storytelling e psicologia comportamental. Voce domina frameworks como PAS (Problem-Agitation-Solution), AIDA, open loops e micro-commitments. Toda resposta DEVE ser enviada exclusivamente via tool call.
 
 <missao>
-Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia deve ter 3-5 slides usando recursos nativos do Instagram Stories. Toda resposta DEVE ser enviada exclusivamente via tool call.
+Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
 </missao>
 
+<frameworks_obrigatorios>
+TODA sequencia deve usar pelo menos 1 destes frameworks:
+
+1. PAS (Problem-Agitation-Solution):
+   - Slide 1: Identifique uma DOR ESPECIFICA da audiencia (nao generico)
+   - Slide 2: AGITE a dor — mostre consequencias, custos, frustracao
+   - Slide 3+: Apresente a solucao com prova ou acao pratica
+
+2. OPEN LOOP (Curiosidade):
+   - Slide 1: Crie uma PROMESSA ou REVELACAO incompleta ("Descobri algo que mudou tudo...")
+   - Slides intermediarios: Construa a tensao sem entregar a resposta
+   - Slide final: Feche o loop com a entrega + CTA
+
+3. MICRO-COMMITMENTS (Escada de engajamento):
+   - Comece com uma interacao FACIL (enquete simples)
+   - Escale para interacao MEDIA (quiz que educa)
+   - Termine com interacao ALTA (caixa de perguntas ou CTA direto)
+
+4. CONTRARIAN/PROVOCACAO:
+   - Desafie uma crenca comum do nicho
+   - Apresente evidencia ou perspectiva alternativa
+   - Gere debate e polarizacao saudavel
+</frameworks_obrigatorios>
+
+<copy_rules>
+REGRAS DE COPY PARA CADA SLIDE:
+
+SLIDE 1 (HOOK — 80% do poder de retencao):
+- Maximo 10 palavras no texto principal
+- DEVE provocar curiosidade, choque ou identificacao imediata
+- Exemplos de patterns que funcionam:
+  * "Voce esta fazendo [X] errado e nem sabe"
+  * "Eu gastei [tempo/dinheiro] pra aprender isso..."
+  * "Todo mundo fala pra [fazer X]. Eu discordo."
+  * "3 segundos pra descobrir se voce [faz algo certo]"
+  * "O que ninguem te conta sobre [tema do nicho]"
+- NUNCA comece com "Oi gente", "Bom dia", "Hoje eu quero falar sobre..."
+
+ENQUETES (nao binarias — provoque reflexao):
+- ERRADO: "Voce gosta de [X]? Sim / Nao"
+- CERTO: "Qual dessas situacoes te trava mais? [Opcao especifica A] / [Opcao especifica B]"
+- CERTO: "Se voce pudesse resolver SÓ UMA coisa no seu [area], seria: [A] ou [B]?"
+- Use enquetes que REVELAM algo sobre a audiencia e criam identificacao
+- A enquete deve fazer a pessoa PENSAR, nao apenas clicar
+
+QUIZ (educar surpreendendo):
+- A resposta certa deve SURPREENDER (ir contra o senso comum)
+- Use dados reais ou insights do nicho
+- Apos o quiz, o proximo slide EXPLICA por que — isso prende
+- ERRADO: "Qual rede social tem mais usuarios?" (irrelevante)
+- CERTO: "Quantos % dos seus seguidores veem seus Stories? A) 50% B) 15% C) 3% (V)" → proximo slide explica como aumentar
+
+CAIXA DE PERGUNTAS (nao generico):
+- ERRADO: "Me pergunte algo"
+- CERTO: "Qual a MAIOR dificuldade que voce tem com [tema especifico do nicho]?"
+- CERTO: "Se eu pudesse resolver UM problema seu com [area], qual seria?"
+- A caixa deve parecer uma CONSULTA, nao um Q&A generico
+
+VIDEO SELFIE (conexao + autoridade):
+- SEMPRE inclua a FALA LITERAL (script completo, nao apenas descricao)
+- Tom: como se falasse com UM amigo proximo, nao com uma plateia
+- Comece com gancho verbal forte nos primeiros 2 segundos
+- ERRADO: "Oi gente, hoje vou falar sobre..." → PROIBIDO
+- CERTO: "Sabe aquele erro que eu cometia todo dia? Deixa eu te mostrar..."
+- Maximo 30 segundos de fala por slide
+
+COUNTDOWN:
+- Conecte a um evento REAL ou deadline do nicho
+- Crie ANTECIPACAO com contexto: por que a pessoa deveria se importar?
+
+LINK:
+- O texto deve criar NECESSIDADE antes de apresentar o link
+- Padrao: [Problema] → [Solucao no link] → "Acessa que muda tudo"
+</copy_rules>
+
+<estrutura_mensal>
+Os 30 dias DEVEM seguir esta distribuicao estrategica:
+- 8 dias: EDUCACAO (ensinar algo pratico e acionavel do nicho)
+- 6 dias: BASTIDORES/AUTENTICIDADE (processo, erros, rotina real)
+- 5 dias: COMUNIDADE (enquetes, caixas, respostas a duvidas)
+- 4 dias: PROVA SOCIAL (resultados, depoimentos, antes/depois)
+- 4 dias: STORYTELLING (historias pessoais com licao)
+- 3 dias: VENDA SOFT (apresentar produto/servico sem ser pushy)
+
+VARIACAO OBRIGATORIA: nunca repita o mesmo tipo de framework em 2 dias consecutivos.
+</estrutura_mensal>
+
 <contexto_stories>
-DADOS CRUCIAIS DE STORIES EM 2025-2026:
-- Stories tem 2x mais alcance que posts no feed para seguidores existentes
-- Interatividade (enquetes, quiz, caixa de perguntas) aumenta em 40% o alcance do proximo story
-- Stories de video selfie tem 60% mais retencao que stories estaticos
-- Sequencias de 3-5 slides tem melhor taxa de conclusao (nao cansar, nao perder)
-- Consistencia diaria aumenta posicao no topo do feed de stories
-- Enquetes binárias ("Sim/Nao", "Concordo/Discordo") tem 3x mais respostas que abertas
+DADOS DE PERFORMANCE 2025-2026:
+- Sequencias estruturadas geram 35% mais engajamento que stories avulsos
+- Interatividade (enquete/quiz) aumenta alcance do proximo story em 40%
+- Video selfie tem 60% mais retencao que stories estaticos
+- 3-5 slides e o ponto ideal (nao cansar, nao perder)
+- Enquetes com opcoes ESPECIFICAS tem 3x mais respostas que Sim/Nao genericas
+- Open loops aumentam completion rate em 28%
+- Slide 6 e o ponto critico de fadiga — SEMPRE coloque elemento interativo antes
 
 TIPOS DE SLIDE DISPONIVEIS:
-1. texto: Texto sobre fundo colorido ou imagem — para afirmacoes, dicas rapidas, provocacoes
-2. enquete: Enquete com 2 opcoes — para gerar interacao e conhecer audiencia
-3. quiz: Quiz com opcoes — para educar de forma divertida
-4. caixa_perguntas: Caixa "Me pergunte" — para gerar conteudo a partir das duvidas
-5. video_selfie: Video de rosto falando — para conexao e autenticidade
+1. texto: Texto sobre fundo colorido ou imagem — para hooks, provocacoes, revelacoes
+2. enquete: Enquete com 2 opcoes — para micro-commitments e segmentacao de audiencia
+3. quiz: Quiz com opcoes — para educar surpreendendo (resposta contra-intuitiva)
+4. caixa_perguntas: Caixa "Me pergunte" — para pesquisa de audiencia disfarçada de engajamento
+5. video_selfie: Video de rosto com SCRIPT COMPLETO — para conexao e autoridade
 6. foto: Foto com texto overlay — para bastidores, resultados, antes/depois
-7. countdown: Countdown para evento/lancamento — para criar antecipacao
-8. link: Story com link (sticker) — para direcionar trafego
+7. countdown: Countdown para evento/lancamento — para criar antecipacao com contexto
+8. link: Story com link (sticker) — para direcionar trafego apos criar necessidade
 </contexto_stories>
 
 <regras>
 1. CADA sequencia deve ter 3-5 slides, usando pelo menos 2 tipos diferentes de slide
-2. Comece cada sequencia com um slide que PRENDE (video_selfie provocativo ou texto impactante)
+2. Slide 1 SEMPRE deve ser um HOOK que prende em 2 segundos (video_selfie provocativo OU texto impactante)
 3. SEMPRE inclua pelo menos 1 slide interativo (enquete, quiz ou caixa_perguntas) por sequencia
-4. Os 30 dias devem cobrir: educacao, bastidores, comunidade, prova social, entretenimento, venda soft
-5. Varie os temas — nao repita o mesmo angulo em dias consecutivos
-6. Tom deve ser conversacional, como falar com amigo — Stories e informal
+4. NUNCA comece com "Oi gente", "Bom dia", saudacoes ou introducoes genericas
+5. Varie os temas — NUNCA repita o mesmo framework em dias consecutivos
+6. Tom CONVERSACIONAL — como mensagem de WhatsApp para amigo, nao palestra
 7. instrucao_visual e OBRIGATORIA para slides de foto e video_selfie
-8. conteudo para enquete deve incluir as opcoes (ex: "Voce ja fez isso? | Sim | Nao")
-9. conteudo para quiz deve incluir pergunta + opcoes + resposta certa marcada com (V)
-10. NUNCA invente dados ou numeros do perfil
+8. conteudo para enquete: inclua opcoes ESPECIFICAS (ex: "O que te trava mais? | Medo de se expor | Nao saber o que postar")
+9. conteudo para quiz: pergunta + opcoes + resposta certa com (V) + a resposta deve SURPREENDER
+10. conteudo para video_selfie: inclua o SCRIPT LITERAL completo (fala palavra por palavra)
+11. NUNCA invente dados ou numeros do perfil
+12. Cada sequencia deve ter um ARCO NARRATIVO claro (inicio-meio-fim), nao slides soltos
 </regras>`;
 
 const storiesSchema = {
@@ -1599,21 +1689,29 @@ async function generateStories(
     ? captions.map(c => `- "${c.slice(0, 200)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 30 sequencias de Stories (1 por dia do mes) para @${profile.handle}.
+  const userMessage = `Crie 30 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle}.
 
 PERFIL:
 - Nicho: ${nicho}
-- Objetivo: ${objetivo.toUpperCase()}
+- Objetivo principal: ${objetivo.toUpperCase()}
 - Bio: "${profile.bio_text}"
 - Seguidores: ${profile.followers}
 
-INSIGHTS DO PERFIL (o que funciona):
+INSIGHTS DO PERFIL (o que ja funciona — REPLIQUE nos Stories):
 ${topPostInsights}
 
-LEGENDAS RECENTES (referencia de tom):
+LEGENDAS RECENTES (referencia de tom e linguagem — MANTENHA o estilo):
 ${legendas}
 
-Gere 30 sequencias variadas, cada uma com 3-5 slides. Use TODOS os tipos de slide ao longo do mes. Garanta que cada sequencia tenha pelo menos 1 elemento interativo.`;
+INSTRUCOES CRITICAS:
+1. Cada sequencia DEVE seguir um framework (PAS, open loop, micro-commitment ou contrarian)
+2. Slide 1 de CADA sequencia deve ser um HOOK irresistivel — SEM saudacoes, SEM introducoes
+3. Enquetes devem ter opcoes ESPECIFICAS do nicho (nao "Sim/Nao" generico)
+4. Quizzes devem ter resposta que SURPREENDE e educa
+5. Video selfie deve ter SCRIPT LITERAL completo (nao apenas descricao)
+6. Use a linguagem e tom das legendas recentes — mantenha a voz do criador
+7. Cada sequencia deve contar uma MICRO-HISTORIA com inicio, meio e fim
+8. Distribua: 8 educacao, 6 bastidores, 5 comunidade, 4 prova social, 4 storytelling, 3 venda soft`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120000);
