@@ -82,39 +82,6 @@ export type Database = {
           },
         ]
       }
-      lead_captures: {
-        Row: {
-          id: string
-          name: string
-          whatsapp: string
-          email: string | null
-          handle: string | null
-          coupon_code: string | null
-          converted: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          whatsapp: string
-          email?: string | null
-          handle?: string | null
-          coupon_code?: string | null
-          converted?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          whatsapp?: string
-          email?: string | null
-          handle?: string | null
-          coupon_code?: string | null
-          converted?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
       blocked_users: {
         Row: {
           blocked_at: string | null
@@ -216,62 +183,6 @@ export type Database = {
           },
         ]
       }
-      referrals: {
-        Row: {
-          id: string
-          user_id: string
-          referral_code: string
-          signups_count: number
-          rewarded: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          referral_code: string
-          signups_count?: number
-          rewarded?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          referral_code?: string
-          signups_count?: number
-          rewarded?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
-      referral_signups: {
-        Row: {
-          id: string
-          referral_id: string
-          referred_user_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          referral_id: string
-          referred_user_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          referral_id?: string
-          referred_user_id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referral_signups_referral_id_fkey"
-            columns: ["referral_id"]
-            isOneToOne: false
-            referencedRelation: "referrals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       users_profiles: {
         Row: {
           analysis_credits: number
@@ -309,10 +220,6 @@ export type Database = {
         Returns: undefined
       }
       is_email_blocked: { Args: { p_email: string }; Returns: boolean }
-      process_referral_signup: {
-        Args: { p_referral_code: string; p_referred_user_id: string }
-        Returns: undefined
-      }
     }
     Enums: {
       [_ in never]: never
