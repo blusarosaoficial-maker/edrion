@@ -21,11 +21,11 @@ export async function getOrCreateReferral(userId: string) {
 
   // Create new
   const code = generateCode();
-  const { data: created, error } = await supabase
-    .from("referrals")
+  const { data: created, error } = await (supabase
+    .from("referrals" as any)
     .insert({ user_id: userId, referral_code: code })
     .select()
-    .single();
+    .single() as any);
 
   if (error) throw error;
   return created;
