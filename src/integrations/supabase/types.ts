@@ -216,6 +216,62 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_signups: {
+        Row: {
+          created_at: string
+          id: string
+          referral_id: string
+          referred_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_id: string
+          referred_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_id?: string
+          referred_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_signups_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referral_code: string
+          rewarded: boolean
+          signups_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_code: string
+          rewarded?: boolean
+          signups_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_code?: string
+          rewarded?: boolean
+          signups_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       users_profiles: {
         Row: {
           analysis_credits: number
@@ -253,6 +309,10 @@ export type Database = {
         Returns: undefined
       }
       is_email_blocked: { Args: { p_email: string }; Returns: boolean }
+      process_referral_signup: {
+        Args: { p_referral_code: string; p_referred_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
