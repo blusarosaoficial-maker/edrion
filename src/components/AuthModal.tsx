@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -131,7 +131,7 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
       setPassword("");
       setConfirmPassword("");
       setLoading(false);
-      setMode("login");
+      setMode("signup");
       setShowPassword(false);
       setBlocked(false);
     }
@@ -145,12 +145,12 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
             className="text-xl text-gradient-brand"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {mode === "login" ? "Entrar na sua conta" : "Criar conta"}
+            {mode === "signup" ? "Crie sua conta grátis" : "Entrar na sua conta"}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {mode === "login"
-              ? "Faça login para ver seu resultado de análise."
-              : "Crie sua conta para ver seu resultado de análise."}
+            {mode === "signup"
+              ? "Salve seu resultado e acesse quando quiser."
+              : "Bem-vindo de volta! Acesse sua análise."}
           </DialogDescription>
         </DialogHeader>
 
