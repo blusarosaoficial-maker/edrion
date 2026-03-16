@@ -11,11 +11,11 @@ function generateCode(): string {
 
 export async function getOrCreateReferral(userId: string) {
   // Try to fetch existing
-  const { data: existing } = await supabase
-    .from("referrals")
+  const { data: existing } = await (supabase
+    .from("referrals" as any)
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .single() as any);
 
   if (existing) return existing;
 
