@@ -390,8 +390,15 @@ const Index = () => {
                       <span className="text-gradient-brand">ninguém engaja?</span>
                     </h1>
                     <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
-                      Descubra o que está travando seu crescimento com uma análise gratuita de bio, posts e estratégia.
+                      Receba um diagnóstico completo do seu perfil com plano de ação, roteiros prontos e 30 dias de Stories.
                     </p>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                      {["Análise de Bio", "Melhor e Pior Post", "7 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
+                        <span key={tag} className="text-[11px] text-muted-foreground/80 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-0.5">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="glass-card rounded-2xl p-5 md:p-6 w-full max-w-md mx-auto relative z-10">
@@ -436,8 +443,15 @@ const Index = () => {
                   <span className="text-gradient-brand">ninguém engaja?</span>
                 </h1>
                 <p className="text-muted-foreground/70 text-sm max-w-sm mx-auto">
-                  Descubra o que está travando seu crescimento com uma análise gratuita de bio, posts e estratégia.
+                  Receba um diagnóstico completo do seu perfil com plano de ação, roteiros prontos e 30 dias de Stories.
                 </p>
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                  {["Análise de Bio", "Melhor e Pior Post", "7 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
+                    <span key={tag} className="text-[11px] text-muted-foreground/80 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-0.5">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div className="glass-card rounded-2xl p-5 md:p-6 w-full max-w-md mx-auto relative z-10">
