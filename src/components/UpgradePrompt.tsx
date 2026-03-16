@@ -3,6 +3,8 @@ import { Lock, ArrowLeft, Sparkles, Check, Shield, Users, Clock } from "lucide-r
 import { useAuth } from "@/contexts/AuthContext";
 import { appendUtmToCheckout } from "@/utils/hotmartUtm";
 import { trackInitiateCheckout } from "@/utils/pixel";
+import WhatsAppCaptureForm from "@/components/WhatsAppCaptureForm";
+import ReferralSection from "@/components/ReferralSection";
 import type { AnalysisResult } from "@/types/analysis";
 
 interface Props {
@@ -57,10 +59,12 @@ function useCountdown() {
 export default function UpgradePrompt({ onBack, result }: Props) {
   const { user } = useAuth();
   const timeLeft = useCountdown();
+  const [coupon, setCoupon] = useState<string | null>(null);
   const baseUrl = user?.email
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(user.email)}`
     : HOTMART_CHECKOUT_URL;
-  const checkoutUrl = appendUtmToCheckout(baseUrl);
+  const urlWithCoupon = coupon ? `${baseUrl}&coupon=${coupon}` : baseUrl;
+  const checkoutUrl = appendUtmToCheckout(urlWithCoupon);
 
   const profile = result?.profile;
 
@@ -123,13 +127,20 @@ export default function UpgradePrompt({ onBack, result }: Props) {
         </span>
       </div>
 
+      {/* WhatsApp capture for coupon */}
+      <WhatsAppCaptureForm
+        userEmail={user?.email || undefined}
+        handle={profile?.handle}
+        onCouponRevealed={(c) => setCoupon(c)}
+      />
+
       <div className="flex flex-col items-center gap-1">
         <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-          40% OFF na sua primeira analise
+          {coupon ? "50% OFF com seu cupom" : "40% OFF na sua primeira analise"}
         </span>
         <div className="flex items-baseline gap-2.5">
           <span className="text-muted-foreground line-through text-base">R$97,00</span>
-          <span className="text-3xl font-bold text-foreground">R$57,00</span>
+          <span className="text-3xl font-bold text-foreground">{coupon ? "R$47,00" : "R$57,00"}</span>
         </div>
         <span className="text-muted-foreground text-xs">
           Pagamento unico · sem assinatura
@@ -151,6 +162,9 @@ export default function UpgradePrompt({ onBack, result }: Props) {
         <Shield className="w-3.5 h-3.5" />
         <span className="text-xs">Pagamento seguro · Garantia de 7 dias</span>
       </div>
+
+      {/* Referral section */}
+      {user && <ReferralSection userId={user.id} />}
 
       <button
         onClick={onBack}

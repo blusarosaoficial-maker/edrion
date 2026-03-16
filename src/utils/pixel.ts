@@ -36,6 +36,11 @@ export function trackPurchase(value?: number, currency = "BRL") {
   });
 }
 
+/** User viewed analysis result */
+export function trackViewContent(handle?: string) {
+  fire("ViewContent", handle ? { content_name: handle } : undefined);
+}
+
 /** User started a free analysis */
 export function trackLead() {
   fire("Lead");

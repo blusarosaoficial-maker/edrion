@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Mail, Lock, Sparkles, Eye, EyeOff, ShieldX } from "lucide-react";
 import { checkBlockedEmail } from "@/services/analyze";
 import { trackCompleteRegistration } from "@/utils/pixel";
+import { processReferralOnSignup } from "@/services/referral";
 
 interface Props {
   isOpen: boolean;
@@ -110,6 +111,11 @@ export default function AuthModal({ isOpen, onSuccess, onClose }: Props) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
       trackCompleteRegistration();
+      // Process referral if user came via referral link
+      const refCode = new URLSearchParams(window.location.search).get("ref");
+      if (refCode && userId) {
+        processReferralOnSignup(refCode, userId).catch(() => {});
+      }
       // onAuthStateChange will trigger onSuccess
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar conta");

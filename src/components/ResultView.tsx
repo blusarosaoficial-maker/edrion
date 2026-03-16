@@ -30,6 +30,7 @@ import WeeklyContentSection from "@/components/WeeklyContentSection";
 import StoriesSection from "@/components/StoriesSection";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackViewContent } from "@/utils/pixel";
 
 
 interface Props {
@@ -75,6 +76,10 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
   const showFullFreeContent = isShowcase || isPremium;
   const [selectedPost, setSelectedPost] = useState<{ post: PostData; variant: "top" | "worst" } | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+
+  useEffect(() => {
+    if (!isShowcase) trackViewContent(profile.handle);
+  }, [profile.handle, isShowcase]);
 
   const healthScore = computeHealthScore(result);
   const health = healthLabel(healthScore);
