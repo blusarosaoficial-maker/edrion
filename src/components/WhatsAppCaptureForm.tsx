@@ -31,7 +31,7 @@ export default function WhatsAppCaptureForm({ userEmail, handle, onCouponReveale
 
     setLoading(true);
     try {
-      await supabase.from("lead_captures").insert({
+      await (supabase.from as any)("lead_captures").insert({
         name: name.trim(),
         whatsapp: digits,
         email: userEmail || null,

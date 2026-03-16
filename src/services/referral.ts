@@ -32,7 +32,7 @@ export async function getOrCreateReferral(userId: string) {
 }
 
 export async function processReferralOnSignup(referralCode: string, userId: string) {
-  await supabase.rpc("process_referral_signup", {
+  await (supabase.rpc as any)("process_referral_signup", {
     p_referral_code: referralCode,
     p_referred_user_id: userId,
   });
