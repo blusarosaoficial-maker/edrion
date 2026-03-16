@@ -63,7 +63,7 @@ export default function UpgradePrompt({ onBack, result }: Props) {
   const baseUrl = user?.email
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(user.email)}`
     : HOTMART_CHECKOUT_URL;
-  const urlWithCoupon = coupon ? `${baseUrl}&coupon=${coupon}` : baseUrl;
+  const urlWithCoupon = coupon ? `${baseUrl}&offDiscount=${coupon}` : baseUrl;
   const checkoutUrl = appendUtmToCheckout(urlWithCoupon);
 
   const profile = result?.profile;

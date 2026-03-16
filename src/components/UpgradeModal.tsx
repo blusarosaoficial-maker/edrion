@@ -44,7 +44,7 @@ function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; u
   const baseUrl = userEmail
     ? `${HOTMART_CHECKOUT_URL}&email=${encodeURIComponent(userEmail)}`
     : HOTMART_CHECKOUT_URL;
-  const urlWithCoupon = coupon ? `${baseUrl}&coupon=${coupon}` : baseUrl;
+  const urlWithCoupon = coupon ? `${baseUrl}&offDiscount=${coupon}` : baseUrl;
   const checkoutUrl = appendUtmToCheckout(urlWithCoupon);
 
   const profile = result?.profile;
