@@ -183,6 +183,39 @@ export type Database = {
           },
         ]
       }
+      lead_captures: {
+        Row: {
+          converted: boolean
+          coupon_code: string | null
+          created_at: string
+          email: string | null
+          handle: string | null
+          id: string
+          name: string
+          whatsapp: string
+        }
+        Insert: {
+          converted?: boolean
+          coupon_code?: string | null
+          created_at?: string
+          email?: string | null
+          handle?: string | null
+          id?: string
+          name: string
+          whatsapp: string
+        }
+        Update: {
+          converted?: boolean
+          coupon_code?: string | null
+          created_at?: string
+          email?: string | null
+          handle?: string | null
+          id?: string
+          name?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       users_profiles: {
         Row: {
           analysis_credits: number
