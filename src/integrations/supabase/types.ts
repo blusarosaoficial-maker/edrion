@@ -82,39 +82,6 @@ export type Database = {
           },
         ]
       }
-      lead_captures: {
-        Row: {
-          id: string
-          name: string
-          whatsapp: string
-          email: string | null
-          handle: string | null
-          coupon_code: string | null
-          converted: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          whatsapp: string
-          email?: string | null
-          handle?: string | null
-          coupon_code?: string | null
-          converted?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          whatsapp?: string
-          email?: string | null
-          handle?: string | null
-          coupon_code?: string | null
-          converted?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
       blocked_users: {
         Row: {
           blocked_at: string | null
@@ -216,51 +183,57 @@ export type Database = {
           },
         ]
       }
-      referrals: {
+      lead_captures: {
         Row: {
-          id: string
-          user_id: string
-          referral_code: string
-          signups_count: number
-          rewarded: boolean
+          converted: boolean
+          coupon_code: string | null
           created_at: string
+          email: string | null
+          handle: string | null
+          id: string
+          name: string
+          whatsapp: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          referral_code: string
-          signups_count?: number
-          rewarded?: boolean
+          converted?: boolean
+          coupon_code?: string | null
           created_at?: string
+          email?: string | null
+          handle?: string | null
+          id?: string
+          name: string
+          whatsapp: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          referral_code?: string
-          signups_count?: number
-          rewarded?: boolean
+          converted?: boolean
+          coupon_code?: string | null
           created_at?: string
+          email?: string | null
+          handle?: string | null
+          id?: string
+          name?: string
+          whatsapp?: string
         }
         Relationships: []
       }
       referral_signups: {
         Row: {
+          created_at: string
           id: string
           referral_id: string
           referred_user_id: string
-          created_at: string
         }
         Insert: {
+          created_at?: string
           id?: string
           referral_id: string
           referred_user_id: string
-          created_at?: string
         }
         Update: {
+          created_at?: string
           id?: string
           referral_id?: string
           referred_user_id?: string
-          created_at?: string
         }
         Relationships: [
           {
@@ -271,6 +244,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referral_code: string
+          rewarded: boolean
+          signups_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_code: string
+          rewarded?: boolean
+          signups_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_code?: string
+          rewarded?: boolean
+          signups_count?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       users_profiles: {
         Row: {

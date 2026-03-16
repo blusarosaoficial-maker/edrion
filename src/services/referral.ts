@@ -11,28 +11,28 @@ function generateCode(): string {
 
 export async function getOrCreateReferral(userId: string) {
   // Try to fetch existing
-  const { data: existing } = await supabase
-    .from("referrals")
+  const { data: existing } = await (supabase
+    .from("referrals" as any)
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .single() as any);
 
   if (existing) return existing;
 
   // Create new
   const code = generateCode();
-  const { data: created, error } = await supabase
-    .from("referrals")
+  const { data: created, error } = await (supabase
+    .from("referrals" as any)
     .insert({ user_id: userId, referral_code: code })
     .select()
-    .single();
+    .single() as any);
 
   if (error) throw error;
   return created;
 }
 
 export async function processReferralOnSignup(referralCode: string, userId: string) {
-  await supabase.rpc("process_referral_signup", {
+  await (supabase.rpc as any)("process_referral_signup", {
     p_referral_code: referralCode,
     p_referred_user_id: userId,
   });
