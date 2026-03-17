@@ -318,6 +318,7 @@ export async function analyzeMock(
           name_keyword: `${handle} | Especialista em ${nichoKey}`,
           detected_tone: "informal e descontraído",
         },
+        latest_post: posts[0],
         top_post: posts[topIdx],
         worst_post: posts[worstIdx],
         next_post_suggestion: {

@@ -71,6 +71,20 @@ function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
         strengths: d.strengths,
         improvements: d.improvements,
       },
+      latest_post: {
+        post_id: `${profile.handle}_latest`,
+        permalink: `https://instagram.com/${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_top.jpg`,
+        caption_preview: d.top_caption,
+        metrics: {
+          likes: d.top_likes,
+          comments: d.top_comments,
+          views: d.top_views,
+          engagement_score: d.top_engagement / 100,
+        },
+        tier: undefined,
+        analysis: null,
+      },
       top_post: {
         post_id: `${profile.handle}_top`,
         permalink: `https://instagram.com/${profile.handle}`,
@@ -170,6 +184,20 @@ function buildFallbackResult(profile: ShowcaseProfile): AnalysisResult {
         },
         strengths: "Perfil com boa presença digital.",
         improvements: "Oportunidades de otimização na bio e conteúdo.",
+      },
+      latest_post: {
+        post_id: `${profile.handle}_latest`,
+        permalink: `https://instagram.com/${profile.handle}`,
+        thumb_url: `${STORAGE_BASE}/post-thumbnails/${profile.handle}/${profile.handle}_top.jpg`,
+        caption_preview: "Conteúdo de alto engajamento deste perfil.",
+        metrics: {
+          likes: Math.round(profile.followers * (profile.engagement / 100) * 0.8),
+          comments: Math.round(profile.followers * (profile.engagement / 100) * 0.05),
+          views: Math.round(profile.followers * 0.3),
+          engagement_score: profile.engagement / 100,
+        },
+        tier: undefined,
+        analysis: null,
       },
       top_post: {
         post_id: `${profile.handle}_top`,

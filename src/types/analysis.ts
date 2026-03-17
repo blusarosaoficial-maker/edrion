@@ -157,6 +157,7 @@ export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
     bio_suggestion: BioSuggestion;
+    latest_post: PostData;
     top_post: PostData;
     worst_post: PostData;
     next_post_suggestion?: NextPostSuggestion;

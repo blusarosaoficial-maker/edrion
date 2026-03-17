@@ -70,7 +70,7 @@ function healthLabel(score: number): { text: string; color: string; bg: string }
 export default function ResultView({ result, onReset, resetLabel, isShowcase }: Props) {
   const { user } = useAuth();
   const { profile, deliverables, limits } = result;
-  const { bio_suggestion, top_post, worst_post } = deliverables;
+  const { bio_suggestion, latest_post, top_post, worst_post } = deliverables;
   const isPremium = result.plan === "premium";
   // In showcase mode, treat free-tier content as unlocked to demonstrate value
   const showFullFreeContent = isShowcase || isPremium;
@@ -155,7 +155,12 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
       {/* 1. Bio Suggestion (now with AI analysis) */}
       <BioAnalysisSection bio={bio_suggestion} />
 
-      {/* 2 & 3. Top & Worst Post */}
+      {/* Latest Post — visible for free, no analysis, just metrics */}
+      {latest_post && (
+        <LatestPostCard post={latest_post} />
+      )}
+
+      {/* 2 & 3. Top & Worst Post — fully locked for free */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <PostCard
           title="Melhor Post"
@@ -163,7 +168,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           post={top_post}
           accentClass="border-primary/30"
           locked={!showFullFreeContent}
-          showPositiveFactors={!isPremium}
           onClickAnalysis={() => {
             if (showFullFreeContent) setSelectedPost({ post: top_post, variant: "top" });
             else onUpgradeAction();
@@ -446,6 +450,53 @@ function tierBadge(tier?: "gold" | "silver" | "bronze") {
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${cfg.cls}`}>
       {cfg.icon} {cfg.label}
     </span>
+  );
+}
+
+/* ─── Latest Post Card (free, no analysis) ─────────────────── */
+
+function LatestPostCard({ post }: { post: PostData }) {
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+        <Clock className="w-5 h-5 text-muted-foreground" />
+        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          Seu Último Post
+        </h3>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="relative overflow-hidden rounded-lg">
+          <img
+            src={post.thumb_url}
+            alt={post.caption_preview}
+            className="w-full aspect-square rounded-lg object-cover bg-muted"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://placehold.co/400x400/1a1a2e/6A5CFF?text=${encodeURIComponent(post.caption_preview?.slice(0, 20) || "Post")}`;
+            }}
+          />
+        </div>
+        <p className="text-sm text-foreground line-clamp-2">{post.caption_preview}</p>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <MetricItem icon={<ThumbsUp className="w-3.5 h-3.5" />} label="Likes" value={formatNum(post.metrics.likes)} />
+          <MetricItem icon={<MessageCircle className="w-3.5 h-3.5" />} label="Comments" value={formatNum(post.metrics.comments)} />
+          {post.metrics.views > 0 && (
+            <MetricItem icon={<Eye className="w-3.5 h-3.5" />} label="Views" value={formatNum(post.metrics.views)} />
+          )}
+          <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Engajamento" value={(post.metrics.engagement_score * 100).toFixed(2) + "%"} />
+        </div>
+        {post.permalink && (
+          <a
+            href={post.permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            Ver no Instagram <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
+    </section>
   );
 }
 
