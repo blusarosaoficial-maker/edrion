@@ -28,6 +28,9 @@ import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
 import StoriesSection from "@/components/StoriesSection";
+import BestTimesSection from "@/components/BestTimesSection";
+import FormatMixSection from "@/components/FormatMixSection";
+import HashtagStrategySection from "@/components/HashtagStrategySection";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackViewContent } from "@/utils/pixel";
@@ -153,7 +156,13 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
       )}
 
       {/* 1. Bio Suggestion (now with AI analysis) */}
-      <BioAnalysisSection bio={bio_suggestion} />
+      <BioAnalysisSection
+        bio={bio_suggestion}
+        objectiveBios={deliverables.objective_bios}
+        selectedObjetivo={result.selected_objetivo}
+        locked={!showFullFreeContent}
+        onLockedClick={onUpgradeAction}
+      />
 
       {/* Latest Post — visible for free, no analysis, just metrics */}
       {latest_post && (
@@ -227,13 +236,40 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           plan={deliverables.weekly_content_plan}
           locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
+          objectivePlans={deliverables.objective_content_plans}
+          selectedObjetivo={result.selected_objetivo}
         />
       )}
 
-      {/* 5. Stories Plan (30 sequences) */}
+      {/* 5. Stories Plan */}
       {deliverables.stories_plan && (
         <StoriesSection
           plan={deliverables.stories_plan}
+          locked={!showFullFreeContent}
+          onLockedClick={onUpgradeAction}
+          objectivePlans={deliverables.objective_stories_plans}
+          selectedObjetivo={result.selected_objetivo}
+        />
+      )}
+
+      {/* 6. Enrichment sections */}
+      {deliverables.best_times && (
+        <BestTimesSection
+          data={deliverables.best_times}
+          locked={!showFullFreeContent}
+          onLockedClick={onUpgradeAction}
+        />
+      )}
+      {deliverables.format_mix && (
+        <FormatMixSection
+          data={deliverables.format_mix}
+          locked={!showFullFreeContent}
+          onLockedClick={onUpgradeAction}
+        />
+      )}
+      {deliverables.hashtag_strategy && (
+        <HashtagStrategySection
+          data={deliverables.hashtag_strategy}
           locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
         />
@@ -684,15 +720,15 @@ function InlineUpgradeBanner({
       <div className="grid grid-cols-3 gap-3">
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Search className="w-4 h-4 text-primary" />
-          <span className="text-[11px] text-center text-muted-foreground">Analise completa dos posts</span>
+          <span className="text-[11px] text-center text-muted-foreground">4 estratégias por objetivo</span>
         </div>
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span className="text-[11px] text-center text-muted-foreground">Roteiros prontos para 7 dias</span>
+          <span className="text-[11px] text-center text-muted-foreground">28 roteiros prontos</span>
         </div>
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Target className="w-4 h-4 text-emerald-400" />
-          <span className="text-[11px] text-center text-muted-foreground">Hooks e legendas para copiar</span>
+          <span className="text-[11px] text-center text-muted-foreground">28 sequências de Stories</span>
         </div>
       </div>
 
@@ -726,10 +762,10 @@ function FinalCTA({ handle, onUpgrade }: { handle: string; onUpgrade: () => void
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-            40% OFF na sua primeira analise
+            70% OFF na sua primeira analise
           </span>
-          <span className="text-muted-foreground line-through text-sm">R$97,00</span>
-          <span className="text-xl font-bold text-foreground">R$57,00</span>
+          <span className="text-muted-foreground line-through text-sm">R$67,00</span>
+          <span className="text-xl font-bold text-foreground">R$19,99</span>
         </div>
 
         <button

@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult } from "@/types/analysis";
+import type { AnalysisResult, ObjectiveKey, BioSuggestion, WeeklyContentPlan, StoriesPlan, BestTimesRecommendation, FormatMixRecommendation, HashtagStrategy } from "@/types/analysis";
 import type { ShowcaseProfile } from "@/components/ShowcaseCarousel";
 import { SHOWCASE_PROFILE_DATA } from "./showcase-data";
+import type { ShowcaseProfileData } from "./showcase-data/types";
 
 const STORAGE_BASE = "https://glgocjuwmssnaztljdus.supabase.co/storage/v1/object/public";
 
@@ -33,6 +34,91 @@ export async function fetchShowcaseResult(
   }
 
   return buildShowcaseResult(profile);
+}
+
+const OBJECTIVE_ESTRATEGIAS: Record<ObjectiveKey, { bio_suffix: string; weekly_estrategia: string; stories_estrategia: string }> = {
+  crescer: {
+    bio_suffix: "Foco em crescimento de seguidores e alcance",
+    weekly_estrategia: "Conteúdo focado em atrair novos seguidores com ganchos virais e temas de alto alcance",
+    stories_estrategia: "Stories projetados para maximizar compartilhamentos e seguidores novos",
+  },
+  engajar: {
+    bio_suffix: "Foco em conexão emocional e interação",
+    weekly_estrategia: "Conteúdo focado em criar diálogo e interação intensa com a audiência",
+    stories_estrategia: "Stories com enquetes, quizzes e caixas de perguntas para máxima interação",
+  },
+  vender: {
+    bio_suffix: "Foco em conversão e vendas",
+    weekly_estrategia: "Conteúdo focado em converter seguidores em clientes com provas sociais e CTAs diretos",
+    stories_estrategia: "Stories com gatilhos de urgência, depoimentos e links de compra",
+  },
+  autoridade: {
+    bio_suffix: "Foco em posicionamento de especialista",
+    weekly_estrategia: "Conteúdo focado em demonstrar expertise e construir credibilidade no nicho",
+    stories_estrategia: "Stories educativos com bastidores, dados e posicionamento como referência",
+  },
+};
+
+function deriveObjectiveVariants(d: ShowcaseProfileData) {
+  const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
+
+  // Derive objective bios
+  const objective_bios = {} as Record<ObjectiveKey, BioSuggestion>;
+  for (const obj of objectives) {
+    objective_bios[obj] = {
+      current_bio: d.bio,
+      suggested_bio: d.suggested_bio,
+      rationale_short: OBJECTIVE_ESTRATEGIAS[obj].bio_suffix,
+      cta_option: d.cta_option,
+    };
+  }
+
+  // Derive objective content plans (reuse base scripts with different estrategia)
+  const objective_content_plans = {} as Record<ObjectiveKey, WeeklyContentPlan>;
+  for (const obj of objectives) {
+    objective_content_plans[obj] = {
+      scripts: d.weekly_content_plan.scripts.slice(0, 7),
+      estrategia_semanal: OBJECTIVE_ESTRATEGIAS[obj].weekly_estrategia,
+    };
+  }
+
+  // Derive objective stories plans (use first 7 sequences with different estrategia)
+  const objective_stories_plans = {} as Record<ObjectiveKey, StoriesPlan>;
+  for (const obj of objectives) {
+    objective_stories_plans[obj] = {
+      sequences: d.stories_plan.sequences.slice(0, 7),
+      estrategia_stories: OBJECTIVE_ESTRATEGIAS[obj].stories_estrategia,
+    };
+  }
+
+  // Generate enrichment data
+  const best_times: BestTimesRecommendation = {
+    slots: [
+      { day: "Segunda", time: "19:00", rationale: "Início da semana, audiência busca motivação" },
+      { day: "Terça", time: "12:00", rationale: "Horário de almoço com alto uso de redes" },
+      { day: "Quarta", time: "20:00", rationale: "Meio da semana, pico de engagement noturno" },
+      { day: "Quinta", time: "18:30", rationale: "Fim do expediente, transição para lazer" },
+      { day: "Sexta", time: "17:00", rationale: "Clima de fim de semana começa" },
+      { day: "Sábado", time: "10:00", rationale: "Manhã relaxada, alto consumo de conteúdo" },
+      { day: "Domingo", time: "19:00", rationale: "Planejamento da semana, audiência receptiva" },
+    ],
+  };
+
+  const format_mix: FormatMixRecommendation = {
+    reels_pct: 50,
+    carousels_pct: 30,
+    stories_pct: 20,
+    rationale: "Reels para alcance, carrosséis para educação e salvamentos, Stories para relacionamento diário",
+  };
+
+  const hashtag_strategy: HashtagStrategy = {
+    high_competition: ["#instagram", "#reels", "#viral", "#trending", "#foryou"],
+    medium_competition: ["#dicasinstagram", "#marketingdigital", "#empreendedorismo", "#crescimentoorganico", "#redessociais", "#conteudodigital", "#estrategiasdigitais", "#socialmedia", "#produtividadedigital", "#negociosonline"],
+    low_competition: ["#dicasparainstagram", "#crescernoinstagram", "#conteudoparaempreendedores", "#marketingparainiciantes", "#negociodigital2024", "#estrategiasinstagram", "#engajamentoinstagram", "#crescimentoinstagram", "#dicasdeconteudo", "#instagramparaempresas", "#conteudoquevende", "#marketingestrategico", "#planejamentodeconteudo", "#instagramtips", "#crescanoinsta"],
+    usage_tip: "Use 3-5 hashtags por post: 1 alta competição + 2 média + 2 baixa. Evite mais de 10 por post.",
+  };
+
+  return { objective_bios, objective_content_plans, objective_stories_plans, best_times, format_mix, hashtag_strategy };
 }
 
 function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
@@ -145,8 +231,10 @@ function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
         angle: d.next_angle,
       },
       weekly_content_plan: d.weekly_content_plan,
-      stories_plan: d.stories_plan,
+      stories_plan: { ...d.stories_plan, sequences: d.stories_plan.sequences.slice(0, 7) },
+      ...deriveObjectiveVariants(d),
     },
+    selected_objetivo: "crescer",
     limits: { posts_analyzed: 9, note: "Análise demonstrativa" },
     plan: "free",
   };

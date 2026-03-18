@@ -153,10 +153,36 @@ export interface StoriesPlan {
   estrategia_stories: string;
 }
 
+export type ObjectiveKey = "crescer" | "engajar" | "vender" | "autoridade";
+
+export interface BestTimesRecommendation {
+  slots: { day: string; time: string; rationale: string }[];
+}
+
+export interface FormatMixRecommendation {
+  reels_pct: number;
+  carousels_pct: number;
+  stories_pct: number;
+  rationale: string;
+}
+
+export interface HashtagStrategy {
+  high_competition: string[];
+  medium_competition: string[];
+  low_competition: string[];
+  usage_tip: string;
+}
+
 export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
     bio_suggestion: BioSuggestion;
+    objective_bios?: Record<ObjectiveKey, BioSuggestion>;
+    objective_content_plans?: Record<ObjectiveKey, WeeklyContentPlan>;
+    objective_stories_plans?: Record<ObjectiveKey, StoriesPlan>;
+    best_times?: BestTimesRecommendation;
+    format_mix?: FormatMixRecommendation;
+    hashtag_strategy?: HashtagStrategy;
     latest_post: PostData;
     top_post: PostData;
     worst_post: PostData;
@@ -174,6 +200,7 @@ export interface AnalysisResult {
     note: string;
   };
   plan: "free" | "premium";
+  selected_objetivo?: ObjectiveKey;
 }
 
 export type AnalysisError =

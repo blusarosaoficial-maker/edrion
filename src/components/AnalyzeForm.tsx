@@ -16,7 +16,6 @@ import {
   Heart,
   ShoppingBag,
   Award,
-  CalendarCheck,
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
@@ -40,7 +39,6 @@ const OBJETIVOS = [
   { value: "engajar", label: "Mais engajamento", icon: Heart },
   { value: "vender", label: "Vender mais", icon: ShoppingBag },
   { value: "autoridade", label: "Construir autoridade", icon: Award },
-  { value: "consistencia", label: "Ser consistente", icon: CalendarCheck },
 ];
 
 const HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;

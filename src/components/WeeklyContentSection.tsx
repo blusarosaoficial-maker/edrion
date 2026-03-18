@@ -16,12 +16,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { WeeklyContentPlan, ContentScript } from "@/types/analysis";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OBJECTIVE_TABS } from "@/constants/objectives";
+import type { WeeklyContentPlan, ContentScript, ObjectiveKey } from "@/types/analysis";
+import { Lightbulb } from "lucide-react";
 
 interface Props {
   plan: WeeklyContentPlan;
   locked?: boolean;
   onLockedClick?: () => void;
+  objectivePlans?: Record<ObjectiveKey, WeeklyContentPlan>;
+  selectedObjetivo?: ObjectiveKey;
 }
 
 const DAY_COLORS: Record<number, string> = {
@@ -54,8 +59,31 @@ const FRAMEWORK_BADGE: Record<string, string> = {
   "Lista/Ranking": "bg-violet-500/10 text-violet-400",
 };
 
-export default function WeeklyContentSection({ plan, locked, onLockedClick }: Props) {
+function WeeklyPlanContent({ plan }: { plan: WeeklyContentPlan }) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/15">
+        <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
+        <span className="text-xs text-muted-foreground">Adapte os roteiros para o seu produto/serviço</span>
+      </div>
+      {plan.scripts.map((script) => (
+        <DayCard
+          key={script.dia}
+          script={script}
+          isExpanded={expandedDay === script.dia}
+          onToggle={() =>
+            setExpandedDay(expandedDay === script.dia ? null : script.dia)
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function WeeklyContentSection({ plan, locked, onLockedClick, objectivePlans, selectedObjetivo }: Props) {
+  const hasObjectives = objectivePlans && Object.keys(objectivePlans).length > 0;
 
   return (
     <section className="space-y-4">
@@ -68,10 +96,10 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick }: Pr
             className="text-foreground font-bold text-lg"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            Sua Semana de Conteúdo
+            {hasObjectives ? "Roteiros por Objetivo" : "Sua Semana de Conteúdo"}
           </h3>
           <p className="text-muted-foreground text-xs">
-            {plan.estrategia_semanal}
+            {hasObjectives ? "28 roteiros completos — 7 para cada estratégia" : plan.estrategia_semanal}
           </p>
         </div>
         {locked && (
@@ -100,24 +128,34 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick }: Pr
                 Desbloquear plano completo
               </span>
               <span className="text-xs text-muted-foreground">
-                7 roteiros prontos com hooks, legendas e hashtags
+                {hasObjectives ? "28 roteiros prontos — 7 para cada objetivo" : "7 roteiros prontos com hooks, legendas e hashtags"}
               </span>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {plan.scripts.map((script) => (
-            <DayCard
-              key={script.dia}
-              script={script}
-              isExpanded={expandedDay === script.dia}
-              onToggle={() =>
-                setExpandedDay(expandedDay === script.dia ? null : script.dia)
-              }
-            />
+      ) : hasObjectives ? (
+        <Tabs defaultValue={selectedObjetivo || "crescer"}>
+          <TabsList className="w-full grid grid-cols-4 mb-4">
+            {OBJECTIVE_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-1.5 text-xs">
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          {OBJECTIVE_TABS.map((tab) => (
+            <TabsContent key={tab.key} value={tab.key}>
+              {objectivePlans[tab.key] && (
+                <WeeklyPlanContent plan={objectivePlans[tab.key]} />
+              )}
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
+      ) : (
+        <WeeklyPlanContent plan={plan} />
       )}
     </section>
   );

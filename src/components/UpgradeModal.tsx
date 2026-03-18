@@ -20,7 +20,7 @@ interface Props {
   result?: AnalysisResult;
 }
 
-const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?off=0u08l1gh&bid=1773508783476";
+const HOTMART_CHECKOUT_URL = "https://pay.hotmart.com/G104699811K?off=u2ahjbe3";
 
 function formatNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -29,12 +29,12 @@ function formatNum(n: number): string {
 }
 
 const BENEFITS = [
-  "Descubra por que seu melhor post performou — e como replicar",
-  "Saiba exatamente o que evitar: análise completa do seu pior post",
-  "Sua bio reescrita e otimizada (pronta para copiar e colar)",
-  "Plano de 7 dias com roteiros completos para o seu nicho",
-  "30 sequências de Stories prontas (1 por dia do mês)",
-  "Hooks, legendas e hashtags prontos para usar",
+  "4 bios otimizadas — uma para cada objetivo de crescimento",
+  "28 roteiros completos — 7 para cada estratégia (vender, crescer, engajar, autoridade)",
+  "28 sequências de Stories prontas para postar",
+  "Melhores horários para postar no seu nicho",
+  "Mix ideal de formatos: Reels vs Carrossel vs Stories",
+  "Estratégia de hashtags por nível de competição",
 ];
 
 function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; userEmail?: string; result?: AnalysisResult }) {
@@ -98,11 +98,11 @@ function UpgradeContent({ onClose, userEmail, result }: { onClose: () => void; u
 
       <div className="flex flex-col items-center gap-1 pt-1">
         <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-          40% OFF na sua primeira analise
+          70% OFF na sua primeira analise
         </span>
         <div className="flex items-baseline gap-2.5">
-          <span className="text-muted-foreground line-through text-base">R$97,00</span>
-          <span className="text-3xl font-bold text-foreground">R$57,00</span>
+          <span className="text-muted-foreground line-through text-base">R$67,00</span>
+          <span className="text-3xl font-bold text-foreground">R$19,99</span>
         </div>
         <span className="text-muted-foreground text-xs">
           Pagamento unico · sem assinatura

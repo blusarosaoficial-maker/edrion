@@ -17,12 +17,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { StoriesPlan, StorySequence, StorySlide } from "@/types/analysis";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OBJECTIVE_TABS } from "@/constants/objectives";
+import type { StoriesPlan, StorySequence, StorySlide, ObjectiveKey } from "@/types/analysis";
 
 interface Props {
   plan: StoriesPlan;
   locked?: boolean;
   onLockedClick?: () => void;
+  objectivePlans?: Record<ObjectiveKey, StoriesPlan>;
+  selectedObjetivo?: ObjectiveKey;
 }
 
 const SLIDE_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
@@ -36,9 +40,30 @@ const SLIDE_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; 
   link: { icon: <Link2 className="w-3 h-3" />, label: "Link", color: "bg-orange-500/10 text-orange-400" },
 };
 
-export default function StoriesSection({ plan, locked, onLockedClick }: Props) {
+function StoriesContent({ plan }: { plan: StoriesPlan }) {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const totalDays = plan.sequences.length;
+
+  return (
+    <div className="space-y-2">
+      {plan.sequences.map((seq) => (
+        <StoryCard
+          key={seq.dia}
+          sequence={seq}
+          isExpanded={expandedDay === seq.dia}
+          onToggle={() =>
+            setExpandedDay(expandedDay === seq.dia ? null : seq.dia)
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function StoriesSection({ plan, locked, onLockedClick, objectivePlans, selectedObjetivo }: Props) {
+  const hasObjectives = objectivePlans && Object.keys(objectivePlans).length > 0;
+  const totalSequences = hasObjectives
+    ? Object.values(objectivePlans).reduce((sum, p) => sum + p.sequences.length, 0)
+    : plan.sequences.length;
 
   return (
     <section className="space-y-4">
@@ -51,10 +76,10 @@ export default function StoriesSection({ plan, locked, onLockedClick }: Props) {
             className="text-foreground font-bold text-lg"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {totalDays} Sequencias de Stories
+            {hasObjectives ? "Stories por Objetivo" : `${totalSequences} Sequencias de Stories`}
           </h3>
           <p className="text-muted-foreground text-xs">
-            {plan.estrategia_stories}
+            {hasObjectives ? `${totalSequences} sequências prontas — 7 para cada estratégia` : plan.estrategia_stories}
           </p>
         </div>
         {locked && (
@@ -80,27 +105,37 @@ export default function StoriesSection({ plan, locked, onLockedClick }: Props) {
                 <Instagram className="w-6 h-6 text-pink-400" />
               </div>
               <span className="text-sm font-medium text-foreground">
-                Desbloquear {totalDays} sequencias de Stories
+                Desbloquear {totalSequences} sequencias de Stories
               </span>
               <span className="text-xs text-muted-foreground text-center max-w-xs">
-                1 sequencia por dia com enquetes, quizzes, videos e textos prontos para postar
+                {hasObjectives ? "7 sequências por objetivo com enquetes, quizzes, videos e textos prontos" : "1 sequencia por dia com enquetes, quizzes, videos e textos prontos para postar"}
               </span>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {plan.sequences.map((seq) => (
-            <StoryCard
-              key={seq.dia}
-              sequence={seq}
-              isExpanded={expandedDay === seq.dia}
-              onToggle={() =>
-                setExpandedDay(expandedDay === seq.dia ? null : seq.dia)
-              }
-            />
+      ) : hasObjectives ? (
+        <Tabs defaultValue={selectedObjetivo || "crescer"}>
+          <TabsList className="w-full grid grid-cols-4 mb-4">
+            {OBJECTIVE_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-1.5 text-xs">
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          {OBJECTIVE_TABS.map((tab) => (
+            <TabsContent key={tab.key} value={tab.key}>
+              {objectivePlans[tab.key] && (
+                <StoriesContent plan={objectivePlans[tab.key]} />
+              )}
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
+      ) : (
+        <StoriesContent plan={plan} />
       )}
     </section>
   );

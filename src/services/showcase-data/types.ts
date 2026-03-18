@@ -62,6 +62,6 @@ export interface ShowcaseProfileData {
   next_angle: string;
   // Weekly content plan
   weekly_content_plan: WeeklyContentPlan;
-  // Stories plan (30 sequences)
+  // Stories plan (source data has 30 sequences, sliced to 7 at runtime)
   stories_plan: StoriesPlan;
 }
