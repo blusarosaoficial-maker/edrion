@@ -1269,7 +1269,7 @@ interface AIWeeklyContentResult {
 const weeklyContentSystemPrompt = `Voce e uma especialista senior em estrategia de conteudo para Instagram, roteirista de videos virais e planejadora editorial para criadores brasileiros.
 
 <missao>
-Crie 7 roteiros de video (1 semana de conteudo) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
+Crie 5 roteiros de video (Segunda a Sexta) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
 </missao>
 
 <contexto_viral>
@@ -1420,9 +1420,9 @@ async function generateWeeklyContent(
     ? captions.map(c => `- "${c.slice(0, 300)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 28 roteiros de video (7 por objetivo) para @${profile.handle}.
+  const userMessage = `Crie 20 roteiros de video (5 por objetivo) para @${profile.handle}.
 
-Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 7 roteiros de Segunda a Domingo.
+Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 5 roteiros de Segunda a Sexta.
 
 PERFIL:
 - Nicho: ${nicho}
@@ -1445,10 +1445,10 @@ INSTRUCOES POR OBJETIVO:
 - VENDER: Foque em conteudo que leva a venda. Prova social, transformacao, dor/solucao, CTA direto para o produto/servico. Inclua "Adapte para o seu produto/servico" nas instrucoes.
 - AUTORIDADE: Foque em conteudo que posiciona como referencia. Dados, analises, bastidores, processos, metodologias.
 
-Gere 7 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
+Gere 5 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 150000);
+  const timeout = setTimeout(() => controller.abort(), 90000);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1459,7 +1459,7 @@ Gere 7 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao in
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: weeklyContentSystemPrompt },
           { role: "user", content: userMessage },
@@ -1469,7 +1469,7 @@ Gere 7 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao in
             type: "function",
             function: {
               name: "generate_weekly_content",
-              description: "Retorna 7 roteiros de video para 1 semana de conteudo",
+              description: "Retorna 5 roteiros de video para 1 semana de conteudo (Seg-Sex)",
               parameters: weeklyContentSchema,
             },
           },
@@ -1585,7 +1585,7 @@ interface AIStoriesResult {
 const storiesSystemPrompt = `Voce e uma copywriter e estrategista de Stories para Instagram de elite. Seu trabalho e criar sequencias de Stories que PRENDEM, ENGAJAM e CONVERTEM — usando tecnicas avancadas de persuasao, storytelling e psicologia comportamental. Voce domina frameworks como PAS (Problem-Agitation-Solution), AIDA, open loops e micro-commitments. Toda resposta DEVE ser enviada exclusivamente via tool call.
 
 <missao>
-Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
+Crie 20 sequencias de Stories (5 por objetivo, Segunda a Sexta) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
 </missao>
 
 <frameworks_obrigatorios>
@@ -1776,9 +1776,9 @@ async function generateStories(
     ? captions.map(c => `- "${c.slice(0, 200)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 28 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle} — 7 por objetivo.
+  const userMessage = `Crie 20 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle} — 5 por objetivo.
 
-Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 7 sequencias (dias 1 a 7).
+Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 5 sequencias (dias 1 a 5, Segunda a Sexta).
 
 PERFIL:
 - Nicho: ${nicho}
@@ -1806,10 +1806,10 @@ INSTRUCOES CRITICAS:
 5. Video selfie deve ter SCRIPT LITERAL completo (nao apenas descricao)
 6. Use a linguagem e tom das legendas recentes — mantenha a voz do criador
 7. Cada sequencia deve contar uma MICRO-HISTORIA com inicio, meio e fim
-8. Para cada objetivo, distribua: 2 educacao, 2 bastidores, 1 comunidade, 1 prova social, 1 storytelling`;
+8. Para cada objetivo, distribua: 1 educacao, 1 bastidores, 1 comunidade, 1 prova social, 1 storytelling`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180000);
+  const timeout = setTimeout(() => controller.abort(), 90000);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1820,7 +1820,7 @@ INSTRUCOES CRITICAS:
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: storiesSystemPrompt },
           { role: "user", content: userMessage },
@@ -1830,7 +1830,7 @@ INSTRUCOES CRITICAS:
             type: "function",
             function: {
               name: "generate_stories",
-              description: "Retorna 30 sequencias de Stories para 1 mes de conteudo",
+              description: "Retorna 20 sequencias de Stories para 1 semana de conteudo (Seg-Sex)",
               parameters: storiesSchema,
             },
           },
@@ -1856,10 +1856,10 @@ INSTRUCOES CRITICAS:
     // Backward compat: if old format with flat sequences
     if ((parsed as any).sequences && !parsed.crescer) {
       const seqs = (parsed as any).sequences as AIStorySequence[];
-      parsed.crescer = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(0, 7) };
-      parsed.engajar = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(7, 14) };
-      parsed.vender = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(14, 21) };
-      parsed.autoridade = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(21, 28) };
+      parsed.crescer = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(0, 5) };
+      parsed.engajar = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(5, 10) };
+      parsed.vender = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(10, 15) };
+      parsed.autoridade = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(15, 20) };
     }
     console.log(`generateStories: success, ${totalSeqs} sequences generated across 4 objectives`);
     return parsed;

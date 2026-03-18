@@ -138,22 +138,22 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
 
     startTimeRef.current = Date.now();
     let current = 0;
-    // Slower progress — request now takes 2-4 minutes with full generation
+    // Progress timing for ~40-90s total request
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      // First 20s: quick to 20% (scraping)
-      // 20-40s: to 35% (bio/posts AI)
-      // 40-120s: to 70% (content generation — slowest part)
-      // 120-240s: to 90% (finishing up)
-      // 240s+: oscillate around 90-94%
-      if (elapsed < 20) {
-        current = (elapsed / 20) * 20;
-      } else if (elapsed < 40) {
-        current = 20 + ((elapsed - 20) / 20) * 15;
-      } else if (elapsed < 120) {
-        current = 35 + ((elapsed - 40) / 80) * 35;
-      } else if (elapsed < 240) {
-        current = 70 + ((elapsed - 120) / 120) * 20;
+      // First 15s: quick to 20% (scraping)
+      // 15-30s: to 40% (bio/posts AI)
+      // 30-60s: to 75% (content generation with gpt-4o-mini)
+      // 60-90s: to 90% (finishing up)
+      // 90s+: oscillate around 90-94%
+      if (elapsed < 15) {
+        current = (elapsed / 15) * 20;
+      } else if (elapsed < 30) {
+        current = 20 + ((elapsed - 15) / 15) * 20;
+      } else if (elapsed < 60) {
+        current = 40 + ((elapsed - 30) / 30) * 35;
+      } else if (elapsed < 90) {
+        current = 75 + ((elapsed - 60) / 30) * 15;
       } else {
         current = 90 + Math.sin(Date.now() / 500) * 2;
       }
