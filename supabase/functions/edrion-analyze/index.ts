@@ -2168,7 +2168,7 @@ async function buildFreeResult(
   };
   const selected_objetivo = objetivoMap[objetivo.toLowerCase()] || "crescer";
 
-  // Build post insights for deferred Phase 3
+  // Build post insights for Phase 3
   const topPostInsights = postsAiResult?.top_post_analysis
     ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
     : `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}.`;
@@ -2177,8 +2177,24 @@ async function buildFreeResult(
     ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
     : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
 
-  // Return result immediately WITHOUT Phase 3 (stories/weekly/enrichment)
-  // Phase 3 will be run in background via EdgeRuntime.waitUntil()
+  // Phase 3: Generate enrichment (weekly content, stories, best times, etc.) INLINE
+  // All deliverables are generated for ALL users — free users see them locked/blurred
+  const [weeklyContentResult, storiesResult, enrichmentResult] = await Promise.all([
+    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
+      .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
+    generateStories(profile, nicho, objetivo, captions, topPostInsights)
+      .catch((err) => { console.error("generateStories crashed:", err); return null; }),
+    generateEnrichment(profile, nicho, objetivo)
+      .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
+  ]);
+
+  const weeklyResult = weeklyContentResult
+    ? applyWeeklyQualityGate(weeklyContentResult)
+    : null;
+  const storiesResultProcessed = storiesResult
+    ? applyStoriesQualityGate(storiesResult)
+    : null;
+
   const result = {
     profile,
     deliverables: {
@@ -2187,23 +2203,17 @@ async function buildFreeResult(
       top_post: topPostData || null,
       worst_post: worstPostData || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
-      weekly_content_plan: null as any,
-      objective_content_plans: undefined as any,
-      stories_plan: null as any,
-      objective_stories_plans: undefined as any,
-      best_times: undefined as any,
-      format_mix: undefined as any,
-      hashtag_strategy: undefined as any,
+      weekly_content_plan: weeklyResult?.weekly_content_plan || null,
+      objective_content_plans: weeklyResult?.objective_content_plans || undefined,
+      stories_plan: storiesResultProcessed?.stories_plan || null,
+      objective_stories_plans: storiesResultProcessed?.objective_stories_plans || undefined,
+      best_times: enrichmentResult?.best_times || undefined,
+      format_mix: enrichmentResult?.format_mix || undefined,
+      hashtag_strategy: enrichmentResult?.hashtag_strategy || undefined,
     },
     selected_objetivo,
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
     plan: "free" as const,
-    // Metadata for deferred enrichment
-    _deferred: {
-      topPostInsights,
-      worstPostInsights,
-      captions,
-    },
   };
 
   return result;
@@ -2416,9 +2426,7 @@ Deno.serve(async (req) => {
     // ── [5] If NOT authenticated → return pending_result ─────
     if (!userId) {
       const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
-      // Remove internal _deferred metadata before sending to client
-      const { _deferred, ...cleanPending } = pendingResult;
-      return json({ code: "AUTH_REQUIRED", pending_result: cleanPending }, 200);
+      return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
     }
 
     // ── [6] Authenticated → check plan limits ────────────────
@@ -2457,9 +2465,6 @@ Deno.serve(async (req) => {
       ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin)
       : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
 
-    // Extract deferred metadata before persisting
-    const { _deferred, ...resultForClient } = result;
-
     // ── [8] Persist ──────────────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin
       .from("analysis_request")
@@ -2473,16 +2478,14 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
 
-    let resultId: string | null = null;
     if (reqInsert) {
-      const { data: resInsert } = await supabaseAdmin.from("analysis_result").insert({
+      await supabaseAdmin.from("analysis_result").insert({
         request_id: reqInsert.id,
         handle: cleanHandle,
-        result_json: resultForClient,
+        result_json: result,
         user_id: userId,
         unlocked_at: useCredit ? new Date().toISOString() : null,
-      }).select("id").single();
-      resultId = resInsert?.id || null;
+      });
     }
 
     // ── [9] Update user profile ────────────────────────────
@@ -2498,24 +2501,7 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // ── [10] Defer Phase 3 (stories/weekly/enrichment) ───────
-    if (resultId && _deferred) {
-      // deno-lint-ignore no-explicit-any
-      (globalThis as any).EdgeRuntime?.waitUntil?.(
-        runDeferredEnrichment(
-          resultId,
-          profile,
-          nicho!,
-          objetivo!,
-          _deferred.captions,
-          _deferred.topPostInsights,
-          _deferred.worstPostInsights,
-          supabaseAdmin,
-        )
-      );
-    }
-
-    return json({ success: true, data: resultForClient }, 200);
+    return json({ success: true, data: result }, 200);
   } catch (err) {
     console.error("edrion-analyze error:", err);
     return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);
