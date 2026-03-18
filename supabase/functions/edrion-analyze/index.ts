@@ -2077,7 +2077,9 @@ async function buildFreeResult(
     analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo, topTranscript.text, worstTranscript.text),
   ]);
 
-  // Calculate scores from rubric
+  // Calculate scores from rubric (safe fallback if AI omits fields)
+  const defaultRubric: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
+  const safeRubric = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric;
   const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
 
   const bio_suggestion = aiResult
