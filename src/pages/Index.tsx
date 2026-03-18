@@ -16,8 +16,9 @@ import { getAnalyzedCount, formatCount } from "@/utils/counter";
 import HistoryPanel from "@/components/HistoryPanel";
 import ShowcaseCarousel, { SHOWCASE_PROFILES } from "@/components/ShowcaseCarousel";
 import { fetchShowcaseResult } from "@/services/showcase";
+import BuildingReveal from "@/components/BuildingReveal";
 
-type AppState = "form" | "loading" | "result" | "upgrade" | "showcase";
+type AppState = "form" | "loading" | "building" | "result" | "upgrade" | "showcase";
 
 const ERROR_MESSAGES: Record<string, string> = {
   private: "Esse perfil é privado. Só conseguimos analisar perfis públicos.",
@@ -196,7 +197,12 @@ const Index = () => {
       setResult(response.data!);
       setIsDone(true);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      setState("result");
+      // Show loading completion animation, then transition to building reveal
+      setTimeout(() => {
+        if (!abortRef.current) {
+          setState("building");
+        }
+      }, 1500);
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
@@ -228,7 +234,7 @@ const Index = () => {
       setPendingResult(null);
       setPendingInputs(null);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      setState("result");
+      setState("building");
       return;
     }
 
@@ -238,6 +244,10 @@ const Index = () => {
       runAnalysis(handle, nicho, objetivo);
     }
   }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
+
+  const handleBuildingComplete = useCallback(() => {
+    setState("result");
+  }, []);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -478,6 +488,14 @@ const Index = () => {
               </div>
             </div>
           )
+        )}
+
+        {state === "building" && result && (
+          <BuildingReveal
+            result={result}
+            onComplete={() => setState("result")}
+            onReset={handleReset}
+          />
         )}
 
         {state === "result" && result && (

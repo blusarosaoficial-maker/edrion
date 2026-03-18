@@ -3,25 +3,14 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
-  Eye,
-  TrendingUp,
-  ExternalLink,
   RotateCcw,
   CheckCircle2,
-  Trophy,
-  Medal,
-  Circle,
-  Search,
   Lock,
   Crown,
   Sparkles,
-  Clock,
   ArrowLeft,
   ArrowRight,
   Lightbulb,
-  Target,
-  Zap,
-  AlertTriangle,
 } from "lucide-react";
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
@@ -32,6 +21,11 @@ import BestTimesSection from "@/components/BestTimesSection";
 import FormatMixSection from "@/components/FormatMixSection";
 import HashtagStrategySection from "@/components/HashtagStrategySection";
 import UpgradeModal from "@/components/UpgradeModal";
+import ProfileHealthScore, { computeHealthScore, healthLabel } from "@/components/ProfileHealthScore";
+import PostCard from "@/components/PostCard";
+import LatestPostCard from "@/components/LatestPostCard";
+import InlineUpgradeBanner from "@/components/InlineUpgradeBanner";
+import FinalCTA from "@/components/FinalCTA";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackViewContent } from "@/utils/pixel";
 
@@ -47,27 +41,6 @@ function formatNum(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
   return n.toString();
-}
-
-
-function computeHealthScore(result: AnalysisResult): number {
-  const scores: number[] = [];
-  if (result.deliverables.bio_suggestion.score !== undefined) {
-    scores.push(result.deliverables.bio_suggestion.score);
-  }
-  const topScore = result.deliverables.top_post.analysis?.nota_geral;
-  if (topScore !== undefined) scores.push(topScore);
-  const worstScore = result.deliverables.worst_post.analysis?.nota_geral;
-  if (worstScore !== undefined) scores.push(worstScore);
-  if (scores.length === 0) return 5;
-  return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
-}
-
-function healthLabel(score: number): { text: string; color: string; bg: string } {
-  if (score >= 8) return { text: "Excelente", color: "text-emerald-400", bg: "from-emerald-500 to-emerald-400" };
-  if (score >= 6) return { text: "Bom", color: "text-primary", bg: "from-primary to-violet-400" };
-  if (score >= 4) return { text: "Regular", color: "text-yellow-500", bg: "from-yellow-500 to-amber-400" };
-  return { text: "Precisa melhorar", color: "text-destructive", bg: "from-red-500 to-orange-500" };
 }
 
 export default function ResultView({ result, onReset, resetLabel, isShowcase }: Props) {
@@ -330,92 +303,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
   );
 }
 
-/* ─── Profile Health Score ─────────────────────────────────── */
-
-function ProfileHealthScore({
-  score,
-  health,
-  isPremium,
-  onUpgrade,
-}: {
-  score: number;
-  health: { text: string; color: string; bg: string };
-  isPremium: boolean;
-  onUpgrade: () => void;
-}) {
-  const pct = Math.min(score * 10, 100);
-  // SVG arc for semicircle gauge
-  const radius = 60;
-  const circumference = Math.PI * radius;
-  const offset = circumference - (pct / 100) * circumference;
-
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 md:p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Target className="w-5 h-5 text-primary" />
-        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Saude do Perfil
-        </h3>
-      </div>
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        {/* Gauge */}
-        <div className="relative w-36 h-20 shrink-0">
-          <svg viewBox="0 0 140 80" className="w-full h-full">
-            {/* Background arc */}
-            <path
-              d="M 10 75 A 60 60 0 0 1 130 75"
-              fill="none"
-              stroke="hsl(var(--secondary))"
-              strokeWidth="10"
-              strokeLinecap="round"
-            />
-            {/* Score arc */}
-            <path
-              d="M 10 75 A 60 60 0 0 1 130 75"
-              fill="none"
-              stroke="url(#healthGradient)"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              className="transition-all duration-1000 ease-out"
-            />
-            <defs>
-              <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="40%" stopColor="#eab308" />
-                <stop offset="70%" stopColor="#6A5CFF" />
-                <stop offset="100%" stopColor="#22c55e" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-end pb-0">
-            <span className={`text-2xl font-bold ${health.color}`}>{score}</span>
-            <span className="text-[10px] text-muted-foreground">/10</span>
-          </div>
-        </div>
-        {/* Info */}
-        <div className="flex-1 text-center sm:text-left space-y-2">
-          <p className={`text-sm font-bold ${health.color}`}>{health.text}</p>
-          <p className="text-xs text-muted-foreground">
-            Nota calculada a partir da sua bio, melhor e pior post.
-            {!isPremium && " Desbloqueie a analise completa para entender cada ponto e como melhorar."}
-          </p>
-          {!isPremium && (
-            <button
-              onClick={onUpgrade}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              <Sparkles className="w-3 h-3" />
-              Ver como melhorar <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ─── Blurred Next Post Suggestion ─────────────────────────── */
 
 function BlurredNextPost({
@@ -437,7 +324,6 @@ function BlurredNextPost({
         </span>
       </div>
       <div className="relative p-5">
-        {/* Blurred content preview */}
         <div className="space-y-3 blur-[6px] select-none pointer-events-none" aria-hidden>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-xs font-semibold rounded bg-primary/10 text-primary">{suggestion.format}</span>
@@ -451,7 +337,6 @@ function BlurredNextPost({
           </div>
           <p className="text-sm text-foreground/60">CTA: {suggestion.cta}</p>
         </div>
-        {/* Overlay */}
         <div
           onClick={onUpgrade}
           className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background/80 flex flex-col items-center justify-center cursor-pointer"
@@ -467,324 +352,6 @@ function BlurredNextPost({
               Hook, roteiro e CTA prontos para usar
             </span>
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Tier Badge ───────────────────────────────────────────── */
-
-function tierBadge(tier?: "gold" | "silver" | "bronze") {
-  if (!tier) return null;
-  const cfg = {
-    gold: { label: "Gold", icon: <Trophy className="w-3 h-3" />, cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-    silver: { label: "Silver", icon: <Medal className="w-3 h-3" />, cls: "bg-slate-400/10 text-slate-400 border-slate-400/20" },
-    bronze: { label: "Bronze", icon: <Circle className="w-3 h-3" />, cls: "bg-orange-600/10 text-orange-600 border-orange-600/20" },
-  }[tier];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${cfg.cls}`}>
-      {cfg.icon} {cfg.label}
-    </span>
-  );
-}
-
-/* ─── Latest Post Card (free, no analysis) ─────────────────── */
-
-function LatestPostCard({ post }: { post: PostData }) {
-  return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-        <Clock className="w-5 h-5 text-muted-foreground" />
-        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Seu Último Post
-        </h3>
-      </div>
-      <div className="p-5 space-y-4">
-        <div className="relative overflow-hidden rounded-lg">
-          <img
-            src={post.thumb_url}
-            alt={post.caption_preview}
-            className="w-full aspect-square rounded-lg object-cover bg-muted"
-            loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://placehold.co/400x400/1a1a2e/6A5CFF?text=${encodeURIComponent(post.caption_preview?.slice(0, 20) || "Post")}`;
-            }}
-          />
-        </div>
-        <p className="text-sm text-foreground line-clamp-2">{post.caption_preview}</p>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <MetricItem icon={<ThumbsUp className="w-3.5 h-3.5" />} label="Likes" value={formatNum(post.metrics.likes)} />
-          <MetricItem icon={<MessageCircle className="w-3.5 h-3.5" />} label="Comments" value={formatNum(post.metrics.comments)} />
-          {post.metrics.views > 0 && (
-            <MetricItem icon={<Eye className="w-3.5 h-3.5" />} label="Views" value={formatNum(post.metrics.views)} />
-          )}
-          <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Engajamento" value={(post.metrics.engagement_score * 100).toFixed(2) + "%"} />
-        </div>
-        {post.permalink && (
-          <a
-            href={post.permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-          >
-            Ver no Instagram <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* ─── Post Card ────────────────────────────────────────────── */
-
-function PostCard({
-  title,
-  icon,
-  post,
-  accentClass,
-  locked,
-  showPositiveFactors,
-  onClickAnalysis,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  post: PostData;
-  accentClass: string;
-  locked?: boolean;
-  showPositiveFactors?: boolean;
-  onClickAnalysis: () => void;
-}) {
-  const tier = post.analysis?.classificacao || post.tier;
-  const score = post.analysis?.nota_geral;
-  const positives = post.analysis?.fatores_positivos;
-
-  return (
-    <section className={`rounded-xl border bg-card overflow-hidden ${accentClass} cursor-pointer hover:border-primary/50 hover:scale-[1.01] transition-all duration-200 group`} onClick={onClickAnalysis}>
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-        {icon}
-        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          {title}
-        </h3>
-        {tierBadge(tier)}
-        {score !== undefined && (
-          <span className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full ${
-            score >= 7 ? "bg-primary/10 text-primary" : score >= 4 ? "bg-yellow-500/10 text-yellow-600" : "bg-destructive/10 text-destructive"
-          }`}>
-            {score}/10
-          </span>
-        )}
-        {locked && (
-          <span className={`${score === undefined ? "ml-auto" : ""} inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20`}>
-            <Lock className="w-2.5 h-2.5" /> PRO
-          </span>
-        )}
-      </div>
-      <div className="p-5 space-y-4">
-        <div className="relative overflow-hidden rounded-lg">
-          <img
-            src={post.thumb_url}
-            alt={post.caption_preview}
-            className="w-full aspect-square rounded-lg object-cover bg-muted transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://placehold.co/400x400/1a1a2e/6A5CFF?text=${encodeURIComponent(post.caption_preview?.slice(0, 20) || "Post")}`;
-            }}
-          />
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <span className="text-white text-xs font-medium backdrop-blur-sm px-2 py-0.5 rounded">
-              {locked ? "Toque para desbloquear" : "Toque para ver analise"}
-            </span>
-          </div>
-        </div>
-        <p className="text-sm text-foreground line-clamp-2">{post.caption_preview}</p>
-
-        {/* Free preview: show positive factors for top post */}
-        {showPositiveFactors && positives && positives.length > 0 && (
-          <div className="space-y-1.5 p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">Por que performou bem</p>
-            {positives.slice(0, 2).map((f, i) => (
-              <div key={i} className="flex items-start gap-1.5 text-xs">
-                <CheckCircle2 className="w-3 h-3 text-primary shrink-0 mt-0.5" />
-                <span className="text-foreground/80">{f}</span>
-              </div>
-            ))}
-            {positives.length > 2 && (
-              <p className="text-[10px] text-amber-400 flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" />
-                +{positives.length - 2} insights · fatores negativos · recomendacoes
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <MetricItem icon={<ThumbsUp className="w-3.5 h-3.5" />} label="Likes" value={formatNum(post.metrics.likes)} />
-          <MetricItem icon={<MessageCircle className="w-3.5 h-3.5" />} label="Comments" value={formatNum(post.metrics.comments)} />
-          {post.metrics.views > 0 && (
-            <MetricItem icon={<Eye className="w-3.5 h-3.5" />} label="Views" value={formatNum(post.metrics.views)} />
-          )}
-          <MetricItem icon={<TrendingUp className="w-3.5 h-3.5" />} label="Engajamento" value={(post.metrics.engagement_score * 100).toFixed(2) + "%"} />
-        </div>
-        <div className="flex items-center justify-between">
-          <a
-            href={post.permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            Ver no Instagram <ExternalLink className="w-3 h-3" />
-          </a>
-          {locked ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400">
-              <Lock className="w-3 h-3" /> Desbloquear Analise
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-primary group-hover:text-primary/80 transition-colors">
-              <Search className="w-3 h-3" /> Ver Analise Completa &rarr;
-            </span>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Countdown Hook ───────────────────────────────────────── */
-
-function useCountdown() {
-  const PROMO_KEY = "edrion_promo_start";
-  const PROMO_DURATION = 24 * 60 * 60 * 1000;
-  const [timeLeft, setTimeLeft] = useState("23:59:59");
-
-  useEffect(() => {
-    if (!sessionStorage.getItem(PROMO_KEY)) {
-      sessionStorage.setItem(PROMO_KEY, String(Date.now()));
-    }
-
-    const tick = () => {
-      const start = Number(sessionStorage.getItem(PROMO_KEY) || Date.now());
-      const remaining = Math.max(0, PROMO_DURATION - (Date.now() - start));
-      const h = Math.floor(remaining / 3600000);
-      const m = Math.floor((remaining % 3600000) / 60000);
-      const s = Math.floor((remaining % 60000) / 1000);
-      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  return timeLeft;
-}
-
-/* ─── Inline Upgrade Banner (curiosity-driven, no price) ───── */
-
-function InlineUpgradeBanner({
-  handle,
-  topScore,
-  worstScore,
-  onUpgrade,
-}: {
-  handle: string;
-  topScore?: number;
-  worstScore?: number;
-  onUpgrade: () => void;
-}) {
-  const hasScores = topScore !== undefined && worstScore !== undefined;
-  const scoreDiff = hasScores ? Math.abs(topScore - worstScore).toFixed(1) : null;
-
-  return (
-    <section className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 p-5 md:p-6 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <Zap className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h3
-            className="text-foreground font-bold text-base"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {hasScores
-              ? `@${handle}, tem ${scoreDiff} pontos separando seu melhor do pior post.`
-              : `@${handle}, encontramos padres que voce pode replicar.`}
-          </h3>
-          <p className="text-muted-foreground text-sm mt-1">
-            Descubra exatamente o que fez seu melhor post funcionar, o que travou o pior, e receba um plano de 7 dias personalizado.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
-          <Search className="w-4 h-4 text-primary" />
-          <span className="text-[11px] text-center text-muted-foreground">4 estratégias por objetivo</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
-          <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span className="text-[11px] text-center text-muted-foreground">28 roteiros prontos</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
-          <Target className="w-4 h-4 text-emerald-400" />
-          <span className="text-[11px] text-center text-muted-foreground">28 sequências de Stories</span>
-        </div>
-      </div>
-
-      <button
-        onClick={onUpgrade}
-        className="w-full h-11 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
-      >
-        Ver analise completa
-        <ArrowRight className="w-4 h-4" />
-      </button>
-    </section>
-  );
-}
-
-/* ─── Final CTA (after everything, urgency + social proof) ── */
-
-function FinalCTA({ handle, onUpgrade }: { handle: string; onUpgrade: () => void }) {
-  const timeLeft = useCountdown();
-
-  return (
-    <section className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 via-background to-orange-500/5 p-6 space-y-5">
-      <div className="text-center space-y-2">
-        <p className="text-lg font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Voce viu o diagnostico. Agora veja a solucao.
-        </p>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          A analise completa inclui tudo que voce precisa para transformar seu perfil em 7 dias — posts analisados em profundidade, roteiros prontos e bio otimizada.
-        </p>
-      </div>
-
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-            70% OFF na sua primeira analise
-          </span>
-          <span className="text-muted-foreground line-through text-sm">R$67,00</span>
-          <span className="text-xl font-bold text-foreground">R$19,99</span>
-        </div>
-
-        <button
-          onClick={onUpgrade}
-          className="w-full max-w-sm h-12 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
-        >
-          <Lock className="w-4 h-4" />
-          Desbloquear Meu Relatorio
-        </button>
-
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span>Expira em <strong className="text-amber-400 font-mono">{timeLeft}</strong></span>
-          </div>
-          <span>·</span>
-          <span>Pagamento unico</span>
-          <span>·</span>
-          <span>Garantia 7 dias</span>
         </div>
       </div>
     </section>
@@ -852,17 +419,5 @@ function NextPostVisible({
         <p className="text-sm text-foreground/60">CTA: {suggestion.cta}</p>
       </div>
     </section>
-  );
-}
-
-/* ─── Metric Item ──────────────────────────────────────────── */
-
-function MetricItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 text-muted-foreground">
-      {icon}
-      <span className="text-xs">{label}</span>
-      <span className="ml-auto text-foreground font-medium text-xs">{value}</span>
-    </div>
   );
 }

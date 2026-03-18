@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { ScanSearch, Check, BadgeCheck, Loader2 } from "lucide-react";
+import { ScanSearch, Check, BadgeCheck, Loader2, Circle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCountUp } from "@/hooks/useCountUp";
 import type { ProfileData } from "@/types/analysis";
@@ -11,6 +11,25 @@ interface Props {
   isDone: boolean;
   handle?: string;
   profileSnapshot?: ProfileData | null;
+}
+
+const STEPS = [
+  { id: "locate", label: "Perfil localizado" },
+  { id: "collect", label: "Coletando dados do perfil" },
+  { id: "analyze", label: "Analisando bio e posts" },
+  { id: "generate", label: "Montando roteiros e stories" },
+  { id: "diagnostic", label: "Gerando diagnostico" },
+] as const;
+
+function getStepState(
+  stepIndex: number,
+  phase: Phase,
+): "done" | "active" | "pending" {
+  const phaseIndex = { A: 0, B: 1, C: 2, D: 3, done: 5 }[phase];
+  if (stepIndex < phaseIndex) return "done";
+  if (stepIndex === phaseIndex) return "active";
+  if (phase === "done") return "done";
+  return "pending";
 }
 
 function CountUpNumber({ target, start }: { target: number; start: boolean }) {
@@ -93,14 +112,6 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
 
   if (!isOpen) return null;
 
-  const phaseLabel = {
-    A: "Localizando perfil...",
-    B: "Coletando dados do perfil...",
-    C: "Analisando dados do perfil...",
-    D: "Gerando diagnóstico estratégico...",
-    done: "Diagnóstico pronto!",
-  }[phase];
-
   const content = (
     <div className="flex flex-col items-center justify-center gap-5 p-6 sm:p-8 w-full max-w-sm mx-auto">
 
@@ -112,14 +123,10 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
           style={{ opacity: showAvatar ? 0 : 1, transform: showAvatar ? "scale(0.8)" : "scale(1)" }}
         >
           <div className="ai-scanner">
-            {/* Radar pulse waves */}
             <div className="ai-scanner-pulse" />
             <div className="ai-scanner-pulse ai-scanner-pulse-delayed" />
-            {/* Outer dashed ring — slow reverse rotation */}
             <div className="ai-scanner-ring-outer" />
-            {/* Inner gradient ring — forward rotation */}
             <div className="ai-scanner-ring-inner" />
-            {/* Core icon */}
             <div className="ai-scanner-core">
               <ScanSearch className="w-8 h-8 text-white relative z-10" />
             </div>
@@ -199,10 +206,41 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
         </p>
       </div>
 
-      {/* === STATUS + AI indicator === */}
-      <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-[20px]">
-        {phase === "D" && <Loader2 className="w-4 h-4 animate-spin" />}
-        <span className="transition-opacity duration-300">{phaseLabel}</span>
+      {/* === STEP CHECKLIST === */}
+      <div className="w-full space-y-2 py-2">
+        {STEPS.map((step, i) => {
+          const state = getStepState(i, phase);
+          return (
+            <div
+              key={step.id}
+              className={`flex items-center gap-2.5 transition-all duration-300 ${
+                state === "pending" ? "opacity-30" : "opacity-100"
+              }`}
+            >
+              {state === "done" ? (
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 step-check-enter">
+                  <Check className="w-3 h-3 text-emerald-400" strokeWidth={3} />
+                </div>
+              ) : state === "active" ? (
+                <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+              ) : (
+                <Circle className="w-5 h-5 text-muted-foreground/30 shrink-0" />
+              )}
+              <span
+                className={`text-sm transition-colors duration-300 ${
+                  state === "done"
+                    ? "text-emerald-400"
+                    : state === "active"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground/40"
+                }`}
+              >
+                {step.label}
+                {state === "active" && "..."}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* === PROGRESS BAR — always visible === */}
