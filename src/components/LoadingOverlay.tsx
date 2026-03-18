@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useCountUp } from "@/hooks/useCountUp";
 import type { ProfileData } from "@/types/analysis";
 
-type Phase = "A" | "B" | "C" | "D" | "E" | "done";
+type Phase = "A" | "B" | "C" | "D" | "done";
 
 interface Props {
   isOpen: boolean;
@@ -17,15 +17,14 @@ const STEPS = [
   { id: "locate", label: "Perfil localizado" },
   { id: "collect", label: "Coletando dados do perfil" },
   { id: "analyze", label: "Analisando bio e posts" },
-  { id: "generate", label: "Montando roteiros e stories" },
-  { id: "diagnostic", label: "Finalizando diagnostico" },
+  { id: "diagnostic", label: "Montando seu diagnostico" },
 ] as const;
 
-/* Counter labels that cycle during Phase D (content generation) */
+/* Counter labels that cycle during Phase D (diagnostic assembly) */
 const GENERATION_LABELS = [
-  "Criando roteiros da semana...",
-  "Montando sequencias de Stories...",
-  "Definindo estrategia de hashtags...",
+  "Calculando saude do perfil...",
+  "Analisando engajamento...",
+  "Preparando diagnostico...",
 ];
 
 /* Motivational tips shown after extended wait */
@@ -40,7 +39,7 @@ function getStepState(
   stepIndex: number,
   phase: Phase,
 ): "done" | "active" | "pending" {
-  const phaseIndex = { A: 0, B: 1, C: 2, D: 3, E: 4, done: 5 }[phase];
+  const phaseIndex = { A: 0, B: 1, C: 2, D: 3, done: 4 }[phase];
   if (stepIndex < phaseIndex) return "done";
   if (stepIndex === phaseIndex) return "active";
   if (phase === "done") return "done";
@@ -71,7 +70,7 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
   const showAvatar = hasProfile && avatarLoaded;
   // Show stats as soon as profile data arrives (even in phase A)
   const showStats = hasProfile;
-  const showBio = hasProfile && (phase === "C" || phase === "D" || phase === "E" || phase === "done") && !!profileSnapshot?.bio_text;
+  const showBio = hasProfile && (phase === "C" || phase === "D" || phase === "done") && !!profileSnapshot?.bio_text;
 
   // Preload avatar image
   useEffect(() => {
@@ -133,24 +132,21 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
 
     startTimeRef.current = Date.now();
     let current = 0;
-    // Progress timing for ~40-90s total request
+    // Progress timing for ~30-45s total (partial result — bio + posts only)
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      // First 15s: quick to 20% (scraping)
-      // 15-30s: to 40% (bio/posts AI)
-      // 30-60s: to 75% (content generation with gpt-4o-mini)
-      // 60-90s: to 90% (finishing up)
-      // 90s+: oscillate around 90-94%
-      if (elapsed < 15) {
-        current = (elapsed / 15) * 20;
-      } else if (elapsed < 30) {
-        current = 20 + ((elapsed - 15) / 15) * 20;
-      } else if (elapsed < 60) {
-        current = 40 + ((elapsed - 30) / 30) * 35;
-      } else if (elapsed < 90) {
-        current = 75 + ((elapsed - 60) / 30) * 15;
+      // First 12s: quick to 25% (scraping profile)
+      // 12-25s: to 55% (scraping posts)
+      // 25-40s: to 85% (bio + posts AI analysis)
+      // 40s+: oscillate around 88-94%
+      if (elapsed < 12) {
+        current = (elapsed / 12) * 25;
+      } else if (elapsed < 25) {
+        current = 25 + ((elapsed - 12) / 13) * 30;
+      } else if (elapsed < 40) {
+        current = 55 + ((elapsed - 25) / 15) * 30;
       } else {
-        current = 90 + Math.sin(Date.now() / 500) * 2;
+        current = 88 + Math.sin(Date.now() / 500) * 3;
       }
       setProgress(Math.min(current, 94));
     }, 250);
@@ -158,14 +154,13 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
     return () => clearInterval(intervalRef.current);
   }, [isOpen]);
 
-  // Phase transitions based on progress
+  // Phase transitions based on progress (4 phases now)
   useEffect(() => {
     if (showDone) return;
-    if (progress < 10) setPhase("A");
-    else if (progress < 25) setPhase("B");
-    else if (progress < 40) setPhase("C");
-    else if (progress < 85) setPhase("D");
-    else setPhase("E");
+    if (progress < 12) setPhase("A");
+    else if (progress < 35) setPhase("B");
+    else if (progress < 65) setPhase("C");
+    else setPhase("D");
   }, [progress, showDone]);
 
   // When API is done, complete animation
@@ -311,8 +306,8 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
                   {state === "active" && "..."}
                 </span>
               </div>
-              {/* Sub-label for content generation phase — cycles through objectives */}
-              {step.id === "generate" && state === "active" && (
+              {/* Sub-label for diagnostic phase — cycles through labels */}
+              {step.id === "diagnostic" && state === "active" && (
                 <p className="ml-[30px] text-xs text-primary/70 mt-1 transition-opacity duration-500 animate-pulse">
                   {GENERATION_LABELS[genLabelIndex]}
                 </p>

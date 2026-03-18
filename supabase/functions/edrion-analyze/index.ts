@@ -2350,12 +2350,152 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── [7] Build result (fast: bio + posts AI only) ─────────
-    const result = (plan === "premium" || useCredit)
-      ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin)
-      : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
+    // ── [7] Build fast partial result (bio + posts only) ─────
+    // Returns immediately with profile, bio, posts — no waiting for weekly/stories/hashtags
+    const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
+    let topIdx = 0, worstIdx = 0;
+    for (let i = 1; i < posts.length; i++) {
+      if (posts[i].metrics.engagement_score > posts[topIdx].metrics.engagement_score) topIdx = i;
+      if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
+    }
+    const basicTopInsights = `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}. Caption: "${posts[topIdx].caption_preview}".`;
+    const basicWorstInsights = `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
 
-    // ── [8] Persist ──────────────────────────────────────────
+    // Phase 1: Bio + Posts analysis in parallel (fast, ~10-15s)
+    const [aiResult, postsAnalysisBundle] = await Promise.all([
+      analyzeBioWithAI(profile, nicho!, objetivo!, captions),
+      (async () => {
+        const [topTranscript, worstTranscript] = await Promise.all([
+          posts[topIdx].post_type === "Video"
+            ? transcribeVideo(posts[topIdx].video_url, posts[topIdx].uses_original_audio, posts[topIdx].music_info)
+            : Promise.resolve({ text: null, skipped_reason: null }),
+          posts[worstIdx].post_type === "Video"
+            ? transcribeVideo(posts[worstIdx].video_url, posts[worstIdx].uses_original_audio, posts[worstIdx].music_info)
+            : Promise.resolve({ text: null, skipped_reason: null }),
+        ]);
+        const postsAiResult = await analyzePostsWithAI(
+          profile, posts[topIdx], posts[worstIdx], posts, nicho!, objetivo!,
+          topTranscript.text, worstTranscript.text,
+        );
+        const topPostData = {
+          ...posts[topIdx],
+          analysis: postsAiResult?.top_post_analysis || null,
+          tier: (postsAiResult?.top_post_analysis?.classificacao || posts[topIdx].tier) as "gold" | "silver" | "bronze",
+          transcript: topTranscript.text || undefined,
+          transcript_skipped_reason: topTranscript.skipped_reason || undefined,
+        };
+        const worstPostData = {
+          ...posts[worstIdx],
+          analysis: postsAiResult?.worst_post_analysis || null,
+          tier: (postsAiResult?.worst_post_analysis?.classificacao || posts[worstIdx].tier) as "gold" | "silver" | "bronze",
+          transcript: worstTranscript.text || undefined,
+          transcript_skipped_reason: worstTranscript.skipped_reason || undefined,
+        };
+        const [topThumb, worstThumb] = await Promise.all([
+          proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
+            .catch(() => topPostData.thumb_url),
+          proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
+            .catch(() => worstPostData.thumb_url),
+        ]);
+        topPostData.thumb_url = topThumb;
+        worstPostData.thumb_url = worstThumb;
+        return { topPostData, worstPostData };
+      })(),
+    ]);
+
+    const { topPostData, worstPostData } = postsAnalysisBundle || {
+      topPostData: { ...posts[topIdx], analysis: null, tier: posts[topIdx].tier },
+      worstPostData: { ...posts[worstIdx], analysis: null, tier: posts[worstIdx].tier },
+    };
+
+    // Build bio_suggestion from AI result
+    const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
+    const defaultRubric: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
+    const safeRubric = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric;
+    const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
+
+    const bio_suggestion = aiResult
+      ? {
+          current_bio: profile.bio_text,
+          suggested_bio: aiResult.bio_sugerida,
+          rationale_short: aiResult.justificativa_bio,
+          cta_option: aiResult.cta_sugerido,
+          score: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_atual)) / 30) * 10).toFixed(1)),
+          score_new: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_nova)) / 30) * 10).toFixed(1)),
+          criteria: {
+            clarity: safeRubric(aiResult.rubrica_bio_atual).clareza,
+            authority: safeRubric(aiResult.rubrica_bio_atual).autoridade,
+            cta: safeRubric(aiResult.rubrica_bio_atual).forca_cta,
+            seo: safeRubric(aiResult.rubrica_bio_atual).seo_descoberta,
+            brand_voice: safeRubric(aiResult.rubrica_bio_atual).voz_da_marca,
+            specificity: safeRubric(aiResult.rubrica_bio_atual).especificidade,
+          },
+          criteria_new: {
+            clarity: safeRubric(aiResult.rubrica_bio_nova).clareza,
+            authority: safeRubric(aiResult.rubrica_bio_nova).autoridade,
+            cta: safeRubric(aiResult.rubrica_bio_nova).forca_cta,
+            seo: safeRubric(aiResult.rubrica_bio_nova).seo_descoberta,
+            brand_voice: safeRubric(aiResult.rubrica_bio_nova).voz_da_marca,
+            specificity: safeRubric(aiResult.rubrica_bio_nova).especificidade,
+          },
+          diagnostic: aiResult.analise_diagnostica || {},
+          strengths: aiResult.pontos_fortes,
+          improvements: aiResult.pontos_de_melhoria,
+          name_keyword: aiResult.sugestao_keyword_nome,
+          detected_tone: aiResult.analise_diagnostica?.tom_de_voz,
+          variations: aiResult.bio_variacao_autoridade ? [
+            { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
+            { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
+            { label: "Ação", bio: aiResult.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
+          ] : undefined,
+        }
+      : {
+          current_bio: profile.bio_text,
+          suggested_bio: templateBio.suggested,
+          rationale_short: templateBio.rationale,
+          cta_option: templateBio.cta,
+        };
+
+    // Latest post thumbnail proxy
+    let latestPost = posts.length > 0 ? { ...posts[0], analysis: null, tier: undefined } : null;
+    if (latestPost) {
+      if (latestPost.post_id === topPostData?.post_id) {
+        latestPost.thumb_url = topPostData.thumb_url;
+      } else if (latestPost.post_id === worstPostData?.post_id) {
+        latestPost.thumb_url = worstPostData.thumb_url;
+      } else {
+        latestPost.thumb_url = await proxyPostThumbnail(
+          profile.handle, latestPost.post_id, latestPost.thumb_url, supabaseAdmin,
+        ).catch(() => latestPost!.thumb_url);
+      }
+    }
+
+    // Build partial result (no weekly/stories/hashtags yet)
+    const isPremiumBuild = plan === "premium" || useCredit;
+    const partialResult = {
+      profile,
+      deliverables: {
+        bio_suggestion,
+        latest_post: latestPost,
+        top_post: topPostData || null,
+        worst_post: worstPostData || null,
+        weekly_content_plan: null as null,
+        stories_plan: null as null,
+        hashtag_strategy: undefined as undefined,
+        ...(isPremiumBuild ? {
+          posts_analysis: posts,
+          competitors_analysis: [],
+          strategic_score: null,
+          improvement_plan: null,
+          pdf_available: true,
+        } : {}),
+      },
+      limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
+      plan: (isPremiumBuild ? "premium" : "free") as "free" | "premium",
+      _deferred: true,
+    };
+
+    // ── [8] Persist partial result ───────────────────────────
     const { data: reqInsert } = await supabaseAdmin
       .from("analysis_request")
       .insert({
@@ -2368,14 +2508,16 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
 
+    let resultId: string | null = null;
     if (reqInsert) {
-      await supabaseAdmin.from("analysis_result").insert({
+      const { data: insertedResult } = await supabaseAdmin.from("analysis_result").insert({
         request_id: reqInsert.id,
         handle: cleanHandle,
-        result_json: result,
+        result_json: partialResult,
         user_id: userId,
         unlocked_at: useCredit ? new Date().toISOString() : null,
-      });
+      }).select("id").single();
+      resultId = insertedResult?.id || null;
     }
 
     // ── [9] Update user profile ────────────────────────────
@@ -2391,7 +2533,30 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    return json({ success: true, data: result }, 200);
+    // ── [10] Return partial result immediately ───────────────
+    // Then run enrichment (weekly/stories/hashtags) in background
+    // The frontend listens for DB updates via Supabase Realtime
+    if (resultId) {
+      // Use EdgeRuntime.waitUntil to keep function alive after response
+      // deno-lint-ignore no-explicit-any
+      const runtime = (globalThis as any).EdgeRuntime;
+      if (runtime?.waitUntil) {
+        runtime.waitUntil(
+          runDeferredEnrichment(
+            resultId, profile, nicho!, objetivo!, captions,
+            basicTopInsights, basicWorstInsights, supabaseAdmin,
+          ).catch((err: Error) => console.error("Deferred enrichment failed:", err.message))
+        );
+      } else {
+        // Fallback: await inline (slower but guarantees completion)
+        await runDeferredEnrichment(
+          resultId, profile, nicho!, objetivo!, captions,
+          basicTopInsights, basicWorstInsights, supabaseAdmin,
+        ).catch((err) => console.error("Deferred enrichment failed:", err));
+      }
+    }
+
+    return json({ success: true, data: partialResult }, 200);
   } catch (err) {
     console.error("edrion-analyze error:", err);
     return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);

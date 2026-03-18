@@ -17,6 +17,7 @@ import HistoryPanel from "@/components/HistoryPanel";
 import ShowcaseCarousel, { SHOWCASE_PROFILES } from "@/components/ShowcaseCarousel";
 import { fetchShowcaseResult } from "@/services/showcase";
 import BuildingReveal from "@/components/BuildingReveal";
+import { useProgressiveResult } from "@/hooks/useProgressiveResult";
 
 type AppState = "form" | "loading" | "building" | "result" | "upgrade" | "showcase";
 
@@ -52,6 +53,16 @@ const Index = () => {
   const [showcaseResult, setShowcaseResult] = useState<AnalysisResult | null>(null);
   const abortRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Progressive result: listen for deferred enrichment updates
+  useProgressiveResult(
+    user?.id,
+    state === "building" || state === "result",
+    useCallback((updatedResult: AnalysisResult) => {
+      setResult(updatedResult);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    }, [queryClient]),
+  );
 
   // Close user menu on outside click
   useEffect(() => {

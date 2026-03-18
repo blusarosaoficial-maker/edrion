@@ -28,29 +28,38 @@ export function useRevealSequence(
   const completedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  // Track which sections have been scheduled to avoid re-scheduling
+  const scheduledRef = useRef<Set<string>>(new Set());
 
-  // Reset when sections change
+  // When sections change, add new ones without resetting existing
   useEffect(() => {
-    const init: Record<string, RevealState> = {};
-    for (const s of sections) init[s.id] = "hidden";
-    setStates(init);
-    completedRef.current = false;
+    setStates((prev) => {
+      const next = { ...prev };
+      for (const s of sections) {
+        if (!(s.id in next)) {
+          next[s.id] = "hidden";
+        }
+      }
+      return next;
+    });
   }, [sections.map((s) => s.id).join(",")]);
 
-  // Start the timeline
+  // Schedule reveal timers for sections (only new ones)
   useEffect(() => {
     if (!enabled || sections.length === 0) return;
 
-    // Clean up previous timers
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
+    const newTimers: ReturnType<typeof setTimeout>[] = [];
 
     for (const section of sections) {
+      // Skip already scheduled sections
+      if (scheduledRef.current.has(section.id)) continue;
+      scheduledRef.current.add(section.id);
+
       // Set to "revealing" at delay
       const revealTimer = setTimeout(() => {
         setStates((prev) => ({ ...prev, [section.id]: "revealing" }));
       }, section.delay);
-      timersRef.current.push(revealTimer);
+      newTimers.push(revealTimer);
 
       // Set to "revealed" after delay + REVEAL_DURATION
       const revealedTimer = setTimeout(() => {
@@ -65,14 +74,25 @@ export function useRevealSequence(
           return next;
         });
       }, section.delay + REVEAL_DURATION);
-      timersRef.current.push(revealedTimer);
+      newTimers.push(revealedTimer);
     }
 
+    timersRef.current.push(...newTimers);
+
     return () => {
+      for (const t of newTimers) clearTimeout(t);
+      timersRef.current = timersRef.current.filter((t) => !newTimers.includes(t));
+    };
+  }, [enabled, sections.map((s) => `${s.id}:${s.delay}`).join(",")]);
+
+  // Reset scheduledRef when component remounts (sections fully change)
+  useEffect(() => {
+    return () => {
+      scheduledRef.current.clear();
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
     };
-  }, [enabled, sections.map((s) => `${s.id}:${s.delay}`).join(",")]);
+  }, []);
 
   const skipToEnd = useCallback(() => {
     timersRef.current.forEach(clearTimeout);
