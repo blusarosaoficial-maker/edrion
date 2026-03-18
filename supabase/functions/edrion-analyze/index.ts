@@ -2040,7 +2040,8 @@ async function buildFreeResult(
   nichoKey: string,
   nicho: string,
   objetivo: string,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
 ) {
   const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
 
@@ -2118,55 +2119,27 @@ async function buildFreeResult(
   const topPostData = {
     ...posts[topIdx],
     analysis: postsAiResult?.top_post_analysis || null,
-    transcription: topTranscript.text || null,
-    transcription_skipped: topTranscript.skipped_reason || null,
+    tier: (postsAiResult?.top_post_analysis?.classificacao || posts[topIdx].tier) as "gold" | "silver" | "bronze",
+    transcript: topTranscript.text || undefined,
+    transcript_skipped_reason: topTranscript.skipped_reason || undefined,
   };
   const worstPostData = {
     ...posts[worstIdx],
     analysis: postsAiResult?.worst_post_analysis || null,
-    transcription: worstTranscript.text || null,
-    transcription_skipped: worstTranscript.skipped_reason || null,
+    tier: (postsAiResult?.worst_post_analysis?.classificacao || posts[worstIdx].tier) as "gold" | "silver" | "bronze",
+    transcript: worstTranscript.text || undefined,
+    transcript_skipped_reason: worstTranscript.skipped_reason || undefined,
   };
 
-  // Build post insights for weekly content generation
-  const topPostInsights = postsAiResult?.top_post_analysis
-    ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
-    : `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}.`;
-
-  const worstPostInsights = postsAiResult?.worst_post_analysis
-    ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
-    : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
-
-  // Phase 3: Weekly content + Stories + Enrichment + thumbnail proxying in parallel (isolated so failures don't cascade)
-  const [weeklyContentResult, storiesResult, enrichmentResult, thumbnails] = await Promise.all([
-    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
-      .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
-    generateStories(profile, nicho, objetivo, captions, topPostInsights)
-      .catch((err) => { console.error("generateStories crashed:", err); return null; }),
-    generateEnrichment(profile, nicho, objetivo)
-      .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
-    Promise.all([
-      proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
-        .catch(() => topPostData.thumb_url),
-      proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
-        .catch(() => worstPostData.thumb_url),
-    ]),
+  // Proxy thumbnails (fast, parallel)
+  const [topThumb, worstThumb] = await Promise.all([
+    proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
+      .catch(() => topPostData.thumb_url),
+    proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
+      .catch(() => worstPostData.thumb_url),
   ]);
-  const [topThumb, worstThumb] = thumbnails;
   topPostData.thumb_url = topThumb;
   worstPostData.thumb_url = worstThumb;
-
-  // Process weekly content through quality gate (strips score_interno)
-  const weeklyResult = weeklyContentResult
-    ? applyWeeklyQualityGate(weeklyContentResult)
-    : null;
-  console.log(`buildFreeResult: weeklyPlan=${weeklyResult ? `OK (${weeklyResult.weekly_content_plan.scripts.length} scripts)` : "NULL"}`);
-
-  // Process stories through quality gate
-  const storiesResultProcessed = storiesResult
-    ? applyStoriesQualityGate(storiesResult)
-    : null;
-  console.log(`buildFreeResult: storiesPlan=${storiesResultProcessed ? `OK (${storiesResultProcessed.stories_plan.sequences.length} sequences)` : "NULL"}`);
 
   // Assemble objective_bios from AI bio results
   // deno-lint-ignore no-explicit-any
@@ -2195,7 +2168,18 @@ async function buildFreeResult(
   };
   const selected_objetivo = objetivoMap[objetivo.toLowerCase()] || "crescer";
 
-  return {
+  // Build post insights for deferred Phase 3
+  const topPostInsights = postsAiResult?.top_post_analysis
+    ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
+    : `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}.`;
+
+  const worstPostInsights = postsAiResult?.worst_post_analysis
+    ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
+    : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
+
+  // Return result immediately WITHOUT Phase 3 (stories/weekly/enrichment)
+  // Phase 3 will be run in background via EdgeRuntime.waitUntil()
+  const result = {
     profile,
     deliverables: {
       bio_suggestion,
@@ -2203,18 +2187,90 @@ async function buildFreeResult(
       top_post: topPostData || null,
       worst_post: worstPostData || null,
       next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
-      weekly_content_plan: weeklyResult?.weekly_content_plan || null,
-      objective_content_plans: weeklyResult?.objective_content_plans || undefined,
-      stories_plan: storiesResultProcessed?.stories_plan || null,
-      objective_stories_plans: storiesResultProcessed?.objective_stories_plans || undefined,
-      best_times: enrichmentResult?.best_times || undefined,
-      format_mix: enrichmentResult?.format_mix || undefined,
-      hashtag_strategy: enrichmentResult?.hashtag_strategy || undefined,
+      weekly_content_plan: null as any,
+      objective_content_plans: undefined as any,
+      stories_plan: null as any,
+      objective_stories_plans: undefined as any,
+      best_times: undefined as any,
+      format_mix: undefined as any,
+      hashtag_strategy: undefined as any,
     },
     selected_objetivo,
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
     plan: "free" as const,
+    // Metadata for deferred enrichment
+    _deferred: {
+      topPostInsights,
+      worstPostInsights,
+      captions,
+    },
   };
+
+  return result;
+}
+
+// Run Phase 3 (stories/weekly/enrichment) in background and update DB record
+async function runDeferredEnrichment(
+  resultId: string,
+  profile: ReturnType<typeof normalizeProfile>,
+  nicho: string,
+  objetivo: string,
+  captions: string[],
+  topPostInsights: string,
+  worstPostInsights: string,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
+) {
+  try {
+    console.log(`runDeferredEnrichment: starting for @${profile.handle}`);
+
+    const [weeklyContentResult, storiesResult, enrichmentResult] = await Promise.all([
+      generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
+        .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
+      generateStories(profile, nicho, objetivo, captions, topPostInsights)
+        .catch((err) => { console.error("generateStories crashed:", err); return null; }),
+      generateEnrichment(profile, nicho, objetivo)
+        .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
+    ]);
+
+    const weeklyResult = weeklyContentResult
+      ? applyWeeklyQualityGate(weeklyContentResult)
+      : null;
+    const storiesResultProcessed = storiesResult
+      ? applyStoriesQualityGate(storiesResult)
+      : null;
+
+    console.log(`runDeferredEnrichment: weekly=${weeklyResult ? "OK" : "NULL"}, stories=${storiesResultProcessed ? "OK" : "NULL"}, enrichment=${enrichmentResult ? "OK" : "NULL"}`);
+
+    // Fetch existing result_json, merge in Phase 3 data, update
+    const { data: existing } = await supabaseAdmin
+      .from("analysis_result")
+      .select("result_json")
+      .eq("id", resultId)
+      .single();
+
+    if (existing) {
+      // deno-lint-ignore no-explicit-any
+      const resultJson = existing.result_json as any;
+      resultJson.deliverables.weekly_content_plan = weeklyResult?.weekly_content_plan || null;
+      resultJson.deliverables.objective_content_plans = weeklyResult?.objective_content_plans || undefined;
+      resultJson.deliverables.stories_plan = storiesResultProcessed?.stories_plan || null;
+      resultJson.deliverables.objective_stories_plans = storiesResultProcessed?.objective_stories_plans || undefined;
+      resultJson.deliverables.best_times = enrichmentResult?.best_times || undefined;
+      resultJson.deliverables.format_mix = enrichmentResult?.format_mix || undefined;
+      resultJson.deliverables.hashtag_strategy = enrichmentResult?.hashtag_strategy || undefined;
+      delete resultJson._deferred;
+
+      await supabaseAdmin
+        .from("analysis_result")
+        .update({ result_json: resultJson })
+        .eq("id", resultId);
+
+      console.log(`runDeferredEnrichment: DB updated for result ${resultId}`);
+    }
+  } catch (err) {
+    console.error("runDeferredEnrichment error:", (err as Error).message);
+  }
 }
 
 function buildPremiumResult(
