@@ -311,11 +311,15 @@ async function transcribeVideo(
   if (!apiKey) return { text: null, skipped_reason: "API indisponivel" };
 
   try {
-    const videoRes = await fetch(videoUrl);
-    if (!videoRes.ok) throw new Error(`fetch video ${videoRes.status}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s total
+
+    const videoRes = await fetch(videoUrl, { signal: controller.signal });
+    if (!videoRes.ok) { clearTimeout(timeout); throw new Error(`fetch video ${videoRes.status}`); }
 
     const blob = await videoRes.blob();
     if (blob.size > 25 * 1024 * 1024) {
+      clearTimeout(timeout);
       return { text: null, skipped_reason: "Video muito longo para transcricao (>25MB)" };
     }
 
@@ -329,7 +333,10 @@ async function transcribeVideo(
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}` },
       body: formData,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!res.ok) {
       const errText = await res.text();
