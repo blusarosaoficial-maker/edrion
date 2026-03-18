@@ -145,17 +145,6 @@ export interface StoriesPlan {
   estrategia_stories: string;
 }
 
-export interface BestTimesRecommendation {
-  slots: { day: string; time: string; rationale: string }[];
-}
-
-export interface FormatMixRecommendation {
-  reels_pct: number;
-  carousels_pct: number;
-  stories_pct: number;
-  rationale: string;
-}
-
 export interface HashtagStrategy {
   high_competition: string[];
   medium_competition: string[];
@@ -167,8 +156,6 @@ export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
     bio_suggestion: BioSuggestion;
-    best_times?: BestTimesRecommendation;
-    format_mix?: FormatMixRecommendation;
     hashtag_strategy?: HashtagStrategy;
     latest_post: PostData;
     top_post: PostData;

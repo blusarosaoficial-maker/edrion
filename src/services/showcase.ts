@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult, BestTimesRecommendation, FormatMixRecommendation, HashtagStrategy } from "@/types/analysis";
+import type { AnalysisResult, HashtagStrategy } from "@/types/analysis";
 import type { ShowcaseProfile } from "@/components/ShowcaseCarousel";
 import { SHOWCASE_PROFILE_DATA } from "./showcase-data";
 import type { ShowcaseProfileData } from "./showcase-data/types";
@@ -37,25 +37,6 @@ export async function fetchShowcaseResult(
 }
 
 function deriveEnrichment() {
-  const best_times: BestTimesRecommendation = {
-    slots: [
-      { day: "Segunda", time: "19:00", rationale: "Início da semana, audiência busca motivação" },
-      { day: "Terça", time: "12:00", rationale: "Horário de almoço com alto uso de redes" },
-      { day: "Quarta", time: "20:00", rationale: "Meio da semana, pico de engagement noturno" },
-      { day: "Quinta", time: "18:30", rationale: "Fim do expediente, transição para lazer" },
-      { day: "Sexta", time: "17:00", rationale: "Clima de fim de semana começa" },
-      { day: "Sábado", time: "10:00", rationale: "Manhã relaxada, alto consumo de conteúdo" },
-      { day: "Domingo", time: "19:00", rationale: "Planejamento da semana, audiência receptiva" },
-    ],
-  };
-
-  const format_mix: FormatMixRecommendation = {
-    reels_pct: 50,
-    carousels_pct: 30,
-    stories_pct: 20,
-    rationale: "Reels para alcance, carrosséis para educação e salvamentos, Stories para relacionamento diário",
-  };
-
   const hashtag_strategy: HashtagStrategy = {
     high_competition: ["#instagram", "#reels", "#viral", "#trending", "#foryou"],
     medium_competition: ["#dicasinstagram", "#marketingdigital", "#empreendedorismo", "#crescimentoorganico", "#redessociais", "#conteudodigital", "#estrategiasdigitais", "#socialmedia", "#produtividadedigital", "#negociosonline"],
@@ -63,7 +44,7 @@ function deriveEnrichment() {
     usage_tip: "Use 3-5 hashtags por post: 1 alta competição + 2 média + 2 baixa. Evite mais de 10 por post.",
   };
 
-  return { best_times, format_mix, hashtag_strategy };
+  return { hashtag_strategy };
 }
 
 function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {

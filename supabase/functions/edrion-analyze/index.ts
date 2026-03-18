@@ -1256,7 +1256,7 @@ interface AIWeeklyContentResult {
 const weeklyContentSystemPrompt = `Voce e uma especialista senior em estrategia de conteudo para Instagram, roteirista de videos virais e planejadora editorial para criadores brasileiros.
 
 <missao>
-Crie 14 roteiros de video (2 por dia, Segunda a Domingo) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
+Crie 7 roteiros de video (1 por dia, Segunda a Domingo) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
 </missao>
 
 <contexto_viral>
@@ -1395,10 +1395,10 @@ async function generateWeeklyContent(
     ? captions.map(c => `- "${c.slice(0, 300)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 14 roteiros de video (2 por dia, 7 dias) para @${profile.handle}.
+  const userMessage = `Crie 7 roteiros de video (1 por dia, 7 dias) para @${profile.handle}.
 
-Gere 2 roteiros para CADA dia da semana (Segunda a Domingo = 14 roteiros total).
-Para cada dia, use 2 frameworks/angulos DIFERENTES.
+Gere 1 roteiro para CADA dia da semana (Segunda a Domingo = 7 roteiros total).
+Cada dia deve usar um framework/angulo DIFERENTE.
 dia=1 (Segunda), dia=2 (Terca), ..., dia=7 (Domingo).
 
 PERFIL:
@@ -1416,7 +1416,7 @@ ${worstPostInsights}
 LEGENDAS RECENTES (referencia de tom e temas):
 ${legendas}
 
-Gere 14 roteiros usando frameworks DIFERENTES, variando entre educativo, entretenimento, autoridade, bastidores, transformacao, comunidade e venda soft. Auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
+Gere 7 roteiros usando frameworks DIFERENTES, variando entre educativo, entretenimento, autoridade, bastidores, transformacao, comunidade e venda soft. Auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
@@ -1440,7 +1440,7 @@ Gere 14 roteiros usando frameworks DIFERENTES, variando entre educativo, entrete
             type: "function",
             function: {
               name: "generate_weekly_content",
-              description: "Retorna 14 roteiros de video (2 por dia, 7 dias) para 1 semana de conteudo",
+              description: "Retorna 7 roteiros de video (1 por dia, 7 dias) para 1 semana de conteudo",
               parameters: weeklyContentSchema,
             },
           },
@@ -1804,8 +1804,6 @@ function applyStoriesQualityGate(result: AIStoriesResult): {
 // ── Enrichment generation ────────────────────────────────────
 
 interface EnrichmentResult {
-  best_times: { slots: { day: string; time: string; rationale: string }[] };
-  format_mix: { reels_pct: number; carousels_pct: number; stories_pct: number; rationale: string };
   hashtag_strategy: { high_competition: string[]; medium_competition: string[]; low_competition: string[]; usage_tip: string };
 }
 
@@ -1818,10 +1816,11 @@ async function generateEnrichment(
   if (!OPENAI_API_KEY) return null;
 
   const systemPrompt = `Voce e um estrategista de Instagram especializado em crescimento organico.
-Analise o perfil e gere recomendacoes praticas de:
-1. MELHORES HORARIOS: 7 slots (1 por dia da semana) com horario e justificativa. REGRA OBRIGATORIA: todos os horarios devem ser entre 08:00 e 22:00. Ninguem posta antes das 8h ou depois das 22h. Priorize horarios de pico: 11:00-13:00 (almoco), 17:00-19:00 (fim do expediente), 20:00-21:30 (noite). Varie os horarios entre os dias.
-2. MIX DE FORMATOS: % ideal de Reels vs Carrossel vs Stories para o nicho
-3. ESTRATEGIA DE HASHTAGS: 5 de alta competicao, 10 de media, 15 de baixa competicao + dica de uso
+Analise o perfil e gere uma ESTRATEGIA DE HASHTAGS personalizada:
+- 5 hashtags de alta competicao (hashtags populares do nicho)
+- 10 hashtags de media competicao (nicho especifico)
+- 15 hashtags de baixa competicao (cauda longa, micro-nicho)
+- 1 dica pratica de como usar as hashtags
 
 Responda em portugues. Baseie-se no nicho e objetivo do perfil.`;
 
@@ -1835,34 +1834,6 @@ Bio: ${profile.bio_text}`;
   const schema = {
     type: "object" as const,
     properties: {
-      best_times: {
-        type: "object" as const,
-        properties: {
-          slots: {
-            type: "array" as const,
-            items: {
-              type: "object" as const,
-              properties: {
-                day: { type: "string" as const, description: "Dia da semana (ex: Segunda)" },
-                time: { type: "string" as const, description: "Horario recomendado (ex: 19:00)" },
-                rationale: { type: "string" as const, description: "Justificativa curta" },
-              },
-              required: ["day", "time", "rationale"],
-            },
-          },
-        },
-        required: ["slots"],
-      },
-      format_mix: {
-        type: "object" as const,
-        properties: {
-          reels_pct: { type: "number" as const },
-          carousels_pct: { type: "number" as const },
-          stories_pct: { type: "number" as const },
-          rationale: { type: "string" as const },
-        },
-        required: ["reels_pct", "carousels_pct", "stories_pct", "rationale"],
-      },
       hashtag_strategy: {
         type: "object" as const,
         properties: {
@@ -1874,7 +1845,7 @@ Bio: ${profile.bio_text}`;
         required: ["high_competition", "medium_competition", "low_competition", "usage_tip"],
       },
     },
-    required: ["best_times", "format_mix", "hashtag_strategy"],
+    required: ["hashtag_strategy"],
   };
 
   try {
@@ -1888,7 +1859,7 @@ Bio: ${profile.bio_text}`;
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -1923,7 +1894,7 @@ Bio: ${profile.bio_text}`;
     parsed.hashtag_strategy.medium_competition = parsed.hashtag_strategy.medium_competition.map(normalizeTag);
     parsed.hashtag_strategy.low_competition = parsed.hashtag_strategy.low_competition.map(normalizeTag);
 
-    console.log(`generateEnrichment: OK (${parsed.best_times.slots.length} slots, ${parsed.hashtag_strategy.high_competition.length + parsed.hashtag_strategy.medium_competition.length + parsed.hashtag_strategy.low_competition.length} hashtags)`);
+    console.log(`generateEnrichment: OK (${parsed.hashtag_strategy.high_competition.length + parsed.hashtag_strategy.medium_competition.length + parsed.hashtag_strategy.low_competition.length} hashtags)`);
     return parsed;
   } catch (err) {
     console.error("generateEnrichment crashed:", err);
@@ -2085,8 +2056,6 @@ async function buildFreeResult(
       worst_post: worstPostData || null,
       weekly_content_plan: weeklyResult || null,
       stories_plan: storiesResultProcessed || null,
-      best_times: enrichmentResult?.best_times || undefined,
-      format_mix: enrichmentResult?.format_mix || undefined,
       hashtag_strategy: enrichmentResult?.hashtag_strategy || undefined,
     },
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
@@ -2141,8 +2110,6 @@ async function runDeferredEnrichment(
       const resultJson = existing.result_json as any;
       resultJson.deliverables.weekly_content_plan = weeklyResult || null;
       resultJson.deliverables.stories_plan = storiesResultProcessed || null;
-      resultJson.deliverables.best_times = enrichmentResult?.best_times || undefined;
-      resultJson.deliverables.format_mix = enrichmentResult?.format_mix || undefined;
       resultJson.deliverables.hashtag_strategy = enrichmentResult?.hashtag_strategy || undefined;
       delete resultJson._deferred;
 

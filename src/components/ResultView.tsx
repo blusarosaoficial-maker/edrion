@@ -15,8 +15,6 @@ import BioAnalysisSection from "@/components/BioAnalysisSection";
 import PostAnalysisModal from "@/components/PostAnalysisModal";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
 import StoriesSection from "@/components/StoriesSection";
-import BestTimesSection from "@/components/BestTimesSection";
-import FormatMixSection from "@/components/FormatMixSection";
 import HashtagStrategySection from "@/components/HashtagStrategySection";
 import UpgradeModal from "@/components/UpgradeModal";
 import ProfileHealthScore, { computeHealthScore, healthLabel } from "@/components/ProfileHealthScore";
@@ -202,21 +200,7 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
         />
       )}
 
-      {/* 6. Enrichment sections */}
-      {deliverables.best_times && (
-        <BestTimesSection
-          data={deliverables.best_times}
-          locked={!showFullFreeContent}
-          onLockedClick={onUpgradeAction}
-        />
-      )}
-      {deliverables.format_mix && (
-        <FormatMixSection
-          data={deliverables.format_mix}
-          locked={!showFullFreeContent}
-          onLockedClick={onUpgradeAction}
-        />
-      )}
+      {/* 6. Hashtag Strategy */}
       {deliverables.hashtag_strategy && (
         <HashtagStrategySection
           data={deliverables.hashtag_strategy}

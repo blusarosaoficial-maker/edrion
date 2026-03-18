@@ -15,8 +15,6 @@ import LatestPostCard from "@/components/LatestPostCard";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
 import WeeklyContentSection from "@/components/WeeklyContentSection";
 import StoriesSection from "@/components/StoriesSection";
-import BestTimesSection from "@/components/BestTimesSection";
-import FormatMixSection from "@/components/FormatMixSection";
 import HashtagStrategySection from "@/components/HashtagStrategySection";
 import InlineUpgradeBanner from "@/components/InlineUpgradeBanner";
 import FinalCTA from "@/components/FinalCTA";
@@ -127,14 +125,6 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
       s.push({ id: "stories", delay: nextDelay });
       nextDelay += 2000;
     }
-    if (deliverables.best_times) {
-      s.push({ id: "bestTimes", delay: nextDelay });
-      nextDelay += 1000;
-    }
-    if (deliverables.format_mix) {
-      s.push({ id: "formatMix", delay: nextDelay });
-      nextDelay += 1000;
-    }
     if (deliverables.hashtag_strategy) {
       s.push({ id: "hashtags", delay: nextDelay });
       nextDelay += 1000;
@@ -155,7 +145,7 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
   // Header building label
   const buildingLabel = useMemo(() => {
     const state = (id: string) => revealState(id);
-    if (state("hashtags") !== "hidden" || state("formatMix") !== "hidden") return "Finalizando diagnostico...";
+    if (state("hashtags") !== "hidden") return "Finalizando diagnostico...";
     if (state("stories") !== "hidden") return "Montando stories...";
     if (state("weekly") !== "hidden") return "Criando roteiros semanais...";
     if (state("posts") !== "hidden") return "Analisando seus posts...";
@@ -307,25 +297,7 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
         </RevealWrapper>
       )}
 
-      {/* Enrichment sections */}
-      {deliverables.best_times && (
-        <RevealWrapper id="bestTimes" revealState={revealState("bestTimes")}>
-          <BestTimesSection
-            data={deliverables.best_times}
-            locked={!showFullFreeContent}
-            onLockedClick={onUpgradeAction}
-          />
-        </RevealWrapper>
-      )}
-      {deliverables.format_mix && (
-        <RevealWrapper id="formatMix" revealState={revealState("formatMix")}>
-          <FormatMixSection
-            data={deliverables.format_mix}
-            locked={!showFullFreeContent}
-            onLockedClick={onUpgradeAction}
-          />
-        </RevealWrapper>
-      )}
+      {/* Hashtag Strategy */}
       {deliverables.hashtag_strategy && (
         <RevealWrapper id="hashtags" revealState={revealState("hashtags")}>
           <HashtagStrategySection
