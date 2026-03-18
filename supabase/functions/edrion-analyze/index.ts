@@ -2101,10 +2101,10 @@ async function buildFreeResult(
         improvements: aiResult.pontos_de_melhoria,
         name_keyword: aiResult.sugestao_keyword_nome,
         detected_tone: aiResult.analise_diagnostica.tom_de_voz,
-        variations: aiResult.bio_para_autoridade ? [
-          { label: "Autoridade", bio: aiResult.bio_para_autoridade, rationale: aiResult.justificativa_autoridade || "Foco em credenciais e prova social" },
-          { label: "Crescer", bio: aiResult.bio_para_crescer, rationale: aiResult.justificativa_crescer || "Foco em crescimento de seguidores" },
-          { label: "Vender", bio: aiResult.bio_para_vender, rationale: aiResult.justificativa_vender || "Foco em conversão e vendas" },
+        variations: aiResult.bio_variacao_autoridade ? [
+          { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
+          { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
+          { label: "Ação", bio: aiResult.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
         ] : undefined,
       }
     : {
