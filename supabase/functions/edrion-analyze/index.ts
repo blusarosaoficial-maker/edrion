@@ -2169,7 +2169,8 @@ async function buildFreeResult(
   console.log(`buildFreeResult: storiesPlan=${storiesResultProcessed ? `OK (${storiesResultProcessed.stories_plan.sequences.length} sequences)` : "NULL"}`);
 
   // Assemble objective_bios from AI bio results
-  const objective_bios = aiResult?.bio_para_crescer ? (() => {
+  // deno-lint-ignore no-explicit-any
+  const objective_bios = (aiResult as any)?.bio_para_crescer ? (() => {
     const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
     const bios = {} as Record<ObjectiveKey, typeof bio_suggestion>;
     for (const obj of objectives) {
