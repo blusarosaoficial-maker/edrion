@@ -1930,7 +1930,7 @@ Responda em portugues. Baseie-se no nicho e objetivo do perfil.`;
 Nicho: ${nicho}
 Objetivo: ${objetivo}
 Seguidores: ${profile.followers}
-Posts: ${profile.media_count}
+Posts: ${profile.posts_count}
 Bio: ${profile.bio_text}`;
 
   const schema = {
