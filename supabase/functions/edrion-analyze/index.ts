@@ -2416,7 +2416,9 @@ Deno.serve(async (req) => {
     // ── [5] If NOT authenticated → return pending_result ─────
     if (!userId) {
       const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
-      return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
+      // Remove internal _deferred metadata before sending to client
+      const { _deferred, ...cleanPending } = pendingResult;
+      return json({ code: "AUTH_REQUIRED", pending_result: cleanPending }, 200);
     }
 
     // ── [6] Authenticated → check plan limits ────────────────
@@ -2444,18 +2446,19 @@ Deno.serve(async (req) => {
 
     if (plan === "free" && freeUsed) {
       if (credits > 0) {
-        // User has credits — allow analysis (will be saved as premium)
         useCredit = true;
       } else {
         return json({ code: "FREE_LIMIT_REACHED" }, 403);
       }
     }
 
-    // ── [7] Build result ─────────────────────────────────────
-    // If using credit, build as premium (user paid in advance)
+    // ── [7] Build result (fast: bio + posts AI only) ─────────
     const result = (plan === "premium" || useCredit)
       ? await buildPremiumResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin)
       : await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
+
+    // Extract deferred metadata before persisting
+    const { _deferred, ...resultForClient } = result;
 
     // ── [8] Persist ──────────────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin
@@ -2470,32 +2473,49 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
 
+    let resultId: string | null = null;
     if (reqInsert) {
-      await supabaseAdmin.from("analysis_result").insert({
+      const { data: resInsert } = await supabaseAdmin.from("analysis_result").insert({
         request_id: reqInsert.id,
         handle: cleanHandle,
-        result_json: result,
+        result_json: resultForClient,
         user_id: userId,
         unlocked_at: useCredit ? new Date().toISOString() : null,
-      });
+      }).select("id").single();
+      resultId = resInsert?.id || null;
     }
 
     // ── [9] Update user profile ────────────────────────────
     if (useCredit) {
-      // Consume 1 credit
       await supabaseAdmin
         .from("users_profiles")
         .update({ analysis_credits: credits - 1 })
         .eq("id", userId);
     } else if (plan === "free") {
-      // Mark free analysis as used
       await supabaseAdmin
         .from("users_profiles")
         .update({ free_analysis_used: true })
         .eq("id", userId);
     }
 
-    return json({ success: true, data: result }, 200);
+    // ── [10] Defer Phase 3 (stories/weekly/enrichment) ───────
+    if (resultId && _deferred) {
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).EdgeRuntime?.waitUntil?.(
+        runDeferredEnrichment(
+          resultId,
+          profile,
+          nicho!,
+          objetivo!,
+          _deferred.captions,
+          _deferred.topPostInsights,
+          _deferred.worstPostInsights,
+          supabaseAdmin,
+        )
+      );
+    }
+
+    return json({ success: true, data: resultForClient }, 200);
   } catch (err) {
     console.error("edrion-analyze error:", err);
     return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);
