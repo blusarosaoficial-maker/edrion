@@ -2110,7 +2110,7 @@ async function buildFreeResult(
         strengths: aiResult.pontos_fortes,
         improvements: aiResult.pontos_de_melhoria,
         name_keyword: aiResult.sugestao_keyword_nome,
-        detected_tone: aiResult.analise_diagnostica.tom_de_voz,
+        detected_tone: aiResult.analise_diagnostica?.tom_de_voz,
         variations: aiResult.bio_variacao_autoridade ? [
           { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
           { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
