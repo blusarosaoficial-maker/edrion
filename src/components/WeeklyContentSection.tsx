@@ -16,17 +16,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { OBJECTIVE_TABS } from "@/constants/objectives";
-import type { WeeklyContentPlan, ContentScript, ObjectiveKey } from "@/types/analysis";
+import type { WeeklyContentPlan, ContentScript } from "@/types/analysis";
 import { Lightbulb } from "lucide-react";
 
 interface Props {
   plan: WeeklyContentPlan;
   locked?: boolean;
   onLockedClick?: () => void;
-  objectivePlans?: Record<ObjectiveKey, WeeklyContentPlan>;
-  selectedObjetivo?: ObjectiveKey;
 }
 
 const DAY_COLORS: Record<number, string> = {
@@ -82,9 +78,7 @@ function WeeklyPlanContent({ plan }: { plan: WeeklyContentPlan }) {
   );
 }
 
-export default function WeeklyContentSection({ plan, locked, onLockedClick, objectivePlans, selectedObjetivo }: Props) {
-  const hasObjectives = objectivePlans && Object.keys(objectivePlans).length > 0;
-
+export default function WeeklyContentSection({ plan, locked, onLockedClick }: Props) {
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-3 px-1">
@@ -96,10 +90,10 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick, obje
             className="text-foreground font-bold text-lg"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {hasObjectives ? "Roteiros por Objetivo" : "Sua Semana de Conteúdo"}
+            Sua Semana de Conteúdo
           </h3>
           <p className="text-muted-foreground text-xs">
-            {hasObjectives ? "28 roteiros completos — 7 para cada estratégia" : plan.estrategia_semanal}
+            {plan.estrategia_semanal}
           </p>
         </div>
         {locked && (
@@ -111,14 +105,14 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick, obje
 
       {locked ? (
         <div className="relative">
-          <div className="space-y-3 opacity-75 pointer-events-none select-none">
+          <div className="space-y-3 opacity-55 pointer-events-none select-none">
             {plan.scripts.map((script) => (
               <LockedDayCard key={script.dia} script={script} />
             ))}
           </div>
           <div
             onClick={onLockedClick}
-            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/60 flex flex-col items-center justify-center cursor-pointer rounded-xl"
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background/70 flex flex-col items-center justify-center cursor-pointer rounded-xl"
           >
             <div className="flex flex-col items-center gap-2 p-4">
               <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -128,32 +122,11 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick, obje
                 Desbloquear plano completo
               </span>
               <span className="text-xs text-muted-foreground">
-                {hasObjectives ? "28 roteiros prontos — 7 para cada objetivo" : "7 roteiros prontos com hooks, legendas e hashtags"}
+                {plan.scripts.length} roteiros prontos com hooks, legendas e hashtags
               </span>
             </div>
           </div>
         </div>
-      ) : hasObjectives ? (
-        <Tabs defaultValue={selectedObjetivo || "crescer"}>
-          <TabsList className="w-full grid grid-cols-4 mb-4">
-            {OBJECTIVE_TABS.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-1.5 text-xs">
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-          {OBJECTIVE_TABS.map((tab) => (
-            <TabsContent key={tab.key} value={tab.key}>
-              {objectivePlans[tab.key] && (
-                <WeeklyPlanContent plan={objectivePlans[tab.key]} />
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
       ) : (
         <WeeklyPlanContent plan={plan} />
       )}

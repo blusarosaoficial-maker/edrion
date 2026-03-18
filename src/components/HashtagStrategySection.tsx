@@ -35,7 +35,7 @@ export default function HashtagStrategySection({ data, locked, onLockedClick }: 
       <div className="relative">
         {locked && (
           <div
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/30"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/40"
             onClick={onLockedClick}
           >
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
@@ -46,7 +46,7 @@ export default function HashtagStrategySection({ data, locked, onLockedClick }: 
           </div>
         )}
 
-        <div className={`p-5 space-y-4 ${locked ? "opacity-70 pointer-events-none select-none" : ""}`}>
+        <div className={`p-5 space-y-4 ${locked ? "opacity-50 pointer-events-none select-none" : ""}`}>
           {TIERS.map((tier) => {
             const hashtags = data[tier.key];
             if (!hashtags || hashtags.length === 0) return null;

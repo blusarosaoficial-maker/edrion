@@ -17,16 +17,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { OBJECTIVE_TABS } from "@/constants/objectives";
-import type { StoriesPlan, StorySequence, StorySlide, ObjectiveKey } from "@/types/analysis";
+import type { StoriesPlan, StorySequence, StorySlide } from "@/types/analysis";
 
 interface Props {
   plan: StoriesPlan;
   locked?: boolean;
   onLockedClick?: () => void;
-  objectivePlans?: Record<ObjectiveKey, StoriesPlan>;
-  selectedObjetivo?: ObjectiveKey;
 }
 
 const SLIDE_TYPE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
@@ -59,11 +55,8 @@ function StoriesContent({ plan }: { plan: StoriesPlan }) {
   );
 }
 
-export default function StoriesSection({ plan, locked, onLockedClick, objectivePlans, selectedObjetivo }: Props) {
-  const hasObjectives = objectivePlans && Object.keys(objectivePlans).length > 0;
-  const totalSequences = hasObjectives
-    ? Object.values(objectivePlans).reduce((sum, p) => sum + p.sequences.length, 0)
-    : plan.sequences.length;
+export default function StoriesSection({ plan, locked, onLockedClick }: Props) {
+  const totalSequences = plan.sequences.length;
 
   return (
     <section className="space-y-4">
@@ -76,10 +69,10 @@ export default function StoriesSection({ plan, locked, onLockedClick, objectiveP
             className="text-foreground font-bold text-lg"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {hasObjectives ? "Stories por Objetivo" : `${totalSequences} Sequencias de Stories`}
+            {totalSequences} Sequências de Stories
           </h3>
           <p className="text-muted-foreground text-xs">
-            {hasObjectives ? `${totalSequences} sequências prontas — 7 para cada estratégia` : plan.estrategia_stories}
+            {plan.estrategia_stories}
           </p>
         </div>
         {locked && (
@@ -91,49 +84,28 @@ export default function StoriesSection({ plan, locked, onLockedClick, objectiveP
 
       {locked ? (
         <div className="relative">
-          <div className="space-y-2 opacity-75 pointer-events-none select-none">
+          <div className="space-y-2 opacity-55 pointer-events-none select-none">
             {plan.sequences.slice(0, 5).map((seq) => (
               <LockedStoryCard key={seq.dia} sequence={seq} />
             ))}
           </div>
           <div
             onClick={onLockedClick}
-            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/60 flex flex-col items-center justify-center cursor-pointer rounded-xl"
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background/70 flex flex-col items-center justify-center cursor-pointer rounded-xl"
           >
             <div className="flex flex-col items-center gap-2 p-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-orange-500/20 flex items-center justify-center">
                 <Instagram className="w-6 h-6 text-pink-400" />
               </div>
               <span className="text-sm font-medium text-foreground">
-                Desbloquear {totalSequences} sequencias de Stories
+                Desbloquear {totalSequences} sequências de Stories
               </span>
               <span className="text-xs text-muted-foreground text-center max-w-xs">
-                {hasObjectives ? "7 sequências por objetivo com enquetes, quizzes, videos e textos prontos" : "1 sequencia por dia com enquetes, quizzes, videos e textos prontos para postar"}
+                1 sequência por dia com enquetes, quizzes, vídeos e textos prontos para postar
               </span>
             </div>
           </div>
         </div>
-      ) : hasObjectives ? (
-        <Tabs defaultValue={selectedObjetivo || "crescer"}>
-          <TabsList className="w-full grid grid-cols-4 mb-4">
-            {OBJECTIVE_TABS.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-1.5 text-xs">
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-          {OBJECTIVE_TABS.map((tab) => (
-            <TabsContent key={tab.key} value={tab.key}>
-              {objectivePlans[tab.key] && (
-                <StoriesContent plan={objectivePlans[tab.key]} />
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
       ) : (
         <StoriesContent plan={plan} />
       )}

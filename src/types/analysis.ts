@@ -100,14 +100,6 @@ export interface BioSuggestion {
   variations?: BioVariation[];
 }
 
-export interface NextPostSuggestion {
-  format: string;
-  hook: string;
-  outline: string[];
-  cta: string;
-  angle: string;
-}
-
 export interface ScriptScene {
   numero: number;
   titulo_cena?: string;
@@ -153,8 +145,6 @@ export interface StoriesPlan {
   estrategia_stories: string;
 }
 
-export type ObjectiveKey = "crescer" | "engajar" | "vender" | "autoridade";
-
 export interface BestTimesRecommendation {
   slots: { day: string; time: string; rationale: string }[];
 }
@@ -177,16 +167,12 @@ export interface AnalysisResult {
   profile: ProfileData;
   deliverables: {
     bio_suggestion: BioSuggestion;
-    objective_bios?: Record<ObjectiveKey, BioSuggestion>;
-    objective_content_plans?: Record<ObjectiveKey, WeeklyContentPlan>;
-    objective_stories_plans?: Record<ObjectiveKey, StoriesPlan>;
     best_times?: BestTimesRecommendation;
     format_mix?: FormatMixRecommendation;
     hashtag_strategy?: HashtagStrategy;
     latest_post: PostData;
     top_post: PostData;
     worst_post: PostData;
-    next_post_suggestion?: NextPostSuggestion;
     weekly_content_plan?: WeeklyContentPlan;
     stories_plan?: StoriesPlan;
     posts_analysis?: PostData[];
@@ -200,7 +186,6 @@ export interface AnalysisResult {
     note: string;
   };
   plan: "free" | "premium";
-  selected_objetivo?: ObjectiveKey;
 }
 
 export type AnalysisError =

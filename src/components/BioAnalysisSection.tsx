@@ -10,23 +10,16 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import type { BioSuggestion, BioCriteria, BioDiagnostic, ObjectiveKey } from "@/types/analysis";
+import type { BioSuggestion, BioCriteria, BioDiagnostic } from "@/types/analysis";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { OBJECTIVE_TABS } from "@/constants/objectives";
-import { Lock } from "lucide-react";
 import { useState } from "react";
 
 interface Props {
   bio: BioSuggestion;
-  objectiveBios?: Record<ObjectiveKey, BioSuggestion>;
-  selectedObjetivo?: ObjectiveKey;
-  locked?: boolean;
-  onLockedClick?: () => void;
 }
 
 const CRITERIA_LABELS: { key: keyof BioCriteria; label: string }[] = [
@@ -247,7 +240,7 @@ function BioContent({ bio }: { bio: BioSuggestion }) {
   );
 }
 
-export default function BioAnalysisSection({ bio, objectiveBios, selectedObjetivo, locked, onLockedClick }: Props) {
+export default function BioAnalysisSection({ bio }: Props) {
   const hasAI = bio.score !== undefined;
 
   return (
@@ -277,72 +270,8 @@ export default function BioAnalysisSection({ bio, objectiveBios, selectedObjetiv
         )}
       </div>
 
-      {/* Main bio analysis (always visible) */}
+      {/* Main bio analysis */}
       <BioContent bio={bio} />
-
-      {/* Objective-based bios (premium/showcase) */}
-      {objectiveBios && (
-        <div className="relative border-t border-border">
-          {locked && (
-            <div
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/30"
-              onClick={onLockedClick}
-            >
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-                <Lock className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-bold text-amber-400">PRO</span>
-              </div>
-              <span className="text-xs text-muted-foreground">Desbloquear 4 bios por objetivo</span>
-            </div>
-          )}
-          <div className={locked ? "opacity-70 pointer-events-none select-none" : ""}>
-            <div className="px-5 pt-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Bios Otimizadas por Objetivo
-              </p>
-            </div>
-            <Tabs defaultValue={selectedObjetivo || "crescer"} className="px-5 pb-5">
-              <TabsList className="w-full grid grid-cols-4 mb-4">
-                {OBJECTIVE_TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-1.5 text-xs">
-                      <Icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-              {OBJECTIVE_TABS.map((tab) => (
-                <TabsContent key={tab.key} value={tab.key}>
-                  {objectiveBios[tab.key] && (
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-sm text-foreground whitespace-pre-line">
-                          {objectiveBios[tab.key].suggested_bio}
-                        </p>
-                        <p className="text-xs text-muted-foreground text-right mt-1">
-                          {objectiveBios[tab.key].suggested_bio.length}/149 chars
-                        </p>
-                      </div>
-                      <p className="text-xs text-muted-foreground italic">
-                        💡 {objectiveBios[tab.key].rationale_short}
-                      </p>
-                      {objectiveBios[tab.key].cta_option && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Zap className="w-4 h-4 text-accent" />
-                          <span className="text-foreground font-medium">CTA:</span>
-                          <span className="text-muted-foreground">{objectiveBios[tab.key].cta_option}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

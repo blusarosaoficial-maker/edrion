@@ -243,13 +243,7 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
 
       {/* Bio Analysis */}
       <RevealWrapper id="bio" revealState={revealState("bio")}>
-        <BioAnalysisSection
-          bio={bio_suggestion}
-          objectiveBios={deliverables.objective_bios}
-          selectedObjetivo={result.selected_objetivo}
-          locked={!showFullFreeContent}
-          onLockedClick={onUpgradeAction}
-        />
+        <BioAnalysisSection bio={bio_suggestion} />
       </RevealWrapper>
 
       {/* Latest Post */}
@@ -298,8 +292,6 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
             plan={deliverables.weekly_content_plan}
             locked={!showFullFreeContent}
             onLockedClick={onUpgradeAction}
-            objectivePlans={deliverables.objective_content_plans}
-            selectedObjetivo={result.selected_objetivo}
           />
         </RevealWrapper>
       )}
@@ -311,8 +303,6 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
             plan={deliverables.stories_plan}
             locked={!showFullFreeContent}
             onLockedClick={onUpgradeAction}
-            objectivePlans={deliverables.objective_stories_plans}
-            selectedObjetivo={result.selected_objetivo}
           />
         </RevealWrapper>
       )}

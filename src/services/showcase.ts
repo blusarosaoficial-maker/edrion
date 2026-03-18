@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult, ObjectiveKey, BioSuggestion, WeeklyContentPlan, StoriesPlan, BestTimesRecommendation, FormatMixRecommendation, HashtagStrategy } from "@/types/analysis";
+import type { AnalysisResult, BestTimesRecommendation, FormatMixRecommendation, HashtagStrategy } from "@/types/analysis";
 import type { ShowcaseProfile } from "@/components/ShowcaseCarousel";
 import { SHOWCASE_PROFILE_DATA } from "./showcase-data";
 import type { ShowcaseProfileData } from "./showcase-data/types";
@@ -36,62 +36,7 @@ export async function fetchShowcaseResult(
   return buildShowcaseResult(profile);
 }
 
-const OBJECTIVE_ESTRATEGIAS: Record<ObjectiveKey, { bio_suffix: string; weekly_estrategia: string; stories_estrategia: string }> = {
-  crescer: {
-    bio_suffix: "Foco em crescimento de seguidores e alcance",
-    weekly_estrategia: "Conteúdo focado em atrair novos seguidores com ganchos virais e temas de alto alcance",
-    stories_estrategia: "Stories projetados para maximizar compartilhamentos e seguidores novos",
-  },
-  engajar: {
-    bio_suffix: "Foco em conexão emocional e interação",
-    weekly_estrategia: "Conteúdo focado em criar diálogo e interação intensa com a audiência",
-    stories_estrategia: "Stories com enquetes, quizzes e caixas de perguntas para máxima interação",
-  },
-  vender: {
-    bio_suffix: "Foco em conversão e vendas",
-    weekly_estrategia: "Conteúdo focado em converter seguidores em clientes com provas sociais e CTAs diretos",
-    stories_estrategia: "Stories com gatilhos de urgência, depoimentos e links de compra",
-  },
-  autoridade: {
-    bio_suffix: "Foco em posicionamento de especialista",
-    weekly_estrategia: "Conteúdo focado em demonstrar expertise e construir credibilidade no nicho",
-    stories_estrategia: "Stories educativos com bastidores, dados e posicionamento como referência",
-  },
-};
-
-function deriveObjectiveVariants(d: ShowcaseProfileData) {
-  const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
-
-  // Derive objective bios
-  const objective_bios = {} as Record<ObjectiveKey, BioSuggestion>;
-  for (const obj of objectives) {
-    objective_bios[obj] = {
-      current_bio: d.bio,
-      suggested_bio: d.suggested_bio,
-      rationale_short: OBJECTIVE_ESTRATEGIAS[obj].bio_suffix,
-      cta_option: d.cta_option,
-    };
-  }
-
-  // Derive objective content plans (reuse base scripts with different estrategia)
-  const objective_content_plans = {} as Record<ObjectiveKey, WeeklyContentPlan>;
-  for (const obj of objectives) {
-    objective_content_plans[obj] = {
-      scripts: d.weekly_content_plan.scripts.slice(0, 7),
-      estrategia_semanal: OBJECTIVE_ESTRATEGIAS[obj].weekly_estrategia,
-    };
-  }
-
-  // Derive objective stories plans (use first 7 sequences with different estrategia)
-  const objective_stories_plans = {} as Record<ObjectiveKey, StoriesPlan>;
-  for (const obj of objectives) {
-    objective_stories_plans[obj] = {
-      sequences: d.stories_plan.sequences.slice(0, 7),
-      estrategia_stories: OBJECTIVE_ESTRATEGIAS[obj].stories_estrategia,
-    };
-  }
-
-  // Generate enrichment data
+function deriveEnrichment() {
   const best_times: BestTimesRecommendation = {
     slots: [
       { day: "Segunda", time: "19:00", rationale: "Início da semana, audiência busca motivação" },
@@ -118,7 +63,7 @@ function deriveObjectiveVariants(d: ShowcaseProfileData) {
     usage_tip: "Use 3-5 hashtags por post: 1 alta competição + 2 média + 2 baixa. Evite mais de 10 por post.",
   };
 
-  return { objective_bios, objective_content_plans, objective_stories_plans, best_times, format_mix, hashtag_strategy };
+  return { best_times, format_mix, hashtag_strategy };
 }
 
 function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
@@ -223,18 +168,10 @@ function buildShowcaseResult(profile: ShowcaseProfile): AnalysisResult {
           classificacao: "bronze" as const,
         },
       },
-      next_post_suggestion: {
-        format: d.next_format,
-        hook: d.next_hook,
-        outline: d.next_outline,
-        cta: d.next_cta,
-        angle: d.next_angle,
-      },
       weekly_content_plan: d.weekly_content_plan,
-      stories_plan: { ...d.stories_plan, sequences: d.stories_plan.sequences.slice(0, 7) },
-      ...deriveObjectiveVariants(d),
+      stories_plan: d.stories_plan,
+      ...deriveEnrichment(),
     },
-    selected_objetivo: "crescer",
     limits: { posts_analyzed: 9, note: "Análise demonstrativa" },
     plan: "free",
   };
@@ -338,13 +275,6 @@ function buildFallbackResult(profile: ShowcaseProfile): AnalysisResult {
           recomendacoes: ["Adicionar storytelling e contexto ao post"],
           classificacao: "bronze",
         },
-      },
-      next_post_suggestion: {
-        format: "Reels",
-        hook: "O erro que todo mundo comete no Instagram",
-        outline: ["Apresentar o erro", "Mostrar a consequência", "Dar a solução"],
-        cta: "Salva esse post e aplica hoje",
-        angle: "Conteúdo educativo",
       },
     },
     limits: { posts_analyzed: 9, note: "Análise demonstrativa" },

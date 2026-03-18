@@ -321,13 +321,6 @@ export async function analyzeMock(
         latest_post: posts[0],
         top_post: posts[topIdx],
         worst_post: posts[worstIdx],
-        next_post_suggestion: {
-          format: "reel",
-          hook: "Você está cometendo esse erro?",
-          outline: ["Apresente o erro", "Mostre consequência", "Entregue solução"],
-          cta: "Comente QUERO para receber o modelo",
-          angle: "Conteúdo educativo",
-        },
       },
       limits: { posts_analyzed: 9, note: "Diagnóstico objetivo" },
       plan: "free",

@@ -917,20 +917,8 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
                   },
                   justificativa_bio: { type: "string", description: "Explicação de por que a nova bio é melhor que a atual, conectando com o objetivo do perfil" },
                   cta_sugerido: { type: "string", description: "CTA alternativo alinhado ao objetivo principal do perfil" },
-                  bio_para_crescer: { type: "string", description: "Bio otimizada para CRESCER SEGUIDORES: foco em identificacao imediata, clareza de nicho, autoridade que gera curiosidade (max 149 chars, 3 linhas)" },
-                  cta_para_crescer: { type: "string", description: "CTA alinhado ao objetivo de crescer seguidores" },
-                  justificativa_crescer: { type: "string", description: "Por que esta bio ajuda a crescer seguidores" },
-                  bio_para_engajar: { type: "string", description: "Bio otimizada para MAIS ENGAJAMENTO: foco em conexao emocional, personalidade marcante, convite a interacao (max 149 chars, 3 linhas)" },
-                  cta_para_engajar: { type: "string", description: "CTA alinhado ao objetivo de engajamento" },
-                  justificativa_engajar: { type: "string", description: "Por que esta bio ajuda a engajar" },
-                  bio_para_vender: { type: "string", description: "Bio otimizada para VENDER MAIS: foco em dor resolvida, proposta de valor irresistivel, CTA direto para compra/link (max 149 chars, 3 linhas)" },
-                  cta_para_vender: { type: "string", description: "CTA alinhado ao objetivo de vendas" },
-                  justificativa_vender: { type: "string", description: "Por que esta bio ajuda a vender" },
-                  bio_para_autoridade: { type: "string", description: "Bio otimizada para CONSTRUIR AUTORIDADE: foco em credenciais, prova social, posicionamento de especialista (max 149 chars, 3 linhas)" },
-                  cta_para_autoridade: { type: "string", description: "CTA alinhado ao objetivo de autoridade" },
-                  justificativa_autoridade: { type: "string", description: "Por que esta bio ajuda a construir autoridade" },
                 },
-                required: ["analise_diagnostica", "rubrica_bio_atual", "nota_geral", "pontos_fortes", "pontos_de_melhoria", "sugestao_keyword_nome", "bio_sugerida", "rubrica_bio_nova", "justificativa_bio", "cta_sugerido", "bio_para_crescer", "cta_para_crescer", "justificativa_crescer", "bio_para_engajar", "cta_para_engajar", "justificativa_engajar", "bio_para_vender", "cta_para_vender", "justificativa_vender", "bio_para_autoridade", "cta_para_autoridade", "justificativa_autoridade"],
+                required: ["analise_diagnostica", "rubrica_bio_atual", "nota_geral", "pontos_fortes", "pontos_de_melhoria", "sugestao_keyword_nome", "bio_sugerida", "rubrica_bio_nova", "justificativa_bio", "cta_sugerido"],
                 additionalProperties: false,
               },
             },
@@ -1260,23 +1248,15 @@ interface AIContentScript {
   score_interno: number;
 }
 
-interface AIObjectiveRoteiros {
-  estrategia: string;
-  roteiros: AIContentScript[];
-}
-
 interface AIWeeklyContentResult {
   estrategia_semanal: string;
-  crescer: AIObjectiveRoteiros;
-  engajar: AIObjectiveRoteiros;
-  vender: AIObjectiveRoteiros;
-  autoridade: AIObjectiveRoteiros;
+  roteiros: AIContentScript[];
 }
 
 const weeklyContentSystemPrompt = `Voce e uma especialista senior em estrategia de conteudo para Instagram, roteirista de videos virais e planejadora editorial para criadores brasileiros.
 
 <missao>
-Crie 5 roteiros de video (Segunda a Sexta) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
+Crie 14 roteiros de video (2 por dia, Segunda a Domingo) personalizados para o perfil analisado. Cada roteiro deve seguir uma estrutura viral comprovada e ser imediatamente gravavel pelo criador. Toda resposta DEVE ser enviada exclusivamente via tool call.
 </missao>
 
 <contexto_viral>
@@ -1384,15 +1364,6 @@ const roteiroItemSchema = {
   required: ["dia", "dia_semana", "titulo", "tema", "framework", "formato", "hook", "cenas", "cta", "legenda_sugerida", "hashtags_sugeridas", "score_interno"],
 };
 
-const objectiveRoteirosSchema = {
-  type: "object" as const,
-  properties: {
-    estrategia: { type: "string" as const, description: "Estrategia semanal para este objetivo em 1-2 frases" },
-    roteiros: { type: "array" as const, items: roteiroItemSchema },
-  },
-  required: ["estrategia", "roteiros"],
-};
-
 const weeklyContentSchema = {
   type: "object" as const,
   properties: {
@@ -1400,12 +1371,9 @@ const weeklyContentSchema = {
       type: "string" as const,
       description: "Visao geral da estrategia em 1-2 frases",
     },
-    crescer: objectiveRoteirosSchema,
-    engajar: objectiveRoteirosSchema,
-    vender: objectiveRoteirosSchema,
-    autoridade: objectiveRoteirosSchema,
+    roteiros: { type: "array" as const, items: roteiroItemSchema },
   },
-  required: ["estrategia_semanal", "crescer", "engajar", "vender", "autoridade"],
+  required: ["estrategia_semanal", "roteiros"],
 };
 
 async function generateWeeklyContent(
@@ -1427,9 +1395,11 @@ async function generateWeeklyContent(
     ? captions.map(c => `- "${c.slice(0, 300)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 20 roteiros de video (5 por objetivo) para @${profile.handle}.
+  const userMessage = `Crie 14 roteiros de video (2 por dia, 7 dias) para @${profile.handle}.
 
-Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 5 roteiros de Segunda a Sexta.
+Gere 2 roteiros para CADA dia da semana (Segunda a Domingo = 14 roteiros total).
+Para cada dia, use 2 frameworks/angulos DIFERENTES.
+dia=1 (Segunda), dia=2 (Terca), ..., dia=7 (Domingo).
 
 PERFIL:
 - Nicho: ${nicho}
@@ -1446,13 +1416,7 @@ ${worstPostInsights}
 LEGENDAS RECENTES (referencia de tom e temas):
 ${legendas}
 
-INSTRUCOES POR OBJETIVO:
-- CRESCER: Foque em conteudo que gera saves, shares e alcance. Hooks virais, temas polemicos do nicho, formatos de alta distribuicao.
-- ENGAJAR: Foque em conteudo que gera comentarios, enquetes, debates. Perguntas, opinioes fortes, conteudo interativo.
-- VENDER: Foque em conteudo que leva a venda. Prova social, transformacao, dor/solucao, CTA direto para o produto/servico. Inclua "Adapte para o seu produto/servico" nas instrucoes.
-- AUTORIDADE: Foque em conteudo que posiciona como referencia. Dados, analises, bastidores, processos, metodologias.
-
-Gere 5 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
+Gere 14 roteiros usando frameworks DIFERENTES, variando entre educativo, entretenimento, autoridade, bastidores, transformacao, comunidade e venda soft. Auto-avaliacao interna (score_interno 1-10). Se algum ficar abaixo de 8, refaca antes de retornar.`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
@@ -1476,7 +1440,7 @@ Gere 5 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao in
             type: "function",
             function: {
               name: "generate_weekly_content",
-              description: "Retorna 5 roteiros de video para 1 semana de conteudo (Seg-Sex)",
+              description: "Retorna 14 roteiros de video (2 por dia, 7 dias) para 1 semana de conteudo",
               parameters: weeklyContentSchema,
             },
           },
@@ -1498,15 +1462,7 @@ Gere 5 roteiros por objetivo usando frameworks DIFERENTES, com auto-avaliacao in
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIWeeklyContentResult;
-    const totalScripts = (parsed.crescer?.roteiros?.length || 0) + (parsed.engajar?.roteiros?.length || 0) + (parsed.vender?.roteiros?.length || 0) + (parsed.autoridade?.roteiros?.length || 0);
-    // Backward compat: if old format with flat roteiros, convert
-    if ((parsed as any).roteiros && !parsed.crescer) {
-      parsed.crescer = { estrategia: parsed.estrategia_semanal, roteiros: (parsed as any).roteiros };
-      parsed.engajar = { estrategia: parsed.estrategia_semanal, roteiros: [] };
-      parsed.vender = { estrategia: parsed.estrategia_semanal, roteiros: [] };
-      parsed.autoridade = { estrategia: parsed.estrategia_semanal, roteiros: [] };
-    }
-    console.log(`generateWeeklyContent: success, ${totalScripts} scripts generated across 4 objectives`);
+    console.log(`generateWeeklyContent: success, ${parsed.roteiros?.length || 0} scripts generated`);
     return parsed;
   } catch (err) {
     console.error("generateWeeklyContent error:", (err as Error).message);
@@ -1534,29 +1490,12 @@ function cleanRoteiros(roteiros: AIContentScript[]) {
   }));
 }
 
-type ObjectiveKey = "crescer" | "engajar" | "vender" | "autoridade";
-
 function applyWeeklyQualityGate(
   result: AIWeeklyContentResult,
-): {
-  weekly_content_plan: { scripts: ReturnType<typeof cleanRoteiros>; estrategia_semanal: string };
-  objective_content_plans: Record<ObjectiveKey, { scripts: ReturnType<typeof cleanRoteiros>; estrategia_semanal: string }>;
-} {
-  const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
-  const objective_content_plans = {} as Record<ObjectiveKey, { scripts: ReturnType<typeof cleanRoteiros>; estrategia_semanal: string }>;
-
-  for (const obj of objectives) {
-    const data = result[obj];
-    objective_content_plans[obj] = {
-      scripts: data?.roteiros ? cleanRoteiros(data.roteiros) : [],
-      estrategia_semanal: data?.estrategia || result.estrategia_semanal,
-    };
-  }
-
-  // Default weekly_content_plan = crescer (backward compat)
+): { scripts: ReturnType<typeof cleanRoteiros>; estrategia_semanal: string } {
   return {
-    weekly_content_plan: objective_content_plans.crescer,
-    objective_content_plans,
+    scripts: result.roteiros ? cleanRoteiros(result.roteiros) : [],
+    estrategia_semanal: result.estrategia_semanal,
   };
 }
 
@@ -1576,23 +1515,15 @@ interface AIStorySequence {
   slides: AIStorySlide[];
 }
 
-interface AIObjectiveStories {
-  estrategia: string;
-  sequences: AIStorySequence[];
-}
-
 interface AIStoriesResult {
   estrategia_stories: string;
-  crescer: AIObjectiveStories;
-  engajar: AIObjectiveStories;
-  vender: AIObjectiveStories;
-  autoridade: AIObjectiveStories;
+  sequences: AIStorySequence[];
 }
 
 const storiesSystemPrompt = `Voce e uma copywriter e estrategista de Stories para Instagram de elite. Seu trabalho e criar sequencias de Stories que PRENDEM, ENGAJAM e CONVERTEM — usando tecnicas avancadas de persuasao, storytelling e psicologia comportamental. Voce domina frameworks como PAS (Problem-Agitation-Solution), AIDA, open loops e micro-commitments. Toda resposta DEVE ser enviada exclusivamente via tool call.
 
 <missao>
-Crie 20 sequencias de Stories (5 por objetivo, Segunda a Sexta) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
+Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
 </missao>
 
 <frameworks_obrigatorios>
@@ -1741,15 +1672,6 @@ const storySequenceItemSchema = {
   required: ["dia", "tema", "objetivo", "slides"],
 };
 
-const objectiveStoriesSchema = {
-  type: "object" as const,
-  properties: {
-    estrategia: { type: "string" as const, description: "Estrategia de Stories para este objetivo em 1-2 frases" },
-    sequences: { type: "array" as const, items: storySequenceItemSchema },
-  },
-  required: ["estrategia", "sequences"],
-};
-
 const storiesSchema = {
   type: "object" as const,
   properties: {
@@ -1757,12 +1679,9 @@ const storiesSchema = {
       type: "string" as const,
       description: "Visao geral da estrategia de Stories em 1-2 frases",
     },
-    crescer: objectiveStoriesSchema,
-    engajar: objectiveStoriesSchema,
-    vender: objectiveStoriesSchema,
-    autoridade: objectiveStoriesSchema,
+    sequences: { type: "array" as const, items: storySequenceItemSchema },
   },
-  required: ["estrategia_stories", "crescer", "engajar", "vender", "autoridade"],
+  required: ["estrategia_stories", "sequences"],
 };
 
 async function generateStories(
@@ -1783,9 +1702,9 @@ async function generateStories(
     ? captions.map(c => `- "${c.slice(0, 200)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 20 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle} — 5 por objetivo.
+  const userMessage = `Crie 30 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle} — 1 por dia do mes.
 
-Para CADA um dos 4 objetivos (crescer, engajar, vender, autoridade), gere 5 sequencias (dias 1 a 5, Segunda a Sexta).
+Gere 30 sequencias (dia 1 a dia 30).
 
 PERFIL:
 - Nicho: ${nicho}
@@ -1799,12 +1718,6 @@ ${topPostInsights}
 LEGENDAS RECENTES (referencia de tom e linguagem — MANTENHA o estilo):
 ${legendas}
 
-INSTRUCOES POR OBJETIVO:
-- CRESCER: Stories que geram visualizacoes, shares e novos seguidores. Hooks virais, conteudo compartilhavel.
-- ENGAJAR: Stories com enquetes, quizzes, caixas de perguntas. Maximize interacao e replies.
-- VENDER: Stories que levam a venda. Prova social, transformacao, urgencia, CTA para produto/servico. Inclua "Adapte para o seu produto" onde relevante.
-- AUTORIDADE: Stories que posicionam como referencia. Dados, bastidores, processos, analises.
-
 INSTRUCOES CRITICAS:
 1. Cada sequencia DEVE seguir um framework (PAS, open loop, micro-commitment ou contrarian)
 2. Slide 1 de CADA sequencia deve ser um HOOK irresistivel — SEM saudacoes, SEM introducoes
@@ -1813,7 +1726,7 @@ INSTRUCOES CRITICAS:
 5. Video selfie deve ter SCRIPT LITERAL completo (nao apenas descricao)
 6. Use a linguagem e tom das legendas recentes — mantenha a voz do criador
 7. Cada sequencia deve contar uma MICRO-HISTORIA com inicio, meio e fim
-8. Para cada objetivo, distribua: 1 educacao, 1 bastidores, 1 comunidade, 1 prova social, 1 storytelling`;
+8. Distribua: 8 educacao, 6 bastidores, 5 comunidade, 4 prova social, 4 storytelling, 3 venda soft`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
@@ -1837,7 +1750,7 @@ INSTRUCOES CRITICAS:
             type: "function",
             function: {
               name: "generate_stories",
-              description: "Retorna 20 sequencias de Stories para 1 semana de conteudo (Seg-Sex)",
+              description: "Retorna 30 sequencias de Stories para 1 mes de conteudo",
               parameters: storiesSchema,
             },
           },
@@ -1859,16 +1772,7 @@ INSTRUCOES CRITICAS:
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIStoriesResult;
-    const totalSeqs = (parsed.crescer?.sequences?.length || 0) + (parsed.engajar?.sequences?.length || 0) + (parsed.vender?.sequences?.length || 0) + (parsed.autoridade?.sequences?.length || 0);
-    // Backward compat: if old format with flat sequences
-    if ((parsed as any).sequences && !parsed.crescer) {
-      const seqs = (parsed as any).sequences as AIStorySequence[];
-      parsed.crescer = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(0, 5) };
-      parsed.engajar = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(5, 10) };
-      parsed.vender = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(10, 15) };
-      parsed.autoridade = { estrategia: parsed.estrategia_stories, sequences: seqs.slice(15, 20) };
-    }
-    console.log(`generateStories: success, ${totalSeqs} sequences generated across 4 objectives`);
+    console.log(`generateStories: success, ${parsed.sequences?.length || 0} sequences generated`);
     return parsed;
   } catch (err) {
     console.error("generateStories error:", (err as Error).message);
@@ -1888,24 +1792,12 @@ function cleanSequences(sequences: AIStorySequence[]) {
 }
 
 function applyStoriesQualityGate(result: AIStoriesResult): {
-  stories_plan: { sequences: ReturnType<typeof cleanSequences>; estrategia_stories: string };
-  objective_stories_plans: Record<ObjectiveKey, { sequences: ReturnType<typeof cleanSequences>; estrategia_stories: string }>;
+  sequences: ReturnType<typeof cleanSequences>;
+  estrategia_stories: string;
 } {
-  const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
-  const objective_stories_plans = {} as Record<ObjectiveKey, { sequences: ReturnType<typeof cleanSequences>; estrategia_stories: string }>;
-
-  for (const obj of objectives) {
-    const data = result[obj];
-    objective_stories_plans[obj] = {
-      sequences: data?.sequences ? cleanSequences(data.sequences) : [],
-      estrategia_stories: data?.estrategia || result.estrategia_stories,
-    };
-  }
-
-  // Default stories_plan = crescer (backward compat)
   return {
-    stories_plan: objective_stories_plans.crescer,
-    objective_stories_plans,
+    sequences: result.sequences ? cleanSequences(result.sequences) : [],
+    estrategia_stories: result.estrategia_stories,
   };
 }
 
@@ -2148,33 +2040,6 @@ async function buildFreeResult(
   topPostData.thumb_url = topThumb;
   worstPostData.thumb_url = worstThumb;
 
-  // Assemble objective_bios from AI bio results
-  // deno-lint-ignore no-explicit-any
-  const objective_bios = (aiResult as any)?.bio_para_crescer ? (() => {
-    const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
-    const bios = {} as Record<ObjectiveKey, typeof bio_suggestion>;
-    for (const obj of objectives) {
-      const bioText = (aiResult as any)[`bio_para_${obj}`] as string;
-      const cta = (aiResult as any)[`cta_para_${obj}`] as string;
-      const rationale = (aiResult as any)[`justificativa_${obj}`] as string;
-      bios[obj] = {
-        current_bio: profile.bio_text,
-        suggested_bio: bioText || "",
-        rationale_short: rationale || "",
-        cta_option: cta || "",
-      };
-    }
-    return bios;
-  })() : undefined;
-
-  // Map objetivo string to ObjectiveKey
-  const objetivoMap: Record<string, ObjectiveKey> = {
-    crescer: "crescer", engajar: "engajar", vender: "vender", autoridade: "autoridade",
-    crescimento: "crescer", engajamento: "engajar", vendas: "vender",
-    todos: "crescer",
-  };
-  const selected_objetivo = objetivoMap[objetivo.toLowerCase()] || "crescer";
-
   // Build post insights for Phase 3
   const topPostInsights = postsAiResult?.top_post_analysis
     ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
@@ -2206,19 +2071,14 @@ async function buildFreeResult(
     profile,
     deliverables: {
       bio_suggestion,
-      objective_bios,
       top_post: topPostData || null,
       worst_post: worstPostData || null,
-      next_post_suggestion: NEXT_POST_BY_NICHO[nichoKey] || NEXT_POST_BY_NICHO["default"],
-      weekly_content_plan: weeklyResult?.weekly_content_plan || null,
-      objective_content_plans: weeklyResult?.objective_content_plans || undefined,
-      stories_plan: storiesResultProcessed?.stories_plan || null,
-      objective_stories_plans: storiesResultProcessed?.objective_stories_plans || undefined,
+      weekly_content_plan: weeklyResult || null,
+      stories_plan: storiesResultProcessed || null,
       best_times: enrichmentResult?.best_times || undefined,
       format_mix: enrichmentResult?.format_mix || undefined,
       hashtag_strategy: enrichmentResult?.hashtag_strategy || undefined,
     },
-    selected_objetivo,
     limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
     plan: "free" as const,
   };
@@ -2269,10 +2129,8 @@ async function runDeferredEnrichment(
     if (existing) {
       // deno-lint-ignore no-explicit-any
       const resultJson = existing.result_json as any;
-      resultJson.deliverables.weekly_content_plan = weeklyResult?.weekly_content_plan || null;
-      resultJson.deliverables.objective_content_plans = weeklyResult?.objective_content_plans || undefined;
-      resultJson.deliverables.stories_plan = storiesResultProcessed?.stories_plan || null;
-      resultJson.deliverables.objective_stories_plans = storiesResultProcessed?.objective_stories_plans || undefined;
+      resultJson.deliverables.weekly_content_plan = weeklyResult || null;
+      resultJson.deliverables.stories_plan = storiesResultProcessed || null;
       resultJson.deliverables.best_times = enrichmentResult?.best_times || undefined;
       resultJson.deliverables.format_mix = enrichmentResult?.format_mix || undefined;
       resultJson.deliverables.hashtag_strategy = enrichmentResult?.hashtag_strategy || undefined;

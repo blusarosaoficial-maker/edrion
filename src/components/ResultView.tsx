@@ -5,12 +5,10 @@ import {
   MessageCircle,
   RotateCcw,
   CheckCircle2,
-  Lock,
   Crown,
   Sparkles,
   ArrowLeft,
   ArrowRight,
-  Lightbulb,
 } from "lucide-react";
 import type { AnalysisResult, PostData } from "@/types/analysis";
 import BioAnalysisSection from "@/components/BioAnalysisSection";
@@ -129,13 +127,7 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
       )}
 
       {/* 1. Bio Suggestion (now with AI analysis) */}
-      <BioAnalysisSection
-        bio={bio_suggestion}
-        objectiveBios={deliverables.objective_bios}
-        selectedObjetivo={result.selected_objetivo}
-        locked={!showFullFreeContent}
-        onLockedClick={onUpgradeAction}
-      />
+      <BioAnalysisSection bio={bio_suggestion} />
 
       {/* Latest Post — visible for free, no analysis, just metrics */}
       {latest_post && (
@@ -183,17 +175,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
         <ShowcaseCTA onAnalyze={handleShowcaseUpgrade} handle={profile.handle} />
       )}
 
-      {/* Next post suggestion — blurred for free users, visible in showcase */}
-      {!isPremium && !isShowcase && deliverables.next_post_suggestion && (
-        <BlurredNextPost
-          suggestion={deliverables.next_post_suggestion}
-          onUpgrade={onUpgradeAction}
-        />
-      )}
-      {isShowcase && deliverables.next_post_suggestion && (
-        <NextPostVisible suggestion={deliverables.next_post_suggestion} />
-      )}
-
       {selectedPost && (
         <PostAnalysisModal
           isOpen={!!selectedPost}
@@ -209,8 +190,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           plan={deliverables.weekly_content_plan}
           locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
-          objectivePlans={deliverables.objective_content_plans}
-          selectedObjetivo={result.selected_objetivo}
         />
       )}
 
@@ -220,8 +199,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
           plan={deliverables.stories_plan}
           locked={!showFullFreeContent}
           onLockedClick={onUpgradeAction}
-          objectivePlans={deliverables.objective_stories_plans}
-          selectedObjetivo={result.selected_objetivo}
         />
       )}
 
@@ -303,61 +280,6 @@ export default function ResultView({ result, onReset, resetLabel, isShowcase }: 
   );
 }
 
-/* ─── Blurred Next Post Suggestion ─────────────────────────── */
-
-function BlurredNextPost({
-  suggestion,
-  onUpgrade,
-}: {
-  suggestion: { format: string; hook: string; outline: string[]; cta: string; angle: string };
-  onUpgrade: () => void;
-}) {
-  return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-        <Lightbulb className="w-5 h-5 text-amber-400" />
-        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Proximo Post Sugerido
-        </h3>
-        <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
-          <Lock className="w-2.5 h-2.5" /> PRO
-        </span>
-      </div>
-      <div className="relative p-5">
-        <div className="space-y-3 blur-[6px] select-none pointer-events-none" aria-hidden>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 text-xs font-semibold rounded bg-primary/10 text-primary">{suggestion.format}</span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded bg-accent/10 text-accent">{suggestion.angle}</span>
-          </div>
-          <p className="text-sm text-foreground font-medium">"{suggestion.hook}"</p>
-          <div className="space-y-1.5">
-            {suggestion.outline.map((item, i) => (
-              <p key={i} className="text-sm text-foreground/70">{i + 1}. {item}</p>
-            ))}
-          </div>
-          <p className="text-sm text-foreground/60">CTA: {suggestion.cta}</p>
-        </div>
-        <div
-          onClick={onUpgrade}
-          className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background/80 flex flex-col items-center justify-center cursor-pointer"
-        >
-          <div className="flex flex-col items-center gap-2 p-4">
-            <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Lightbulb className="w-5 h-5 text-amber-400" />
-            </div>
-            <span className="text-sm font-medium text-foreground">
-              Seu proximo post ja foi planejado
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Hook, roteiro e CTA prontos para usar
-            </span>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ─── Showcase CTA (replaces upgrade banner in showcase mode) ─ */
 
 function ShowcaseCTA({ onAnalyze, handle }: { onAnalyze: () => void; handle: string }) {
@@ -390,34 +312,3 @@ function ShowcaseCTA({ onAnalyze, handle }: { onAnalyze: () => void; handle: str
   );
 }
 
-/* ─── Next Post Visible (showcase mode) ────────────────────── */
-
-function NextPostVisible({
-  suggestion,
-}: {
-  suggestion: { format: string; hook: string; outline: string[]; cta: string; angle: string };
-}) {
-  return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-        <Lightbulb className="w-5 h-5 text-amber-400" />
-        <h3 className="text-foreground font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Próximo Post Sugerido
-        </h3>
-      </div>
-      <div className="p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-primary/10 text-primary">{suggestion.format}</span>
-          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-accent/10 text-accent">{suggestion.angle}</span>
-        </div>
-        <p className="text-sm text-foreground font-medium">"{suggestion.hook}"</p>
-        <div className="space-y-1.5">
-          {suggestion.outline.map((item, i) => (
-            <p key={i} className="text-sm text-foreground/70">{i + 1}. {item}</p>
-          ))}
-        </div>
-        <p className="text-sm text-foreground/60">CTA: {suggestion.cta}</p>
-      </div>
-    </section>
-  );
-}
