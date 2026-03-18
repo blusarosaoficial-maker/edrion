@@ -2187,6 +2187,7 @@ async function buildFreeResult(
   const objetivoMap: Record<string, ObjectiveKey> = {
     crescer: "crescer", engajar: "engajar", vender: "vender", autoridade: "autoridade",
     crescimento: "crescer", engajamento: "engajar", vendas: "vender",
+    todos: "crescer",
   };
   const selected_objetivo = objetivoMap[objetivo.toLowerCase()] || "crescer";
 

@@ -12,10 +12,6 @@ import {
   DollarSign,
   Clapperboard,
   MoreHorizontal,
-  TrendingUp,
-  Heart,
-  ShoppingBag,
-  Award,
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
@@ -34,13 +30,6 @@ const NICHOS = [
   { value: "outro", label: "Outro", icon: MoreHorizontal },
 ];
 
-const OBJETIVOS = [
-  { value: "crescer", label: "Crescer seguidores", icon: TrendingUp },
-  { value: "engajar", label: "Mais engajamento", icon: Heart },
-  { value: "vender", label: "Vender mais", icon: ShoppingBag },
-  { value: "autoridade", label: "Construir autoridade", icon: Award },
-];
-
 const HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
 
 interface Props {
@@ -48,12 +37,11 @@ interface Props {
   isLoading: boolean;
 }
 
-type Step = "handle" | "nicho" | "objetivo";
+type Step = "handle" | "nicho";
 
 export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
   const [handle, setHandle] = useState("");
   const [nicho, setNicho] = useState("");
-  const [objetivo, setObjetivo] = useState("");
   const [step, setStep] = useState<Step>("handle");
   const [handleError, setHandleError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,18 +81,12 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
 
   const selectNicho = (value: string) => {
     setNicho(value);
-    setStep("objetivo");
-  };
-
-  const selectObjetivo = (value: string) => {
-    setObjetivo(value);
     const clean = handle.replace(/^@/, "").trim();
-    onSubmit(clean, nicho, value);
+    onSubmit(clean, value, "todos");
   };
 
   const goBack = () => {
-    if (step === "objetivo") setStep("nicho");
-    else if (step === "nicho") setStep("handle");
+    if (step === "nicho") setStep("handle");
   };
 
   // Direct submit for handle step (click button)
@@ -117,13 +99,13 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
     <div className="w-full">
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-1.5 mb-5">
-        {(["handle", "nicho", "objetivo"] as Step[]).map((s, i) => (
+        {(["handle", "nicho"] as Step[]).map((s, i) => (
           <div
             key={s}
             className={`h-1 rounded-full transition-all duration-300 ${
               s === step
                 ? "w-8 bg-gradient-brand"
-                : i < ["handle", "nicho", "objetivo"].indexOf(step)
+                : i < (["handle", "nicho"] as Step[]).indexOf(step)
                 ? "w-8 bg-primary/40"
                 : "w-4 bg-white/[0.08]"
             }`}
@@ -209,50 +191,6 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
         </div>
       )}
 
-      {/* STEP 3: Objective selection */}
-      {step === "objetivo" && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-2 mb-1">
-            <button
-              onClick={goBack}
-              className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors text-muted-foreground"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <p className="text-sm font-medium text-foreground">Qual seu objetivo principal?</p>
-              <p className="text-xs text-muted-foreground/60">Escolha o que mais importa agora</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            {OBJETIVOS.map((o) => {
-              const Icon = o.icon;
-              return (
-                <button
-                  key={o.value}
-                  onClick={() => selectObjetivo(o.value)}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all duration-200 text-left ${
-                    objetivo === o.value
-                      ? "border-primary/50 bg-primary/10 text-foreground"
-                      : "border-white/[0.06] bg-white/[0.02] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.12] hover:text-foreground"
-                  }`}
-                >
-                  <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
-                    <Icon className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="text-sm font-medium">{o.label}</span>
-                  <ArrowRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100" />
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="text-center text-muted-foreground/30 text-[11px]">
-            Analisando @{handle.replace(/^@/, "")}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
