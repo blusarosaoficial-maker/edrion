@@ -46,7 +46,7 @@ export default function HashtagStrategySection({ data, locked, onLockedClick }: 
           </div>
         )}
 
-        <div className={`p-5 space-y-4 ${locked ? "opacity-50 pointer-events-none select-none" : ""}`}>
+        <div className={`p-5 space-y-4 ${locked ? "opacity-30 blur-[2px] pointer-events-none select-none" : ""}`}>
           {TIERS.map((tier) => {
             const hashtags = data[tier.key];
             if (!hashtags || hashtags.length === 0) return null;

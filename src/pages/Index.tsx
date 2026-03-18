@@ -399,7 +399,7 @@ const Index = () => {
                       Receba um diagnóstico completo do seu perfil com plano de ação, roteiros prontos e 30 dias de Stories.
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-                      {["Análise de Bio", "Melhor e Pior Post", "7 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
+                      {["Análise de Bio", "Melhor e Pior Post", "14 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
                         <span key={tag} className="text-[11px] text-muted-foreground/80 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-0.5">
                           {tag}
                         </span>
@@ -452,7 +452,7 @@ const Index = () => {
                   Receba um diagnóstico completo do seu perfil com plano de ação, roteiros prontos e 30 dias de Stories.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-                  {["Análise de Bio", "Melhor e Pior Post", "7 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
+                  {["Análise de Bio", "Melhor e Pior Post", "14 Roteiros Prontos", "30 Stories", "Hashtags e Hooks"].map((tag) => (
                     <span key={tag} className="text-[11px] text-muted-foreground/80 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-0.5">
                       {tag}
                     </span>

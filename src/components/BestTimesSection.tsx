@@ -31,7 +31,7 @@ export default function BestTimesSection({ data, locked, onLockedClick }: Props)
           </div>
         )}
 
-        <div className={`p-5 space-y-3 ${locked ? "opacity-50 pointer-events-none select-none" : ""}`}>
+        <div className={`p-5 space-y-3 ${locked ? "opacity-30 blur-[2px] pointer-events-none select-none" : ""}`}>
           <div className="grid gap-2">
             {data.slots.map((slot, i) => (
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary border border-border">

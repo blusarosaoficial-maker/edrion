@@ -43,7 +43,7 @@ export default function FormatMixSection({ data, locked, onLockedClick }: Props)
           </div>
         )}
 
-        <div className={`p-5 space-y-4 ${locked ? "opacity-50 pointer-events-none select-none" : ""}`}>
+        <div className={`p-5 space-y-4 ${locked ? "opacity-30 blur-[2px] pointer-events-none select-none" : ""}`}>
           <div className="space-y-3">
             {formats.map((f) => {
               const config = FORMAT_COLORS[f.key];

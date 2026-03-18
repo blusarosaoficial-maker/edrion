@@ -1819,7 +1819,7 @@ async function generateEnrichment(
 
   const systemPrompt = `Voce e um estrategista de Instagram especializado em crescimento organico.
 Analise o perfil e gere recomendacoes praticas de:
-1. MELHORES HORARIOS: 7 slots (1 por dia da semana) com horario e justificativa
+1. MELHORES HORARIOS: 7 slots (1 por dia da semana) com horario e justificativa. REGRA OBRIGATORIA: todos os horarios devem ser entre 08:00 e 22:00. Ninguem posta antes das 8h ou depois das 22h. Priorize horarios de pico: 11:00-13:00 (almoco), 17:00-19:00 (fim do expediente), 20:00-21:30 (noite). Varie os horarios entre os dias.
 2. MIX DE FORMATOS: % ideal de Reels vs Carrossel vs Stories para o nicho
 3. ESTRATEGIA DE HASHTAGS: 5 de alta competicao, 10 de media, 15 de baixa competicao + dica de uso
 
@@ -2069,10 +2069,18 @@ async function buildFreeResult(
     ? applyStoriesQualityGate(storiesResult)
     : null;
 
+  // Latest post = most recent post (first in the array, ordered by date)
+  const latestPost = posts.length > 0 ? {
+    ...posts[0],
+    analysis: null,
+    tier: undefined,
+  } : null;
+
   const result = {
     profile,
     deliverables: {
       bio_suggestion,
+      latest_post: latestPost,
       top_post: topPostData || null,
       worst_post: worstPostData || null,
       weekly_content_plan: weeklyResult || null,

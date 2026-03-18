@@ -105,7 +105,7 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick }: Pr
 
       {locked ? (
         <div className="relative">
-          <div className="space-y-3 opacity-55 pointer-events-none select-none">
+          <div className="space-y-3 opacity-30 blur-[2px] pointer-events-none select-none">
             {plan.scripts.map((script) => (
               <LockedDayCard key={script.dia} script={script} />
             ))}

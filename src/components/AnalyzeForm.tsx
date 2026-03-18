@@ -14,6 +14,10 @@ import {
   MoreHorizontal,
   ArrowRight,
   ArrowLeft,
+  TrendingUp,
+  Heart,
+  ShoppingBag,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +34,13 @@ const NICHOS = [
   { value: "outro", label: "Outro", icon: MoreHorizontal },
 ];
 
+const OBJETIVOS = [
+  { value: "crescer", label: "Crescer seguidores", icon: TrendingUp, desc: "Atrair novos seguidores qualificados" },
+  { value: "engajar", label: "Aumentar engajamento", icon: Heart, desc: "Mais curtidas, comentários e salvamentos" },
+  { value: "vender", label: "Vender mais", icon: ShoppingBag, desc: "Converter seguidores em clientes" },
+  { value: "autoridade", label: "Construir autoridade", icon: Award, desc: "Ser referência no seu nicho" },
+];
+
 const HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
 
 interface Props {
@@ -37,7 +48,7 @@ interface Props {
   isLoading: boolean;
 }
 
-type Step = "handle" | "nicho";
+type Step = "handle" | "nicho" | "objetivo";
 
 export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
   const [handle, setHandle] = useState("");
@@ -81,12 +92,17 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
 
   const selectNicho = (value: string) => {
     setNicho(value);
+    setStep("objetivo");
+  };
+
+  const selectObjetivo = (value: string) => {
     const clean = handle.replace(/^@/, "").trim();
-    onSubmit(clean, value, "todos");
+    onSubmit(clean, nicho, value);
   };
 
   const goBack = () => {
     if (step === "nicho") setStep("handle");
+    if (step === "objetivo") setStep("nicho");
   };
 
   // Direct submit for handle step (click button)
@@ -95,17 +111,20 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
     handleNext();
   };
 
+  const STEPS: Step[] = ["handle", "nicho", "objetivo"];
+  const currentStepIdx = STEPS.indexOf(step);
+
   return (
     <div className="w-full">
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-1.5 mb-5">
-        {(["handle", "nicho"] as Step[]).map((s, i) => (
+        {STEPS.map((s, i) => (
           <div
             key={s}
             className={`h-1 rounded-full transition-all duration-300 ${
               s === step
                 ? "w-8 bg-gradient-brand"
-                : i < (["handle", "nicho"] as Step[]).indexOf(step)
+                : i < currentStepIdx
                 ? "w-8 bg-primary/40"
                 : "w-4 bg-white/[0.08]"
             }`}
@@ -184,6 +203,46 @@ export default function AnalyzeForm({ onSubmit, isLoading }: Props) {
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="text-sm font-medium truncate">{n.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: Objetivo selection */}
+      {step === "objetivo" && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2 mb-1">
+            <button
+              onClick={goBack}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors text-muted-foreground"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-foreground">Qual seu principal objetivo?</p>
+              <p className="text-xs text-muted-foreground/60">Vamos focar a análise no que importa pra você</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {OBJETIVOS.map((o) => {
+              const Icon = o.icon;
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => selectObjetivo(o.value)}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/[0.06] bg-white/[0.02] text-muted-foreground hover:bg-white/[0.06] hover:border-white/[0.12] hover:text-foreground transition-all duration-200 text-left"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-4.5 h-4.5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{o.label}</p>
+                    <p className="text-xs text-muted-foreground/60">{o.desc}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/30 shrink-0 ml-auto" />
                 </button>
               );
             })}

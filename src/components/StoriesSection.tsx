@@ -84,7 +84,7 @@ export default function StoriesSection({ plan, locked, onLockedClick }: Props) {
 
       {locked ? (
         <div className="relative">
-          <div className="space-y-2 opacity-55 pointer-events-none select-none">
+          <div className="space-y-2 opacity-30 blur-[2px] pointer-events-none select-none">
             {plan.sequences.slice(0, 5).map((seq) => (
               <LockedStoryCard key={seq.dia} sequence={seq} />
             ))}
