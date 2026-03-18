@@ -1949,22 +1949,77 @@ async function buildFreeResult(
     if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
   }
 
-  // Phase 1: Transcribe video audio for top/worst posts (parallel)
-  const [topTranscript, worstTranscript] = await Promise.all([
-    posts[topIdx].post_type === "Video"
-      ? transcribeVideo(posts[topIdx].video_url, posts[topIdx].uses_original_audio, posts[topIdx].music_info)
-      : Promise.resolve({ text: null, skipped_reason: null }),
-    posts[worstIdx].post_type === "Video"
-      ? transcribeVideo(posts[worstIdx].video_url, posts[worstIdx].uses_original_audio, posts[worstIdx].music_info)
-      : Promise.resolve({ text: null, skipped_reason: null }),
+  const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
+
+  // Build basic post insights (used by Phase 3 without waiting for AI analysis)
+  const basicTopInsights = `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}. Caption: "${posts[topIdx].caption_preview}".`;
+  const basicWorstInsights = `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
+
+  // ALL PHASES IN PARALLEL — no sequential dependencies
+  // Bio AI doesn't need transcription, weekly/stories/hashtags use basic insights
+  const [
+    aiResult,
+    postsAnalysisBundle,
+    weeklyContentResult,
+    storiesResult,
+    enrichmentResult,
+  ] = await Promise.all([
+    // Bio analysis (independent — no transcription needed)
+    analyzeBioWithAI(profile, nicho, objetivo, captions),
+    // Posts analysis (transcription → post AI → proxy thumbnails, chained internally)
+    (async () => {
+      const [topTranscript, worstTranscript] = await Promise.all([
+        posts[topIdx].post_type === "Video"
+          ? transcribeVideo(posts[topIdx].video_url, posts[topIdx].uses_original_audio, posts[topIdx].music_info)
+          : Promise.resolve({ text: null, skipped_reason: null }),
+        posts[worstIdx].post_type === "Video"
+          ? transcribeVideo(posts[worstIdx].video_url, posts[worstIdx].uses_original_audio, posts[worstIdx].music_info)
+          : Promise.resolve({ text: null, skipped_reason: null }),
+      ]);
+      const postsAiResult = await analyzePostsWithAI(
+        profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo,
+        topTranscript.text, worstTranscript.text,
+      );
+      // Proxy thumbnails
+      const topPostData = {
+        ...posts[topIdx],
+        analysis: postsAiResult?.top_post_analysis || null,
+        tier: (postsAiResult?.top_post_analysis?.classificacao || posts[topIdx].tier) as "gold" | "silver" | "bronze",
+        transcript: topTranscript.text || undefined,
+        transcript_skipped_reason: topTranscript.skipped_reason || undefined,
+      };
+      const worstPostData = {
+        ...posts[worstIdx],
+        analysis: postsAiResult?.worst_post_analysis || null,
+        tier: (postsAiResult?.worst_post_analysis?.classificacao || posts[worstIdx].tier) as "gold" | "silver" | "bronze",
+        transcript: worstTranscript.text || undefined,
+        transcript_skipped_reason: worstTranscript.skipped_reason || undefined,
+      };
+      const [topThumb, worstThumb] = await Promise.all([
+        proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
+          .catch(() => topPostData.thumb_url),
+        proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
+          .catch(() => worstPostData.thumb_url),
+      ]);
+      topPostData.thumb_url = topThumb;
+      worstPostData.thumb_url = worstThumb;
+      return { topPostData, worstPostData };
+    })(),
+    // Weekly content (starts immediately with basic insights)
+    generateWeeklyContent(profile, nicho, objetivo, captions, basicTopInsights, basicWorstInsights)
+      .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
+    // Stories (starts immediately with basic insights)
+    generateStories(profile, nicho, objetivo, captions, basicTopInsights)
+      .catch((err) => { console.error("generateStories crashed:", err); return null; }),
+    // Hashtags (starts immediately)
+    generateEnrichment(profile, nicho, objetivo)
+      .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
   ]);
 
-  // Phase 2: Run BOTH AI analyses in parallel (posts AI now includes transcription)
-  const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
-  const [aiResult, postsAiResult] = await Promise.all([
-    analyzeBioWithAI(profile, nicho, objetivo, captions),
-    analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo, topTranscript.text, worstTranscript.text),
-  ]);
+  const { topPostData, worstPostData } = postsAnalysisBundle || {
+    topPostData: { ...posts[topIdx], analysis: null, tier: posts[topIdx].tier },
+    worstPostData: { ...posts[worstIdx], analysis: null, tier: posts[worstIdx].tier },
+  };
 
   // Calculate scores from rubric (safe fallback if AI omits fields)
   const defaultRubric: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
@@ -2012,52 +2067,6 @@ async function buildFreeResult(
         rationale_short: templateBio.rationale,
         cta_option: templateBio.cta,
       };
-
-  // Attach AI post analysis + transcription to top/worst posts
-  const topPostData = {
-    ...posts[topIdx],
-    analysis: postsAiResult?.top_post_analysis || null,
-    tier: (postsAiResult?.top_post_analysis?.classificacao || posts[topIdx].tier) as "gold" | "silver" | "bronze",
-    transcript: topTranscript.text || undefined,
-    transcript_skipped_reason: topTranscript.skipped_reason || undefined,
-  };
-  const worstPostData = {
-    ...posts[worstIdx],
-    analysis: postsAiResult?.worst_post_analysis || null,
-    tier: (postsAiResult?.worst_post_analysis?.classificacao || posts[worstIdx].tier) as "gold" | "silver" | "bronze",
-    transcript: worstTranscript.text || undefined,
-    transcript_skipped_reason: worstTranscript.skipped_reason || undefined,
-  };
-
-  // Proxy thumbnails (fast, parallel)
-  const [topThumb, worstThumb] = await Promise.all([
-    proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
-      .catch(() => topPostData.thumb_url),
-    proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
-      .catch(() => worstPostData.thumb_url),
-  ]);
-  topPostData.thumb_url = topThumb;
-  worstPostData.thumb_url = worstThumb;
-
-  // Build post insights for Phase 3
-  const topPostInsights = postsAiResult?.top_post_analysis
-    ? `Fatores positivos: ${postsAiResult.top_post_analysis.fatores_positivos.join("; ")}. Recomendacoes: ${postsAiResult.top_post_analysis.recomendacoes.join("; ")}.`
-    : `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}.`;
-
-  const worstPostInsights = postsAiResult?.worst_post_analysis
-    ? `Fatores negativos: ${postsAiResult.worst_post_analysis.fatores_negativos.join("; ")}. Recomendacoes: ${postsAiResult.worst_post_analysis.recomendacoes.join("; ")}.`
-    : `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
-
-  // Phase 3: Generate enrichment (weekly content, stories, best times, etc.) INLINE
-  // All deliverables are generated for ALL users — free users see them locked/blurred
-  const [weeklyContentResult, storiesResult, enrichmentResult] = await Promise.all([
-    generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
-      .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
-    generateStories(profile, nicho, objetivo, captions, topPostInsights)
-      .catch((err) => { console.error("generateStories crashed:", err); return null; }),
-    generateEnrichment(profile, nicho, objetivo)
-      .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
-  ]);
 
   const weeklyResult = weeklyContentResult
     ? applyWeeklyQualityGate(weeklyContentResult)
