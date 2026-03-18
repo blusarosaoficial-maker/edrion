@@ -2041,11 +2041,24 @@ async function buildFreeResult(
     : null;
 
   // Latest post = most recent post (first in the array, ordered by date)
-  const latestPost = posts.length > 0 ? {
+  let latestPost = posts.length > 0 ? {
     ...posts[0],
     analysis: null,
     tier: undefined,
   } : null;
+
+  // Proxy latest post thumbnail (reuse if same as top/worst)
+  if (latestPost) {
+    if (latestPost.post_id === topPostData?.post_id) {
+      latestPost.thumb_url = topPostData.thumb_url;
+    } else if (latestPost.post_id === worstPostData?.post_id) {
+      latestPost.thumb_url = worstPostData.thumb_url;
+    } else {
+      latestPost.thumb_url = await proxyPostThumbnail(
+        profile.handle, latestPost.post_id, latestPost.thumb_url, supabaseAdmin,
+      ).catch(() => latestPost!.thumb_url);
+    }
+  }
 
   const result = {
     profile,
