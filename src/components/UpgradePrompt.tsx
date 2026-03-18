@@ -20,11 +20,10 @@ function formatNum(n: number): string {
 }
 
 const BENEFITS = [
-  "4 bios otimizadas — uma para cada objetivo de crescimento",
-  "28 roteiros completos — 7 para cada estratégia (vender, crescer, engajar, autoridade)",
-  "28 sequências de Stories prontas para postar",
-  "Melhores horários para postar no seu nicho",
-  "Mix ideal de formatos: Reels vs Carrossel vs Stories",
+  "Bio otimizada com 3 variações estratégicas",
+  "Análise completa do melhor e pior post",
+  "7 roteiros de conteúdo — um para cada dia da semana",
+  "30 sequências de Stories prontas para postar",
   "Estratégia de hashtags por nível de competição",
 ];
 

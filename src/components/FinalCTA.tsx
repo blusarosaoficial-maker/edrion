@@ -43,7 +43,7 @@ export default function FinalCTA({ handle, onUpgrade }: Props) {
           Voce viu o diagnostico. Agora veja a solucao.
         </p>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          A analise completa inclui tudo que voce precisa para transformar seu perfil em 7 dias — posts analisados em profundidade, roteiros prontos e bio otimizada.
+          Desbloqueie a analise completa — bio otimizada, 7 roteiros, 30 Stories, hashtags e analise dos seus posts.
         </p>
       </div>
 

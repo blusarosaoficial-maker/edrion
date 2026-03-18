@@ -35,15 +35,15 @@ export default function InlineUpgradeBanner({ handle, topScore, worstScore, onUp
       <div className="grid grid-cols-3 gap-3">
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Search className="w-4 h-4 text-primary" />
-          <span className="text-[11px] text-center text-muted-foreground">4 estratégias por objetivo</span>
+          <span className="text-[11px] text-center text-muted-foreground">7 roteiros prontos</span>
         </div>
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span className="text-[11px] text-center text-muted-foreground">28 roteiros prontos</span>
+          <span className="text-[11px] text-center text-muted-foreground">30 sequências de Stories</span>
         </div>
         <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-card border border-border">
           <Target className="w-4 h-4 text-emerald-400" />
-          <span className="text-[11px] text-center text-muted-foreground">28 sequências de Stories</span>
+          <span className="text-[11px] text-center text-muted-foreground">Estratégia de hashtags</span>
         </div>
       </div>
 
