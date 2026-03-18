@@ -61,7 +61,7 @@ function RevealWrapper({
   return (
     <div
       ref={ref}
-      className={`reveal-section ${revealState !== "hidden" ? "revealed" : ""} ${className}`}
+      className={`reveal-section revealed ${className}`}
       data-reveal-id={id}
     >
       {children}
