@@ -1969,7 +1969,9 @@ async function buildFreeResult(
     analyzePostsWithAI(profile, posts[topIdx], posts[worstIdx], posts, nicho, objetivo, topTranscript.text, worstTranscript.text),
   ]);
 
-  // Calculate scores from rubric
+  // Calculate scores from rubric (safe fallback if AI omits fields)
+  const defaultRubric: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
+  const safeRubric = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric;
   const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
 
   const bio_suggestion = aiResult
@@ -1978,29 +1980,29 @@ async function buildFreeResult(
         suggested_bio: aiResult.bio_sugerida,
         rationale_short: aiResult.justificativa_bio,
         cta_option: aiResult.cta_sugerido,
-        score: parseFloat(((sumRubric(aiResult.rubrica_bio_atual) / 30) * 10).toFixed(1)),
-        score_new: parseFloat(((sumRubric(aiResult.rubrica_bio_nova) / 30) * 10).toFixed(1)),
+        score: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_atual)) / 30) * 10).toFixed(1)),
+        score_new: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_nova)) / 30) * 10).toFixed(1)),
         criteria: {
-          clarity: aiResult.rubrica_bio_atual.clareza,
-          authority: aiResult.rubrica_bio_atual.autoridade,
-          cta: aiResult.rubrica_bio_atual.forca_cta,
-          seo: aiResult.rubrica_bio_atual.seo_descoberta,
-          brand_voice: aiResult.rubrica_bio_atual.voz_da_marca,
-          specificity: aiResult.rubrica_bio_atual.especificidade,
+          clarity: safeRubric(aiResult.rubrica_bio_atual).clareza,
+          authority: safeRubric(aiResult.rubrica_bio_atual).autoridade,
+          cta: safeRubric(aiResult.rubrica_bio_atual).forca_cta,
+          seo: safeRubric(aiResult.rubrica_bio_atual).seo_descoberta,
+          brand_voice: safeRubric(aiResult.rubrica_bio_atual).voz_da_marca,
+          specificity: safeRubric(aiResult.rubrica_bio_atual).especificidade,
         },
         criteria_new: {
-          clarity: aiResult.rubrica_bio_nova.clareza,
-          authority: aiResult.rubrica_bio_nova.autoridade,
-          cta: aiResult.rubrica_bio_nova.forca_cta,
-          seo: aiResult.rubrica_bio_nova.seo_descoberta,
-          brand_voice: aiResult.rubrica_bio_nova.voz_da_marca,
-          specificity: aiResult.rubrica_bio_nova.especificidade,
+          clarity: safeRubric(aiResult.rubrica_bio_nova).clareza,
+          authority: safeRubric(aiResult.rubrica_bio_nova).autoridade,
+          cta: safeRubric(aiResult.rubrica_bio_nova).forca_cta,
+          seo: safeRubric(aiResult.rubrica_bio_nova).seo_descoberta,
+          brand_voice: safeRubric(aiResult.rubrica_bio_nova).voz_da_marca,
+          specificity: safeRubric(aiResult.rubrica_bio_nova).especificidade,
         },
-        diagnostic: aiResult.analise_diagnostica,
+        diagnostic: aiResult.analise_diagnostica || {},
         strengths: aiResult.pontos_fortes,
         improvements: aiResult.pontos_de_melhoria,
         name_keyword: aiResult.sugestao_keyword_nome,
-        detected_tone: aiResult.analise_diagnostica.tom_de_voz,
+        detected_tone: aiResult.analise_diagnostica?.tom_de_voz,
         variations: aiResult.bio_variacao_autoridade ? [
           { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
           { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
