@@ -32,7 +32,7 @@ export default function FormatMixSection({ data, locked, onLockedClick }: Props)
       <div className="relative">
         {locked && (
           <div
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/60 backdrop-blur-sm"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/30"
             onClick={onLockedClick}
           >
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
@@ -43,7 +43,7 @@ export default function FormatMixSection({ data, locked, onLockedClick }: Props)
           </div>
         )}
 
-        <div className={`p-5 space-y-4 ${locked ? "opacity-40 pointer-events-none select-none" : ""}`}>
+        <div className={`p-5 space-y-4 ${locked ? "opacity-70 pointer-events-none select-none" : ""}`}>
           <div className="space-y-3">
             {formats.map((f) => {
               const config = FORMAT_COLORS[f.key];

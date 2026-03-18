@@ -197,12 +197,8 @@ const Index = () => {
       setResult(response.data!);
       setIsDone(true);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      // Show loading completion animation, then transition to building reveal
-      setTimeout(() => {
-        if (!abortRef.current) {
-          setState("building");
-        }
-      }, 1500);
+      // Transition directly to building reveal
+      setState("building");
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);

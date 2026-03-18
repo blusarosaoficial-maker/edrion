@@ -285,7 +285,7 @@ export default function BioAnalysisSection({ bio, objectiveBios, selectedObjetiv
         <div className="relative border-t border-border">
           {locked && (
             <div
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/60 backdrop-blur-sm"
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer bg-background/30"
               onClick={onLockedClick}
             >
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
@@ -295,7 +295,7 @@ export default function BioAnalysisSection({ bio, objectiveBios, selectedObjetiv
               <span className="text-xs text-muted-foreground">Desbloquear 4 bios por objetivo</span>
             </div>
           )}
-          <div className={locked ? "opacity-40 pointer-events-none select-none" : ""}>
+          <div className={locked ? "opacity-70 pointer-events-none select-none" : ""}>
             <div className="px-5 pt-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                 Bios Otimizadas por Objetivo

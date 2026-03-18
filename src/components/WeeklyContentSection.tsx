@@ -111,14 +111,14 @@ export default function WeeklyContentSection({ plan, locked, onLockedClick, obje
 
       {locked ? (
         <div className="relative">
-          <div className="space-y-3 opacity-60 pointer-events-none select-none">
+          <div className="space-y-3 opacity-75 pointer-events-none select-none">
             {plan.scripts.map((script) => (
               <LockedDayCard key={script.dia} script={script} />
             ))}
           </div>
           <div
             onClick={onLockedClick}
-            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background/90 flex flex-col items-center justify-center cursor-pointer rounded-xl"
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/60 flex flex-col items-center justify-center cursor-pointer rounded-xl"
           >
             <div className="flex flex-col items-center gap-2 p-4">
               <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">

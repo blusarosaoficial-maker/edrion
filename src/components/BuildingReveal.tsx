@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -47,20 +47,10 @@ function RevealWrapper({
   children: React.ReactNode;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll into view when revealing
-  useEffect(() => {
-    if (revealState === "revealing" && ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [revealState]);
-
   if (revealState === "hidden") return null;
 
   return (
     <div
-      ref={ref}
       className={`reveal-section revealed ${className}`}
       data-reveal-id={id}
     >
