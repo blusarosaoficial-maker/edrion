@@ -1523,7 +1523,7 @@ interface AIStoriesResult {
 const storiesSystemPrompt = `Voce e uma copywriter e estrategista de Stories para Instagram de elite. Seu trabalho e criar sequencias de Stories que PRENDEM, ENGAJAM e CONVERTEM — usando tecnicas avancadas de persuasao, storytelling e psicologia comportamental. Voce domina frameworks como PAS (Problem-Agitation-Solution), AIDA, open loops e micro-commitments. Toda resposta DEVE ser enviada exclusivamente via tool call.
 
 <missao>
-Crie 30 sequencias de Stories (1 por dia do mes) personalizadas para o perfil analisado. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
+Crie as sequencias de Stories (1 por dia) personalizadas para o perfil analisado. Gere EXATAMENTE a quantidade de dias solicitada pelo usuario. Cada sequencia DEVE seguir um arco narrativo com TENSAO, CURIOSIDADE e RESOLUCAO. Nada de stories "bobos" ou genericos — cada slide deve ter intencao estrategica clara.
 </missao>
 
 <frameworks_obrigatorios>
@@ -1602,14 +1602,7 @@ LINK:
 </copy_rules>
 
 <estrutura_mensal>
-Os 30 dias DEVEM seguir esta distribuicao estrategica:
-- 8 dias: EDUCACAO (ensinar algo pratico e acionavel do nicho)
-- 6 dias: BASTIDORES/AUTENTICIDADE (processo, erros, rotina real)
-- 5 dias: COMUNIDADE (enquetes, caixas, respostas a duvidas)
-- 4 dias: PROVA SOCIAL (resultados, depoimentos, antes/depois)
-- 4 dias: STORYTELLING (historias pessoais com licao)
-- 3 dias: VENDA SOFT (apresentar produto/servico sem ser pushy)
-
+Siga a distribuicao de categorias indicada na mensagem do usuario.
 VARIACAO OBRIGATORIA: nunca repita o mesmo tipo de framework em 2 dias consecutivos.
 </estrutura_mensal>
 
@@ -1684,27 +1677,27 @@ const storiesSchema = {
   required: ["estrategia_stories", "sequences"],
 };
 
-async function generateStories(
+async function generateStoriesBatch(
   profile: ReturnType<typeof normalizeProfile>,
   nicho: string,
   objetivo: string,
   captions: string[],
   topPostInsights: string,
+  diaStart: number,
+  diaEnd: number,
+  distribuicao: string,
 ): Promise<AIStoriesResult | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) {
-    console.warn("generateStories: OPENAI_API_KEY not set, skipping");
-    return null;
-  }
-  console.log(`generateStories: starting for @${profile.handle}, nicho=${nicho}`);
+  if (!apiKey) return null;
 
+  const count = diaEnd - diaStart + 1;
   const legendas = captions.length > 0
     ? captions.map(c => `- "${c.slice(0, 200)}"`).join("\n")
     : "(sem legendas disponiveis)";
 
-  const userMessage = `Crie 30 sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle} — 1 por dia do mes.
+  const userMessage = `Crie ${count} sequencias de Stories PERSUASIVAS e ESTRATEGICAS para @${profile.handle}.
 
-Gere 30 sequencias (dia 1 a dia 30).
+Gere ${count} sequencias (dia ${diaStart} a dia ${diaEnd}).
 
 PERFIL:
 - Nicho: ${nicho}
@@ -1726,7 +1719,7 @@ INSTRUCOES CRITICAS:
 5. Video selfie deve ter SCRIPT LITERAL completo (nao apenas descricao)
 6. Use a linguagem e tom das legendas recentes — mantenha a voz do criador
 7. Cada sequencia deve contar uma MICRO-HISTORIA com inicio, meio e fim
-8. Distribua: 8 educacao, 6 bastidores, 5 comunidade, 4 prova social, 4 storytelling, 3 venda soft`;
+8. Distribua neste lote: ${distribuicao}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
@@ -1741,6 +1734,7 @@ INSTRUCOES CRITICAS:
       signal: controller.signal,
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        max_completion_tokens: 16384,
         messages: [
           { role: "system", content: storiesSystemPrompt },
           { role: "user", content: userMessage },
@@ -1750,7 +1744,7 @@ INSTRUCOES CRITICAS:
             type: "function",
             function: {
               name: "generate_stories",
-              description: "Retorna 30 sequencias de Stories para 1 mes de conteudo",
+              description: `Retorna ${count} sequencias de Stories (dia ${diaStart}-${diaEnd})`,
               parameters: storiesSchema,
             },
           },
@@ -1760,26 +1754,58 @@ INSTRUCOES CRITICAS:
     });
 
     if (!res.ok) {
-      console.error("OpenAI Stories error:", res.status, await res.text());
+      console.error("OpenAI Stories batch error:", res.status, await res.text());
       return null;
     }
 
     const data = await res.json();
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
-      console.error("OpenAI Stories: no tool call. Response:", JSON.stringify(data?.choices?.[0]?.message || {}).slice(0, 500));
+      console.error("OpenAI Stories batch: no tool call. Response:", JSON.stringify(data?.choices?.[0]?.message || {}).slice(0, 500));
       return null;
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as AIStoriesResult;
-    console.log(`generateStories: success, ${parsed.sequences?.length || 0} sequences generated`);
+    console.log(`generateStoriesBatch(${diaStart}-${diaEnd}): success, ${parsed.sequences?.length || 0} sequences`);
     return parsed;
   } catch (err) {
-    console.error("generateStories error:", (err as Error).message);
+    console.error(`generateStoriesBatch(${diaStart}-${diaEnd}) error:`, (err as Error).message);
     return null;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function generateStories(
+  profile: ReturnType<typeof normalizeProfile>,
+  nicho: string,
+  objetivo: string,
+  captions: string[],
+  topPostInsights: string,
+): Promise<AIStoriesResult | null> {
+  console.log(`generateStories: starting for @${profile.handle}, nicho=${nicho}`);
+
+  // Split into 2 parallel batches to stay within token limits
+  const [batch1, batch2] = await Promise.all([
+    generateStoriesBatch(profile, nicho, objetivo, captions, topPostInsights,
+      1, 15, "4 educacao, 3 bastidores, 3 comunidade, 2 prova social, 2 storytelling, 1 venda soft"),
+    generateStoriesBatch(profile, nicho, objetivo, captions, topPostInsights,
+      16, 30, "4 educacao, 3 bastidores, 2 comunidade, 2 prova social, 2 storytelling, 2 venda soft"),
+  ]);
+
+  if (!batch1 && !batch2) return null;
+
+  const allSequences = [
+    ...(batch1?.sequences || []),
+    ...(batch2?.sequences || []),
+  ];
+
+  console.log(`generateStories: total ${allSequences.length} sequences from 2 batches`);
+
+  return {
+    estrategia_stories: batch1?.estrategia_stories || batch2?.estrategia_stories || "",
+    sequences: allSequences,
+  };
 }
 
 function cleanSequences(sequences: AIStorySequence[]) {
