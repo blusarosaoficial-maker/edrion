@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import { ScanSearch, Check, BadgeCheck, Loader2, Circle } from "lucide-react";
+import { ScanSearch, Check, BadgeCheck, Loader2, Circle, Sparkles } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCountUp } from "@/hooks/useCountUp";
 import type { ProfileData } from "@/types/analysis";
 
-type Phase = "A" | "B" | "C" | "D" | "done";
+type Phase = "A" | "B" | "C" | "D" | "E" | "done";
 
 interface Props {
   isOpen: boolean;
@@ -18,14 +18,34 @@ const STEPS = [
   { id: "collect", label: "Coletando dados do perfil" },
   { id: "analyze", label: "Analisando bio e posts" },
   { id: "generate", label: "Montando roteiros e stories" },
-  { id: "diagnostic", label: "Gerando diagnostico" },
+  { id: "diagnostic", label: "Finalizando diagnostico" },
 ] as const;
+
+/* Counter labels that cycle during Phase D (content generation) */
+const GENERATION_LABELS = [
+  "Criando roteiro para Engajamento...",
+  "Criando roteiro para Vendas...",
+  "Criando roteiro para Autoridade...",
+  "Criando roteiro para Crescimento...",
+  "Montando sequencia de Stories...",
+  "Analisando melhores horarios...",
+  "Calculando mix de formatos...",
+  "Definindo estrategia de hashtags...",
+];
+
+/* Motivational tips shown after extended wait */
+const TIPS = [
+  "Quanto mais posts, mais preciso o diagnostico",
+  "Estamos analisando padroes de engajamento",
+  "Nossa IA compara com +10 mil perfis do seu nicho",
+  "Cada roteiro e personalizado para seu publico",
+];
 
 function getStepState(
   stepIndex: number,
   phase: Phase,
 ): "done" | "active" | "pending" {
-  const phaseIndex = { A: 0, B: 1, C: 2, D: 3, done: 5 }[phase];
+  const phaseIndex = { A: 0, B: 1, C: 2, D: 3, E: 4, done: 5 }[phase];
   if (stepIndex < phaseIndex) return "done";
   if (stepIndex === phaseIndex) return "active";
   if (phase === "done") return "done";
@@ -44,13 +64,19 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
   const [phase, setPhase] = useState<Phase>("A");
   const [showDone, setShowDone] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const [genLabelIndex, setGenLabelIndex] = useState(0);
+  const [tipIndex, setTipIndex] = useState(-1);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const doneTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const genLabelRef = useRef<ReturnType<typeof setInterval>>();
+  const tipTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const startTimeRef = useRef(0);
 
   const hasProfile = !!profileSnapshot;
   const showAvatar = hasProfile && avatarLoaded;
-  const showStats = hasProfile && phase !== "A";
-  const showBio = hasProfile && (phase === "C" || phase === "D" || phase === "done") && !!profileSnapshot?.bio_text;
+  // Show stats as soon as profile data arrives (even in phase A)
+  const showStats = hasProfile;
+  const showBio = hasProfile && (phase === "C" || phase === "D" || phase === "E" || phase === "done") && !!profileSnapshot?.bio_text;
 
   // Preload avatar image
   useEffect(() => {
@@ -63,6 +89,36 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
     img.src = profileSnapshot.avatar_url;
   }, [profileSnapshot?.avatar_url]);
 
+  // Cycle generation labels during phase D
+  useEffect(() => {
+    if (phase === "D") {
+      setGenLabelIndex(0);
+      genLabelRef.current = setInterval(() => {
+        setGenLabelIndex((prev) => (prev + 1) % GENERATION_LABELS.length);
+      }, 3500);
+      return () => clearInterval(genLabelRef.current);
+    }
+    clearInterval(genLabelRef.current);
+  }, [phase]);
+
+  // Show motivational tip after 45s
+  useEffect(() => {
+    if (!isOpen) {
+      setTipIndex(-1);
+      clearTimeout(tipTimerRef.current);
+      return;
+    }
+    tipTimerRef.current = setTimeout(() => {
+      setTipIndex(0);
+      // Rotate tips every 8s
+      const interval = setInterval(() => {
+        setTipIndex((prev) => (prev + 1) % TIPS.length);
+      }, 8000);
+      return () => clearInterval(interval);
+    }, 45000);
+    return () => clearTimeout(tipTimerRef.current);
+  }, [isOpen]);
+
   // Reset on open
   useEffect(() => {
     if (!isOpen) {
@@ -70,15 +126,35 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
       setPhase("A");
       setShowDone(false);
       setAvatarLoaded(false);
+      setGenLabelIndex(0);
+      setTipIndex(-1);
       clearInterval(intervalRef.current);
       clearTimeout(doneTimerRef.current);
+      clearInterval(genLabelRef.current);
+      clearTimeout(tipTimerRef.current);
+      startTimeRef.current = 0;
       return;
     }
 
+    startTimeRef.current = Date.now();
     let current = 0;
+    // Slower progress — request now takes 2-4 minutes with full generation
     intervalRef.current = setInterval(() => {
-      current += 0.5;
-      if (current >= 90) {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      // First 20s: quick to 20% (scraping)
+      // 20-40s: to 35% (bio/posts AI)
+      // 40-120s: to 70% (content generation — slowest part)
+      // 120-240s: to 90% (finishing up)
+      // 240s+: oscillate around 90-94%
+      if (elapsed < 20) {
+        current = (elapsed / 20) * 20;
+      } else if (elapsed < 40) {
+        current = 20 + ((elapsed - 20) / 20) * 15;
+      } else if (elapsed < 120) {
+        current = 35 + ((elapsed - 40) / 80) * 35;
+      } else if (elapsed < 240) {
+        current = 70 + ((elapsed - 120) / 120) * 20;
+      } else {
         current = 90 + Math.sin(Date.now() / 500) * 2;
       }
       setProgress(Math.min(current, 94));
@@ -90,10 +166,11 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
   // Phase transitions based on progress
   useEffect(() => {
     if (showDone) return;
-    if (progress < 15) setPhase("A");
-    else if (progress < 40) setPhase("B");
-    else if (progress < 75) setPhase("C");
-    else setPhase("D");
+    if (progress < 10) setPhase("A");
+    else if (progress < 25) setPhase("B");
+    else if (progress < 40) setPhase("C");
+    else if (progress < 85) setPhase("D");
+    else setPhase("E");
   }, [progress, showDone]);
 
   // When API is done, complete animation
@@ -211,37 +288,52 @@ export default function LoadingOverlay({ isOpen, isDone, handle, profileSnapshot
         {STEPS.map((step, i) => {
           const state = getStepState(i, phase);
           return (
-            <div
-              key={step.id}
-              className={`flex items-center gap-2.5 transition-all duration-300 ${
-                state === "pending" ? "opacity-30" : "opacity-100"
-              }`}
-            >
-              {state === "done" ? (
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 step-check-enter">
-                  <Check className="w-3 h-3 text-emerald-400" strokeWidth={3} />
-                </div>
-              ) : state === "active" ? (
-                <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
-              ) : (
-                <Circle className="w-5 h-5 text-muted-foreground/30 shrink-0" />
-              )}
-              <span
-                className={`text-sm transition-colors duration-300 ${
-                  state === "done"
-                    ? "text-emerald-400"
-                    : state === "active"
-                    ? "text-foreground font-medium"
-                    : "text-muted-foreground/40"
+            <div key={step.id}>
+              <div
+                className={`flex items-center gap-2.5 transition-all duration-300 ${
+                  state === "pending" ? "opacity-30" : "opacity-100"
                 }`}
               >
-                {step.label}
-                {state === "active" && "..."}
-              </span>
+                {state === "done" ? (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 step-check-enter">
+                    <Check className="w-3 h-3 text-emerald-400" strokeWidth={3} />
+                  </div>
+                ) : state === "active" ? (
+                  <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                ) : (
+                  <Circle className="w-5 h-5 text-muted-foreground/30 shrink-0" />
+                )}
+                <span
+                  className={`text-sm transition-colors duration-300 ${
+                    state === "done"
+                      ? "text-emerald-400"
+                      : state === "active"
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground/40"
+                  }`}
+                >
+                  {step.label}
+                  {state === "active" && "..."}
+                </span>
+              </div>
+              {/* Sub-label for content generation phase — cycles through objectives */}
+              {step.id === "generate" && state === "active" && (
+                <p className="ml-[30px] text-xs text-primary/70 mt-1 transition-opacity duration-500 animate-pulse">
+                  {GENERATION_LABELS[genLabelIndex]}
+                </p>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* === MOTIVATIONAL TIP — appears after 45s === */}
+      {tipIndex >= 0 && !showDone && (
+        <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 transition-opacity duration-500">
+          <Sparkles className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+          <p className="text-xs text-muted-foreground leading-snug">{TIPS[tipIndex]}</p>
+        </div>
+      )}
 
       {/* === PROGRESS BAR — always visible === */}
       <div className="w-full space-y-1">
