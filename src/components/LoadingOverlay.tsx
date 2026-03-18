@@ -23,13 +23,8 @@ const STEPS = [
 
 /* Counter labels that cycle during Phase D (content generation) */
 const GENERATION_LABELS = [
-  "Criando roteiro para Engajamento...",
-  "Criando roteiro para Vendas...",
-  "Criando roteiro para Autoridade...",
-  "Criando roteiro para Crescimento...",
-  "Montando sequencia de Stories...",
-  "Analisando melhores horarios...",
-  "Calculando mix de formatos...",
+  "Criando roteiros da semana...",
+  "Montando sequencias de Stories...",
   "Definindo estrategia de hashtags...",
 ];
 
