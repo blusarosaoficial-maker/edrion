@@ -969,9 +969,12 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
     for (const obj of Object.keys(bioObjetivoMap)) {
       const key = `bio_para_${obj}` as keyof typeof parsed;
       if (parsed[key]) {
-        (parsed as Record<string, string>)[key] = validateBioHallucinations(parsed[key] as string, profile.bio_text, captions);
-        (parsed as Record<string, string>)[key] = validateBioTextClaims(parsed[key] as string, profile.bio_text, captions);
-        (parsed as Record<string, string>)[key] = enforceBioQuality(parsed[key] as string, obj);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = validateBioHallucinations(parsed[key] as string, profile.bio_text, captions);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = validateBioTextClaims(parsed[key] as string, profile.bio_text, captions);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = enforceBioQuality(parsed[key] as string, obj);
       }
     }
     return parsed;
