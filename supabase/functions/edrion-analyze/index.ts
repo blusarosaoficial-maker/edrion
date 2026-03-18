@@ -969,9 +969,12 @@ nova bio (max 149 chars), rubrica da bio nova, justificativa e CTA.${legendas}`;
     for (const obj of Object.keys(bioObjetivoMap)) {
       const key = `bio_para_${obj}` as keyof typeof parsed;
       if (parsed[key]) {
-        (parsed as Record<string, string>)[key] = validateBioHallucinations(parsed[key] as string, profile.bio_text, captions);
-        (parsed as Record<string, string>)[key] = validateBioTextClaims(parsed[key] as string, profile.bio_text, captions);
-        (parsed as Record<string, string>)[key] = enforceBioQuality(parsed[key] as string, obj);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = validateBioHallucinations(parsed[key] as string, profile.bio_text, captions);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = validateBioTextClaims(parsed[key] as string, profile.bio_text, captions);
+        // deno-lint-ignore no-explicit-any
+        (parsed as unknown as Record<string, string>)[key] = enforceBioQuality(parsed[key] as string, obj);
       }
     }
     return parsed;
@@ -1927,7 +1930,7 @@ Responda em portugues. Baseie-se no nicho e objetivo do perfil.`;
 Nicho: ${nicho}
 Objetivo: ${objetivo}
 Seguidores: ${profile.followers}
-Posts: ${profile.media_count}
+Posts: ${profile.posts_count}
 Bio: ${profile.bio_text}`;
 
   const schema = {
@@ -2098,10 +2101,10 @@ async function buildFreeResult(
         improvements: aiResult.pontos_de_melhoria,
         name_keyword: aiResult.sugestao_keyword_nome,
         detected_tone: aiResult.analise_diagnostica.tom_de_voz,
-        variations: aiResult.bio_para_autoridade ? [
-          { label: "Autoridade", bio: aiResult.bio_para_autoridade, rationale: aiResult.justificativa_autoridade || "Foco em credenciais e prova social" },
-          { label: "Crescer", bio: aiResult.bio_para_crescer, rationale: aiResult.justificativa_crescer || "Foco em crescimento de seguidores" },
-          { label: "Vender", bio: aiResult.bio_para_vender, rationale: aiResult.justificativa_vender || "Foco em conversão e vendas" },
+        variations: aiResult.bio_variacao_autoridade ? [
+          { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
+          { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
+          { label: "Ação", bio: aiResult.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
         ] : undefined,
       }
     : {
@@ -2166,7 +2169,8 @@ async function buildFreeResult(
   console.log(`buildFreeResult: storiesPlan=${storiesResultProcessed ? `OK (${storiesResultProcessed.stories_plan.sequences.length} sequences)` : "NULL"}`);
 
   // Assemble objective_bios from AI bio results
-  const objective_bios = aiResult?.bio_para_crescer ? (() => {
+  // deno-lint-ignore no-explicit-any
+  const objective_bios = (aiResult as any)?.bio_para_crescer ? (() => {
     const objectives: ObjectiveKey[] = ["crescer", "engajar", "vender", "autoridade"];
     const bios = {} as Record<ObjectiveKey, typeof bio_suggestion>;
     for (const obj of objectives) {
