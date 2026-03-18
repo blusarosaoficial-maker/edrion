@@ -2279,7 +2279,8 @@ function buildPremiumResult(
   nichoKey: string,
   nicho: string,
   objetivo: string,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
 ) {
   // Premium also gets AI bio analysis
   return buildFreeResult(profile, posts, nichoKey, nicho, objetivo, supabaseAdmin).then((freeResult) => ({
