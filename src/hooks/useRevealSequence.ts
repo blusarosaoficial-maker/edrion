@@ -118,7 +118,7 @@ export function useRevealSequence(
     [states],
   );
 
-  const isComplete = sections.every((s) => states[s.id] === "revealed");
+  const isComplete = sections.length > 0 && sections.every((s) => states[s.id] === "revealed");
 
   return { isRevealed, revealState, skipToEnd, isComplete };
 }
