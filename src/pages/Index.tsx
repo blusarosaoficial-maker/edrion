@@ -6,10 +6,10 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
 import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze";
+import { scrapeProfile, analyzeWithData, analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult, ProfileData } from "@/types/analysis";
+import type { AnalysisResult, ProfileData, RawPostData } from "@/types/analysis";
 import { LogIn, LogOut, ChevronDown } from "lucide-react";
 import { trackLead, trackPurchase } from "@/utils/pixel";
 import { getAnalyzedCount, formatCount } from "@/utils/counter";
@@ -19,6 +19,7 @@ import { fetchShowcaseResult } from "@/services/showcase";
 import BuildingReveal from "@/components/BuildingReveal";
 
 type AppState = "form" | "loading" | "building" | "result" | "upgrade" | "showcase";
+type AnalysisPhase = "scraping" | "analyzing" | "done";
 
 const ERROR_MESSAGES: Record<string, string> = {
   private: "Esse perfil é privado. Só conseguimos analisar perfis públicos.",
@@ -42,16 +43,20 @@ const Index = () => {
   const [state, setState] = useState<AppState>("form");
   const [activeTab, setActiveTab] = useState("nova-analise");
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [isDone, setIsDone] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileData | null>(null);
+  const [analysisPhase, setAnalysisPhase] = useState<AnalysisPhase>("scraping");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingInputs, setPendingInputs] = useState<{ handle: string; nicho: string; objetivo: string } | null>(null);
   const [pendingResult, setPendingResult] = useState<AnalysisResult | null>(null);
-  const [currentHandle, setCurrentHandle] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showcaseResult, setShowcaseResult] = useState<AnalysisResult | null>(null);
+  // Loading overlay state — only used for showcase
+  const [isDone, setIsDone] = useState(false);
+  const [currentHandle, setCurrentHandle] = useState("");
   const abortRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Store scrape data between phases
+  const scrapeDataRef = useRef<{ profile: ProfileData; posts: RawPostData[] } | null>(null);
 
   // Close user menu on outside click
   useEffect(() => {
@@ -66,7 +71,6 @@ const Index = () => {
   }, [showUserMenu]);
 
   // Auto-refresh result when analysis_result is updated (e.g., Hotmart unlock)
-  // Runs whenever user is logged in — works regardless of current screen
   useEffect(() => {
     if (!user) return;
 
@@ -125,73 +129,92 @@ const Index = () => {
       }
     }
 
-    setState("loading");
-    setIsDone(false);
+    // Go IMMEDIATELY to building view with skeleton
+    setState("building");
+    setAnalysisPhase("scraping");
+    setResult(null);
     setProfileSnapshot(null);
-    setCurrentHandle(handle);
+    setPendingInputs({ handle, nicho, objetivo });
+    scrapeDataRef.current = null;
     abortRef.current = false;
     trackLead();
 
     try {
-      const response = await analyzeProfile(handle, nicho, objetivo);
+      // ── Phase 1: Scrape profile (~15-20s) ──────────────────
+      const scrapeResult = await scrapeProfile(handle, nicho, objetivo);
 
       if (abortRef.current) return;
 
-      if (!response.success) {
-        if (response.error === "auth_required" && response.pendingResult) {
-          // Full analysis complete — show BuildingReveal, then ask for login
-          setPendingResult(response.pendingResult);
-          setPendingInputs({ handle, nicho, objetivo });
-          if (response.pendingResult.profile) {
-            setProfileSnapshot(response.pendingResult.profile);
-          }
-          setResult(response.pendingResult);
-          setIsDone(true);
-          setState("building");
+      if (!scrapeResult.success) {
+        setState("form");
+        toast.error(ERROR_MESSAGES[scrapeResult.error || "timeout"] || ERROR_MESSAGES.timeout);
+        return;
+      }
+
+      // Cache hit — full result already available
+      if (scrapeResult.cachedResult) {
+        setProfileSnapshot(scrapeResult.cachedResult.profile);
+        setResult(scrapeResult.cachedResult);
+        setAnalysisPhase("done");
+        return;
+      }
+
+      // Show profile immediately
+      if (scrapeResult.profile) {
+        setProfileSnapshot(scrapeResult.profile);
+      }
+
+      // Store scrape data for phase 2
+      scrapeDataRef.current = {
+        profile: scrapeResult.profile!,
+        posts: scrapeResult.posts || [],
+      };
+
+      // ── Phase 2: AI Analysis (~20-35s) ─────────────────────
+      setAnalysisPhase("analyzing");
+
+      const analyzeResult = await analyzeWithData(
+        handle, nicho, objetivo,
+        scrapeResult.profile!,
+        scrapeResult.posts || [],
+      );
+
+      if (abortRef.current) return;
+
+      if (!analyzeResult.success) {
+        // Auth required — analysis complete, needs login
+        if (analyzeResult.error === "auth_required" && analyzeResult.pendingResult) {
+          setPendingResult(analyzeResult.pendingResult);
+          setResult(analyzeResult.pendingResult);
+          setAnalysisPhase("done");
           return;
         }
 
-        if (response.error === "auth_required") {
+        if (analyzeResult.error === "auth_required") {
           setState("form");
-          setPendingInputs({ handle, nicho, objetivo });
           setShowAuthModal(true);
           return;
         }
 
-        if (response.error === "free_limit") {
-          if (!result && user) {
-            const { data: lastRow } = await supabase
-              .from("analysis_result")
-              .select("result_json")
-              .eq("user_id", user.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single();
-            if (lastRow?.result_json) {
-              setResult(lastRow.result_json as unknown as AnalysisResult);
-            }
-          }
+        if (analyzeResult.error === "free_limit") {
           setState("upgrade");
           return;
         }
 
         setState("form");
-        toast.error(ERROR_MESSAGES[response.error || "timeout"] || ERROR_MESSAGES.timeout);
+        toast.error(ERROR_MESSAGES.timeout);
         return;
       }
 
-      if (response.data?.profile) {
-        setProfileSnapshot(response.data.profile);
-      }
-      setResult(response.data!);
-      setIsDone(true);
+      // Success — show full result
+      setResult(analyzeResult.data!);
+      setAnalysisPhase("done");
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      setState("building");
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
-  }, [queryClient, user]);
+  }, [queryClient, user, result]);
 
   const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
     runAnalysis(handle, nicho, objetivo);
@@ -251,6 +274,8 @@ const Index = () => {
     setPendingInputs(null);
     setPendingResult(null);
     setShowAuthModal(false);
+    setAnalysisPhase("scraping");
+    scrapeDataRef.current = null;
   }, []);
 
   const handleGoToHistory = useCallback(() => {
@@ -370,7 +395,8 @@ const Index = () => {
         )}
       </header>
 
-      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
+      {/* Loading overlay — only for showcase */}
+      <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={null} />
       <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => {
         setShowAuthModal(false);
         // If we have a result already shown (BuildingReveal completed), show it as result
@@ -494,9 +520,11 @@ const Index = () => {
           )
         )}
 
-        {state === "building" && result && (
+        {state === "building" && (
           <BuildingReveal
             result={result}
+            profileSnapshot={profileSnapshot}
+            analysisPhase={analysisPhase}
             onComplete={handleBuildingComplete}
             onReset={handleReset}
           />

@@ -1786,12 +1786,20 @@ async function generateStories(
   console.log(`generateStories: starting for @${profile.handle}, nicho=${nicho}`);
 
   // Split into 2 parallel batches to stay within token limits
-  const [batch1, batch2] = await Promise.all([
+  const [batch1, batch2Raw] = await Promise.all([
     generateStoriesBatch(profile, nicho, objetivo, captions, topPostInsights,
       1, 15, "4 educacao, 3 bastidores, 3 comunidade, 2 prova social, 2 storytelling, 1 venda soft"),
     generateStoriesBatch(profile, nicho, objetivo, captions, topPostInsights,
       16, 30, "4 educacao, 3 bastidores, 2 comunidade, 2 prova social, 2 storytelling, 2 venda soft"),
   ]);
+
+  // Retry batch2 if it failed (likely timeout)
+  let batch2 = batch2Raw;
+  if (!batch2 && batch1) {
+    console.log("generateStories: batch2 failed, retrying once...");
+    batch2 = await generateStoriesBatch(profile, nicho, objetivo, captions, topPostInsights,
+      16, 30, "4 educacao, 3 bastidores, 2 comunidade, 2 prova social, 2 storytelling, 2 venda soft");
+  }
 
   if (!batch1 && !batch2) return null;
 
@@ -2196,9 +2204,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { handle, nicho, objetivo } = body as { handle?: string; nicho?: string; objetivo?: string };
+    const { handle, nicho, objetivo, step } = body as {
+      handle?: string; nicho?: string; objetivo?: string; step?: "scrape" | "analyze";
+    };
 
-    // ── [1] Validate handle ──────────────────────────────────
+    // ── [1] Validate ──────────────────────────────────────────
     const cleanHandle = (handle || "").replace(/^@/, "").trim().toLowerCase();
     if (!cleanHandle || !HANDLE_REGEX.test(cleanHandle)) {
       return json({ code: "VALIDATION_ERROR", message: "Handle inválido" }, 422);
@@ -2207,11 +2217,140 @@ Deno.serve(async (req) => {
       return json({ code: "VALIDATION_ERROR", message: "Nicho e objetivo são obrigatórios" }, 422);
     }
 
-    // ── [2] Check auth + cache ───────────────────────────────
     const { supabaseAdmin } = getAuth(req);
     const userId = await resolveUser(req);
 
-    // If authenticated, check cache first (only return complete results)
+    // ══════════════════════════════════════════════════════════
+    // STEP 1: SCRAPE — return profile + posts quickly
+    // ══════════════════════════════════════════════════════════
+    if (step === "scrape") {
+      // Check cache first (authenticated users only)
+      if (userId) {
+        const { data: cachedResults } = await supabaseAdmin
+          .from("analysis_result")
+          .select("id, result_json")
+          .eq("handle", cleanHandle)
+          .eq("user_id", userId)
+          .limit(1);
+
+        if (cachedResults && cachedResults.length > 0) {
+          const cached = cachedResults[0].result_json as Record<string, unknown>;
+          const deliverables = cached?.deliverables as Record<string, unknown> | undefined;
+          if (deliverables?.weekly_content_plan) {
+            // Complete cache hit — return profile + full result
+            const profile = cached.profile as Record<string, unknown>;
+            return json({ success: true, cached: true, profile, posts: [], fullResult: cached }, 200);
+          }
+          // Partial cache — delete and re-scrape
+          await supabaseAdmin.from("analysis_result").delete().eq("id", cachedResults[0].id);
+        }
+      }
+
+      // Call Apify scraper
+      let rawProfile: ApifyProfile;
+      try {
+        rawProfile = await callApify(cleanHandle);
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (msg === "PRIVATE_PROFILE") return json({ code: "PRIVATE_PROFILE" }, 403);
+        if (msg === "NOT_FOUND") return json({ code: "NOT_FOUND" }, 404);
+        return json({ code: "TIMEOUT" }, 504);
+      }
+
+      // Normalize + proxy avatar
+      const profile = normalizeProfile(rawProfile);
+      profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
+      const posts = normalizePosts(rawProfile.latestPosts || [], profile.followers);
+
+      return json({ success: true, profile, posts }, 200);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // STEP 2: ANALYZE — run AI with provided profile + posts
+    // ══════════════════════════════════════════════════════════
+    if (step === "analyze") {
+      const { profile: profileInput, posts: postsInput } = body as {
+        profile?: Record<string, unknown>;
+        posts?: Record<string, unknown>[];
+      };
+
+      if (!profileInput || !postsInput) {
+        return json({ code: "VALIDATION_ERROR", message: "profile and posts are required for analyze step" }, 422);
+      }
+
+      // Cast inputs (they come from the scrape step's JSON output)
+      const profile = profileInput as unknown as ReturnType<typeof normalizeProfile>;
+      const posts = postsInput as unknown as ReturnType<typeof normalizePosts>;
+      const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
+
+      // Run FULL AI analysis in parallel
+      const fullResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
+
+      // Not authenticated → return result with AUTH_REQUIRED
+      if (!userId) {
+        return json({ code: "AUTH_REQUIRED", result: fullResult }, 200);
+      }
+
+      // Authenticated → check plan limits + persist
+      const { data: userProfile } = await supabaseAdmin
+        .from("users_profiles")
+        .select("plan, free_analysis_used, analysis_credits")
+        .eq("id", userId)
+        .single();
+
+      if (!userProfile) {
+        await supabaseAdmin.from("users_profiles").insert({
+          id: userId, email: "", plan: "free", free_analysis_used: false, analysis_credits: 0,
+        });
+      }
+
+      const plan = userProfile?.plan || "free";
+      const freeUsed = userProfile?.free_analysis_used || false;
+      const credits = userProfile?.analysis_credits || 0;
+      let useCredit = false;
+
+      if (plan === "free" && freeUsed) {
+        if (credits > 0) { useCredit = true; }
+        else { return json({ code: "FREE_LIMIT_REACHED" }, 403); }
+      }
+
+      const isPremiumBuild = plan === "premium" || useCredit;
+      const resultToSave = isPremiumBuild
+        ? {
+            ...fullResult, plan: "premium" as const,
+            deliverables: {
+              ...fullResult.deliverables,
+              posts_analysis: posts, competitors_analysis: [], strategic_score: null, improvement_plan: null, pdf_available: true,
+            },
+          }
+        : fullResult;
+
+      const { data: reqInsert } = await supabaseAdmin
+        .from("analysis_request")
+        .insert({ user_id: userId, handle: cleanHandle, nicho: nicho!, objetivo: objetivo!, plan_at_time: useCredit ? "credit" : plan })
+        .select("id").single();
+
+      if (reqInsert) {
+        await supabaseAdmin.from("analysis_result").insert({
+          request_id: reqInsert.id, handle: cleanHandle, result_json: resultToSave, user_id: userId,
+          unlocked_at: useCredit ? new Date().toISOString() : null,
+        });
+      }
+
+      if (useCredit) {
+        await supabaseAdmin.from("users_profiles").update({ analysis_credits: credits - 1 }).eq("id", userId);
+      } else if (plan === "free") {
+        await supabaseAdmin.from("users_profiles").update({ free_analysis_used: true }).eq("id", userId);
+      }
+
+      return json({ success: true, data: resultToSave }, 200);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // LEGACY: No step param — full flow in one call (backward compat)
+    // ══════════════════════════════════════════════════════════
+
+    // Check cache (authenticated only)
     if (userId) {
       const { data: cachedResults } = await supabaseAdmin
         .from("analysis_result")
@@ -2223,19 +2362,13 @@ Deno.serve(async (req) => {
       if (cachedResults && cachedResults.length > 0) {
         const cached = cachedResults[0].result_json as Record<string, unknown>;
         const deliverables = cached?.deliverables as Record<string, unknown> | undefined;
-        // Only return cache if it's complete (has weekly_content_plan)
         if (deliverables?.weekly_content_plan) {
           return json({ success: true, data: cached }, 200);
         }
-        // Partial cache — delete it and re-analyze fully
-        await supabaseAdmin
-          .from("analysis_result")
-          .delete()
-          .eq("id", cachedResults[0].id);
+        await supabaseAdmin.from("analysis_result").delete().eq("id", cachedResults[0].id);
       }
     }
 
-    // ── [3] Call Apify (scraping — runs for everyone) ───────────
     let rawProfile: ApifyProfile;
     try {
       rawProfile = await callApify(cleanHandle);
@@ -2246,23 +2379,17 @@ Deno.serve(async (req) => {
       return json({ code: "TIMEOUT" }, 504);
     }
 
-    // ── [4] Normalize + proxy avatar ─────────────────────────
     const profile = normalizeProfile(rawProfile);
     profile.avatar_url = await proxyAvatar(cleanHandle, profile.avatar_url, supabaseAdmin);
     const posts = normalizePosts(rawProfile.latestPosts || [], profile.followers);
     const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
-    // ── [5] Run FULL analysis (bio + posts + weekly + stories + hashtags) ─────
-    // Always runs everything in parallel — same for auth and non-auth users
     const fullResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
 
-    // ── [6] If NOT authenticated → return result with AUTH_REQUIRED ─────
-    // Frontend shows BuildingReveal, then asks for login
     if (!userId) {
       return json({ code: "AUTH_REQUIRED", result: fullResult }, 200);
     }
 
-    // ── [7] Authenticated → check plan limits ────────────────
     const { data: userProfile } = await supabaseAdmin
       .from("users_profiles")
       .select("plan, free_analysis_used, analysis_credits")
@@ -2271,11 +2398,7 @@ Deno.serve(async (req) => {
 
     if (!userProfile) {
       await supabaseAdmin.from("users_profiles").insert({
-        id: userId,
-        email: "",
-        plan: "free",
-        free_analysis_used: false,
-        analysis_credits: 0,
+        id: userId, email: "", plan: "free", free_analysis_used: false, analysis_credits: 0,
       });
     }
 
@@ -2285,64 +2408,37 @@ Deno.serve(async (req) => {
     let useCredit = false;
 
     if (plan === "free" && freeUsed) {
-      if (credits > 0) {
-        useCredit = true;
-      } else {
-        return json({ code: "FREE_LIMIT_REACHED" }, 403);
-      }
+      if (credits > 0) { useCredit = true; }
+      else { return json({ code: "FREE_LIMIT_REACHED" }, 403); }
     }
 
-    // ── [8] Enrich result for premium users ──────────────────
     const isPremiumBuild = plan === "premium" || useCredit;
     const resultToSave = isPremiumBuild
       ? {
-          ...fullResult,
-          plan: "premium" as const,
+          ...fullResult, plan: "premium" as const,
           deliverables: {
             ...fullResult.deliverables,
-            posts_analysis: posts,
-            competitors_analysis: [],
-            strategic_score: null,
-            improvement_plan: null,
-            pdf_available: true,
+            posts_analysis: posts, competitors_analysis: [], strategic_score: null, improvement_plan: null, pdf_available: true,
           },
         }
       : fullResult;
 
-    // ── [9] Persist result ───────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin
       .from("analysis_request")
-      .insert({
-        user_id: userId,
-        handle: cleanHandle,
-        nicho: nicho!,
-        objetivo: objetivo!,
-        plan_at_time: useCredit ? "credit" : plan,
-      })
-      .select("id")
-      .single();
+      .insert({ user_id: userId, handle: cleanHandle, nicho: nicho!, objetivo: objetivo!, plan_at_time: useCredit ? "credit" : plan })
+      .select("id").single();
 
     if (reqInsert) {
       await supabaseAdmin.from("analysis_result").insert({
-        request_id: reqInsert.id,
-        handle: cleanHandle,
-        result_json: resultToSave,
-        user_id: userId,
+        request_id: reqInsert.id, handle: cleanHandle, result_json: resultToSave, user_id: userId,
         unlocked_at: useCredit ? new Date().toISOString() : null,
       });
     }
 
-    // ── [10] Update user profile ────────────────────────────
     if (useCredit) {
-      await supabaseAdmin
-        .from("users_profiles")
-        .update({ analysis_credits: credits - 1 })
-        .eq("id", userId);
+      await supabaseAdmin.from("users_profiles").update({ analysis_credits: credits - 1 }).eq("id", userId);
     } else if (plan === "free") {
-      await supabaseAdmin
-        .from("users_profiles")
-        .update({ free_analysis_used: true })
-        .eq("id", userId);
+      await supabaseAdmin.from("users_profiles").update({ free_analysis_used: true }).eq("id", userId);
     }
 
     return json({ success: true, data: resultToSave }, 200);

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResponse, AnalysisResult } from "@/types/analysis";
+import type { AnalysisResponse, AnalysisResult, ScrapeResponse, RawPostData, ProfileData } from "@/types/analysis";
 
 // ── Helper ─────────────────────────────────────────────────────
 
@@ -22,7 +22,90 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
-// ── Analyze profile ────────────────────────────────────────────
+// ── Phase 1: Scrape profile ───────────────────────────────────
+
+export async function scrapeProfile(
+  handle: string,
+  nicho: string,
+  objetivo: string,
+): Promise<ScrapeResponse> {
+  try {
+    const url = getEdgeFunctionUrl("edrion-analyze");
+    const headers = await getAuthHeaders();
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ handle, nicho, objetivo, step: "scrape" }),
+    });
+
+    const data = await res.json();
+
+    if (data?.code === "PRIVATE_PROFILE") return { success: false, error: "private" };
+    if (data?.code === "NOT_FOUND") return { success: false, error: "not_found" };
+    if (data?.code === "TIMEOUT") return { success: false, error: "timeout" };
+    if (data?.code === "VALIDATION_ERROR") return { success: false, error: "timeout" };
+
+    // Cache hit — complete result already available
+    if (data?.cached && data?.fullResult) {
+      return { success: true, profile: data.profile, posts: data.posts, cachedResult: data.fullResult };
+    }
+
+    if (data?.success && data?.profile) {
+      return { success: true, profile: data.profile, posts: data.posts };
+    }
+
+    return { success: false, error: "timeout" };
+  } catch {
+    return { success: false, error: "timeout" };
+  }
+}
+
+// ── Phase 2: Run AI analysis with scraped data ───────────────
+
+export async function analyzeWithData(
+  handle: string,
+  nicho: string,
+  objetivo: string,
+  profile: ProfileData,
+  posts: RawPostData[],
+): Promise<AnalysisResponse> {
+  try {
+    const url = getEdgeFunctionUrl("edrion-analyze");
+    const headers = await getAuthHeaders();
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ handle, nicho, objetivo, step: "analyze", profile, posts }),
+    });
+
+    const responseData = await res.json();
+
+    if (responseData?.code === "AUTH_REQUIRED" && responseData?.result) {
+      return {
+        success: false,
+        error: "auth_required",
+        pendingResult: responseData.result as AnalysisResult,
+      };
+    }
+    if (responseData?.code === "AUTH_REQUIRED") {
+      return { success: false, error: "auth_required" };
+    }
+    if (responseData?.code === "FREE_LIMIT_REACHED") {
+      return { success: false, error: "free_limit" };
+    }
+    if (responseData?.success && responseData?.data) {
+      return { success: true, data: responseData.data };
+    }
+
+    return { success: false, error: "timeout" };
+  } catch {
+    return { success: false, error: "timeout" };
+  }
+}
+
+// ── Legacy: Full analyze in one call ──────────────────────────
 
 export async function analyzeProfile(
   handle: string,

@@ -205,3 +205,30 @@ export interface AnalysisResponse {
   error?: AnalysisError;
   pendingResult?: AnalysisResult;
 }
+
+export interface ScrapeResponse {
+  success: boolean;
+  profile?: ProfileData;
+  posts?: RawPostData[];
+  error?: AnalysisError;
+  cachedResult?: AnalysisResult;
+}
+
+/** Raw post data returned by scrape step (before AI analysis) */
+export interface RawPostData {
+  post_id: string;
+  permalink: string;
+  thumb_url: string;
+  caption_preview: string;
+  full_caption?: string;
+  post_type?: string;
+  hashtags?: string[];
+  timestamp?: string;
+  is_pinned?: boolean;
+  has_location?: boolean;
+  music_info?: string | null;
+  video_url?: string | null;
+  uses_original_audio?: boolean;
+  metrics: PostMetrics;
+  tier?: "gold" | "silver" | "bronze";
+}
