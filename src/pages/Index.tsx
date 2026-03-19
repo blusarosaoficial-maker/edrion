@@ -154,6 +154,10 @@ const Index = () => {
       // Cache hit — full result already available
       if (scrapeResult.cachedResult) {
         setProfileSnapshot(scrapeResult.cachedResult.profile);
+        // For non-authenticated users, set pendingResult so auth modal shows after reveal
+        if (!user) {
+          setPendingResult(scrapeResult.cachedResult);
+        }
         setResult(scrapeResult.cachedResult);
         setAnalysisPhase("done");
         return;

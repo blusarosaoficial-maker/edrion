@@ -283,12 +283,12 @@ export default function BuildingReveal({
         </div>
       )}
 
-      {/* Skeletons while scraping (no profile yet) */}
-      {!profile && analysisPhase === "scraping" && (
-        <>
-          <ProfileSkeleton />
-          <ContentSkeleton />
-        </>
+      {/* Profile skeleton while scraping (no profile yet) */}
+      {!profile && analysisPhase === "scraping" && <ProfileSkeleton />}
+
+      {/* Content skeletons — show until real content sections start appearing */}
+      {revealState("healthScore") === "hidden" && revealState("bio") === "hidden" && !isComplete && (
+        <ContentSkeleton />
       )}
 
       {/* Profile header */}
@@ -347,9 +347,6 @@ export default function BuildingReveal({
           )}
         </RevealWrapper>
       )}
-
-      {/* Content skeletons while AI analysis runs */}
-      {profile && !result && analysisPhase === "analyzing" && <ContentSkeleton />}
 
       {/* Bio Analysis */}
       {deliverables && (
