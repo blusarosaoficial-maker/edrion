@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useRef } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -230,40 +230,43 @@ export default function BuildingReveal({
     // Don't pass onComplete here — we control it below based on analysisPhase
   });
 
-  // Only call onComplete when ALL sections are revealed AND analysis is done
-  // This prevents premature completion when only profileHeader is revealed
+  // Call onComplete 5s after analysisPhase becomes "done" (don't wait for all reveals)
+  // This triggers the auth modal quickly so users can't read too much before signing up
   const onCompleteCalledRef = useRef(false);
   useEffect(() => {
-    if (isComplete && analysisPhase === "done" && !onCompleteCalledRef.current) {
+    if (analysisPhase === "done" && !onCompleteCalledRef.current) {
       onCompleteCalledRef.current = true;
-      // Small delay to ensure last section animation is visible
-      const timer = setTimeout(() => onComplete(), 200);
+      const timer = setTimeout(() => onComplete(), 5000);
       return () => clearTimeout(timer);
     }
-  }, [isComplete, analysisPhase, onComplete]);
+  }, [analysisPhase, onComplete]);
 
-  // Building label based on current phase
+  // Rotating status messages
+  const ROTATING_MESSAGES = useMemo(() => [
+    "Coletando dados do perfil...",
+    "Analisando metricas de engajamento...",
+    "Avaliando qualidade do conteudo...",
+    "Gerando diagnostico com IA...",
+    "Analisando sua bio e posicionamento...",
+    "Criando roteiros personalizados...",
+    "Montando estrategia de hashtags...",
+    "Finalizando seu diagnostico...",
+  ], []);
+
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (analysisPhase === "done" && isComplete) return;
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % ROTATING_MESSAGES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [analysisPhase, isComplete, ROTATING_MESSAGES.length]);
+
   const buildingLabel = useMemo(() => {
-    if (analysisPhase === "scraping") return "Coletando dados do perfil...";
-    if (analysisPhase === "analyzing") {
-      const state = (id: string) => revealState(id);
-      if (state("hashtags") !== "hidden") return "Finalizando diagnostico...";
-      if (state("stories") !== "hidden") return "Montando stories...";
-      if (state("weekly") !== "hidden") return "Criando roteiros semanais...";
-      if (state("posts") !== "hidden") return "Analisando seus posts...";
-      if (state("bio") !== "hidden") return "Analisando sua bio...";
-      if (state("healthScore") !== "hidden") return "Calculando saude do perfil...";
-      return "Gerando analise com IA...";
-    }
-    if (analysisPhase === "done" && !isComplete) {
-      const rs = (id: string) => revealState(id);
-      if (rs("hashtags") !== "hidden") return "Finalizando diagnostico...";
-      if (rs("stories") !== "hidden") return "Montando stories...";
-      if (rs("weekly") !== "hidden") return "Criando roteiros semanais...";
-      return "Montando seu diagnostico...";
-    }
-    return "Diagnostico completo!";
-  }, [analysisPhase, revealState, isComplete]);
+    if (analysisPhase === "done" && isComplete) return "Diagnostico completo!";
+    return ROTATING_MESSAGES[messageIndex];
+  }, [analysisPhase, isComplete, messageIndex, ROTATING_MESSAGES]);
 
   const showStatusBar = !(isComplete && analysisPhase === "done");
 

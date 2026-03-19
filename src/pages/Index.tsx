@@ -442,14 +442,13 @@ const Index = () => {
       {/* Loading overlay — only for showcase */}
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={null} />
       <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => {
-        setShowAuthModal(false);
-        // If we have a result already shown (BuildingReveal completed), show it
-        if (result && pendingResultRef.current) {
-          setPendingResult(null);
-          setPendingInputs(null);
-          setState("result");
+        // If there's a pending result, user MUST sign up — reopen modal after brief delay
+        if (pendingResultRef.current) {
+          setShowAuthModal(false);
+          setTimeout(() => setShowAuthModal(true), 1500);
           return;
         }
+        setShowAuthModal(false);
         setPendingInputs(null);
         setPendingResult(null);
         setState("form");
