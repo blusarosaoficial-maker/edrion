@@ -129,7 +129,7 @@ export default function BuildingReveal({
   const showFullFreeContent = isShowcase || isPremium;
 
   const healthScore = result ? computeHealthScore(result) : 0;
-  const health = result ? healthLabel(healthScore) : { label: "", color: "" };
+  const health = result ? healthLabel(healthScore) : { text: "", color: "", bg: "" };
 
   const onUpgradeAction = useCallback(() => {
     onReset();
