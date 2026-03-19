@@ -2274,7 +2274,7 @@ Deno.serve(async (req) => {
     if (userId) {
       const { data: cachedResults } = await supabaseAdmin
         .from("analysis_result")
-        .select("result_json")
+        .select("id, result_json")
         .eq("handle", cleanHandle)
         .eq("user_id", userId)
         .limit(1);
@@ -2282,14 +2282,50 @@ Deno.serve(async (req) => {
       if (cachedResults && cachedResults.length > 0) {
         const cached = cachedResults[0].result_json as Record<string, unknown>;
         const deliverables = cached?.deliverables as Record<string, unknown> | undefined;
-        // If cache is missing weekly_content_plan, delete stale cache and re-analyze
         if (deliverables && !deliverables.weekly_content_plan) {
-          console.log(`Cache stale for ${cleanHandle} (missing weekly_content_plan), re-analyzing...`);
-          await supabaseAdmin
-            .from("analysis_result")
-            .delete()
-            .eq("handle", cleanHandle)
-            .eq("user_id", userId);
+          // Cache is partial (saved before enrichment) — return it immediately
+          // and run enrichment in background (no re-scraping, no credit charge)
+          console.log(`Cache partial for ${cleanHandle} (missing weekly_content_plan), running enrichment in background...`);
+          const cachedResultId = cachedResults[0].id;
+          // deno-lint-ignore no-explicit-any
+          const cachedProfile = (cached as any).profile;
+          const cachedPosts = (cached as any).deliverables?.top_post
+            ? [
+                (cached as any).deliverables.latest_post,
+                (cached as any).deliverables.top_post,
+                (cached as any).deliverables.worst_post,
+              ].filter(Boolean)
+            : [];
+          const cachedCaptions = cachedPosts.map((p: { caption_preview?: string }) => p.caption_preview).filter(Boolean).slice(0, 5);
+          const cachedTopInsights = (cached as any).deliverables?.top_post
+            ? `Top post tem engagement score de ${(cached as any).deliverables.top_post.metrics?.engagement_score}. Formato: ${(cached as any).deliverables.top_post.post_type}.`
+            : "";
+          const cachedWorstInsights = (cached as any).deliverables?.worst_post
+            ? `Worst post tem engagement score de ${(cached as any).deliverables.worst_post.metrics?.engagement_score}. Formato: ${(cached as any).deliverables.worst_post.post_type}.`
+            : "";
+
+          // Mark as deferred so frontend knows enrichment is coming
+          cached._deferred = true;
+
+          // Run enrichment in background
+          // deno-lint-ignore no-explicit-any
+          const runtime = (globalThis as any).EdgeRuntime;
+          if (runtime?.waitUntil) {
+            runtime.waitUntil(
+              runDeferredEnrichment(
+                cachedResultId, cachedProfile, nicho!, objetivo!, cachedCaptions,
+                cachedTopInsights, cachedWorstInsights, supabaseAdmin,
+              ).catch((err: Error) => console.error("Deferred enrichment (cache) failed:", err.message))
+            );
+          } else {
+            // Fallback: await inline
+            await runDeferredEnrichment(
+              cachedResultId, cachedProfile, nicho!, objetivo!, cachedCaptions,
+              cachedTopInsights, cachedWorstInsights, supabaseAdmin,
+            ).catch((err) => console.error("Deferred enrichment (cache) failed:", err));
+          }
+
+          return json({ success: true, data: cached }, 200);
         } else {
           return json({ success: true, data: cached }, 200);
         }

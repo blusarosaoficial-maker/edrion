@@ -6,7 +6,7 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
 import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile, checkUserCredits } from "@/services/analyze";
+import { analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
@@ -223,18 +223,44 @@ const Index = () => {
   const handleAuthSuccess = useCallback(async () => {
     setShowAuthModal(false);
 
-    if (pendingInputs) {
+    if (pendingResult && pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
+
+      // Save the partial result immediately so the user sees it right away
+      const saveResponse = await saveResult(handle, nicho, objetivo, pendingResult);
+
+      if (!saveResponse.success) {
+        if (saveResponse.error === "free_limit") {
+          setResult(pendingResult);
+          setPendingResult(null);
+          setPendingInputs(null);
+          setState("upgrade");
+          return;
+        }
+      }
+
+      // Show partial result immediately (bio + posts)
+      // Mark as deferred so BuildingReveal waits for enrichment
+      setResult({ ...pendingResult, _deferred: true });
       setPendingResult(null);
       setPendingInputs(null);
-      // Re-run analysis as authenticated user — this triggers progressive reveal
-      // with background enrichment (weekly/stories/hashtags).
-      // Apify scraping is cached so it's fast (~2s), bio+posts ~10-15s,
-      // then enrichment runs in background via EdgeRuntime.waitUntil.
-      runAnalysis(handle, nicho, objetivo);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+      setState("building");
+
+      // Fire-and-forget: call analyzeProfile as authenticated user.
+      // edrion-analyze finds the cached partial result and runs enrichment
+      // in background via EdgeRuntime.waitUntil — no re-scraping, no credit charge.
+      // useProgressiveResult picks up the DB update via Realtime.
+      analyzeProfile(handle, nicho, objetivo).catch(() => {});
       return;
     }
-  }, [pendingInputs, runAnalysis]);
+
+    if (pendingInputs) {
+      const { handle, nicho, objetivo } = pendingInputs;
+      setPendingInputs(null);
+      runAnalysis(handle, nicho, objetivo);
+    }
+  }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
 
   const handleBuildingComplete = useCallback(() => {
     setState("result");
