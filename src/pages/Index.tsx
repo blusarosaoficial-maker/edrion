@@ -255,14 +255,18 @@ const Index = () => {
     }
   }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
 
+  // Use ref to avoid stale closure in handleBuildingComplete
+  const pendingResultRef = useRef<AnalysisResult | null>(null);
+  pendingResultRef.current = pendingResult;
+
   const handleBuildingComplete = useCallback(() => {
     // If user is not logged in and we have a pending result, ask for login
-    if (!user && pendingResult) {
+    if (!user && pendingResultRef.current) {
       setShowAuthModal(true);
       return;
     }
     setState("result");
-  }, [user, pendingResult]);
+  }, [user]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -399,8 +403,8 @@ const Index = () => {
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={null} />
       <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => {
         setShowAuthModal(false);
-        // If we have a result already shown (BuildingReveal completed), show it as result
-        if (result && pendingResult) {
+        // If we have a result already shown (BuildingReveal completed), show it
+        if (result && pendingResultRef.current) {
           setPendingResult(null);
           setPendingInputs(null);
           setState("result");

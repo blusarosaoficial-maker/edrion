@@ -112,6 +112,41 @@ function ProfileSkeleton() {
   );
 }
 
+function ContentSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Health score skeleton */}
+      <div className="p-5 rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-full bg-muted" />
+          <div className="flex-1 space-y-2">
+            <div className="h-5 bg-muted rounded w-40" />
+            <div className="h-3 bg-muted rounded w-56" />
+          </div>
+        </div>
+      </div>
+      {/* Bio skeleton */}
+      <div className="p-5 rounded-xl border border-border bg-card space-y-3">
+        <div className="h-5 bg-muted rounded w-36" />
+        <div className="h-3 bg-muted rounded w-full" />
+        <div className="h-3 bg-muted rounded w-4/5" />
+        <div className="h-3 bg-muted rounded w-3/5" />
+      </div>
+      {/* Posts skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[0, 1].map((i) => (
+          <div key={i} className="p-5 rounded-xl border border-border bg-card space-y-3">
+            <div className="h-5 bg-muted rounded w-28" />
+            <div className="w-full h-40 bg-muted rounded-lg" />
+            <div className="h-3 bg-muted rounded w-full" />
+            <div className="h-3 bg-muted rounded w-2/3" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main component ─────────────────────────────────────────── */
 
 export default function BuildingReveal({
@@ -248,8 +283,13 @@ export default function BuildingReveal({
         </div>
       )}
 
-      {/* Skeleton while scraping (no profile yet) */}
-      {!profile && analysisPhase === "scraping" && <ProfileSkeleton />}
+      {/* Skeletons while scraping (no profile yet) */}
+      {!profile && analysisPhase === "scraping" && (
+        <>
+          <ProfileSkeleton />
+          <ContentSkeleton />
+        </>
+      )}
 
       {/* Profile header */}
       {profile && (
@@ -308,13 +348,8 @@ export default function BuildingReveal({
         </RevealWrapper>
       )}
 
-      {/* Waiting indicator while AI analysis runs */}
-      {profile && !result && analysisPhase === "analyzing" && (
-        <div className="flex flex-col items-center gap-3 py-8">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Gerando analise completa com IA...</p>
-        </div>
-      )}
+      {/* Content skeletons while AI analysis runs */}
+      {profile && !result && analysisPhase === "analyzing" && <ContentSkeleton />}
 
       {/* Bio Analysis */}
       {deliverables && (
