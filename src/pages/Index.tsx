@@ -428,7 +428,7 @@ const Index = () => {
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
                     </div>
-                    <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático</span>
+                    <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático · <span className="text-muted-foreground/30">v2.1</span></span>
                   </div>
 
                   {/* Showcase carousel — social proof */}
@@ -481,7 +481,7 @@ const Index = () => {
                   <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 border border-background" />
                   <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 border border-background" />
                 </div>
-                <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático</span>
+                <span>{formatCount(getAnalyzedCount())} perfis analisados · 100% automático · <span className="text-muted-foreground/30">v2.1</span></span>
               </div>
 
               {/* Showcase carousel — social proof */}
