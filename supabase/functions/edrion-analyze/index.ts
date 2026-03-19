@@ -2313,9 +2313,138 @@ Deno.serve(async (req) => {
     const posts = normalizePosts(rawProfile.latestPosts || [], profile.followers);
     const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
-    // ── [5] If NOT authenticated → return pending_result ─────
+    // ── [5] If NOT authenticated → return FAST partial pending_result ─────
+    // Only run bio + posts analysis (~15s), skip weekly/stories/hashtags
+    // Enrichment will run after the user logs in and the analysis is persisted
     if (!userId) {
-      const pendingResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
+      const captions_free = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
+      let topIdx_free = 0, worstIdx_free = 0;
+      for (let i = 1; i < posts.length; i++) {
+        if (posts[i].metrics.engagement_score > posts[topIdx_free].metrics.engagement_score) topIdx_free = i;
+        if (posts[i].metrics.engagement_score < posts[worstIdx_free].metrics.engagement_score) worstIdx_free = i;
+      }
+
+      // Phase 1 only: Bio + Posts in parallel (~10-15s)
+      const [aiResult_free, postsBundle_free] = await Promise.all([
+        analyzeBioWithAI(profile, nicho!, objetivo!, captions_free),
+        (async () => {
+          const [topTx, worstTx] = await Promise.all([
+            posts[topIdx_free].post_type === "Video"
+              ? transcribeVideo(posts[topIdx_free].video_url, posts[topIdx_free].uses_original_audio, posts[topIdx_free].music_info)
+              : Promise.resolve({ text: null, skipped_reason: null }),
+            posts[worstIdx_free].post_type === "Video"
+              ? transcribeVideo(posts[worstIdx_free].video_url, posts[worstIdx_free].uses_original_audio, posts[worstIdx_free].music_info)
+              : Promise.resolve({ text: null, skipped_reason: null }),
+          ]);
+          const postsAi = await analyzePostsWithAI(
+            profile, posts[topIdx_free], posts[worstIdx_free], posts, nicho!, objetivo!,
+            topTx.text, worstTx.text,
+          );
+          const topPD = {
+            ...posts[topIdx_free],
+            analysis: postsAi?.top_post_analysis || null,
+            tier: (postsAi?.top_post_analysis?.classificacao || posts[topIdx_free].tier) as "gold" | "silver" | "bronze",
+            transcript: topTx.text || undefined,
+            transcript_skipped_reason: topTx.skipped_reason || undefined,
+          };
+          const worstPD = {
+            ...posts[worstIdx_free],
+            analysis: postsAi?.worst_post_analysis || null,
+            tier: (postsAi?.worst_post_analysis?.classificacao || posts[worstIdx_free].tier) as "gold" | "silver" | "bronze",
+            transcript: worstTx.text || undefined,
+            transcript_skipped_reason: worstTx.skipped_reason || undefined,
+          };
+          const [tThumb, wThumb] = await Promise.all([
+            proxyPostThumbnail(profile.handle, topPD.post_id, topPD.thumb_url, supabaseAdmin).catch(() => topPD.thumb_url),
+            proxyPostThumbnail(profile.handle, worstPD.post_id, worstPD.thumb_url, supabaseAdmin).catch(() => worstPD.thumb_url),
+          ]);
+          topPD.thumb_url = tThumb;
+          worstPD.thumb_url = wThumb;
+          return { topPostData: topPD, worstPostData: worstPD };
+        })(),
+      ]);
+
+      const { topPostData: topPD_free, worstPostData: worstPD_free } = postsBundle_free || {
+        topPostData: { ...posts[topIdx_free], analysis: null, tier: posts[topIdx_free].tier },
+        worstPostData: { ...posts[worstIdx_free], analysis: null, tier: posts[worstIdx_free].tier },
+      };
+
+      const templateBio_free = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
+      const defaultRubric_free: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
+      const safeRubric_free = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric_free;
+      const sumRubric_free = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
+
+      const bio_free = aiResult_free
+        ? {
+            current_bio: profile.bio_text,
+            suggested_bio: aiResult_free.bio_sugerida,
+            rationale_short: aiResult_free.justificativa_bio,
+            cta_option: aiResult_free.cta_sugerido,
+            score: parseFloat(((sumRubric_free(safeRubric_free(aiResult_free.rubrica_bio_atual)) / 30) * 10).toFixed(1)),
+            score_new: parseFloat(((sumRubric_free(safeRubric_free(aiResult_free.rubrica_bio_nova)) / 30) * 10).toFixed(1)),
+            criteria: {
+              clarity: safeRubric_free(aiResult_free.rubrica_bio_atual).clareza,
+              authority: safeRubric_free(aiResult_free.rubrica_bio_atual).autoridade,
+              cta: safeRubric_free(aiResult_free.rubrica_bio_atual).forca_cta,
+              seo: safeRubric_free(aiResult_free.rubrica_bio_atual).seo_descoberta,
+              brand_voice: safeRubric_free(aiResult_free.rubrica_bio_atual).voz_da_marca,
+              specificity: safeRubric_free(aiResult_free.rubrica_bio_atual).especificidade,
+            },
+            criteria_new: {
+              clarity: safeRubric_free(aiResult_free.rubrica_bio_nova).clareza,
+              authority: safeRubric_free(aiResult_free.rubrica_bio_nova).autoridade,
+              cta: safeRubric_free(aiResult_free.rubrica_bio_nova).forca_cta,
+              seo: safeRubric_free(aiResult_free.rubrica_bio_nova).seo_descoberta,
+              brand_voice: safeRubric_free(aiResult_free.rubrica_bio_nova).voz_da_marca,
+              specificity: safeRubric_free(aiResult_free.rubrica_bio_nova).especificidade,
+            },
+            diagnostic: aiResult_free.analise_diagnostica || {},
+            strengths: aiResult_free.pontos_fortes,
+            improvements: aiResult_free.pontos_de_melhoria,
+            name_keyword: aiResult_free.sugestao_keyword_nome,
+            detected_tone: aiResult_free.analise_diagnostica?.tom_de_voz,
+            variations: aiResult_free.bio_variacao_autoridade ? [
+              { label: "Autoridade", bio: aiResult_free.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
+              { label: "Conexão", bio: aiResult_free.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
+              { label: "Ação", bio: aiResult_free.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
+            ] : undefined,
+          }
+        : {
+            current_bio: profile.bio_text,
+            suggested_bio: templateBio_free.suggested,
+            rationale_short: templateBio_free.rationale,
+            cta_option: templateBio_free.cta,
+          };
+
+      // Latest post thumbnail
+      let latestPost_free = posts.length > 0 ? { ...posts[0], analysis: null, tier: undefined } : null;
+      if (latestPost_free) {
+        if (latestPost_free.post_id === topPD_free?.post_id) {
+          latestPost_free.thumb_url = topPD_free.thumb_url;
+        } else if (latestPost_free.post_id === worstPD_free?.post_id) {
+          latestPost_free.thumb_url = worstPD_free.thumb_url;
+        } else {
+          latestPost_free.thumb_url = await proxyPostThumbnail(
+            profile.handle, latestPost_free.post_id, latestPost_free.thumb_url, supabaseAdmin,
+          ).catch(() => latestPost_free!.thumb_url);
+        }
+      }
+
+      const pendingResult = {
+        profile,
+        deliverables: {
+          bio_suggestion: bio_free,
+          latest_post: latestPost_free,
+          top_post: topPD_free || null,
+          worst_post: worstPD_free || null,
+          weekly_content_plan: null as null,
+          stories_plan: null as null,
+          hashtag_strategy: undefined as undefined,
+        },
+        limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
+        plan: "free" as const,
+      };
+
       return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
     }
 

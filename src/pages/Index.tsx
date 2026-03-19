@@ -6,7 +6,7 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import ResultView from "@/components/ResultView";
 import AuthModal from "@/components/AuthModal";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { analyzeProfile, saveResult, checkUserCredits } from "@/services/analyze";
+import { analyzeProfile, checkUserCredits } from "@/services/analyze";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ProfileData } from "@/types/analysis";
@@ -223,34 +223,18 @@ const Index = () => {
   const handleAuthSuccess = useCallback(async () => {
     setShowAuthModal(false);
 
-    if (pendingResult && pendingInputs) {
-      const { handle, nicho, objetivo } = pendingInputs;
-      const saveResponse = await saveResult(handle, nicho, objetivo, pendingResult);
-
-      if (!saveResponse.success) {
-        if (saveResponse.error === "free_limit") {
-          setResult(pendingResult);
-          setPendingResult(null);
-          setPendingInputs(null);
-          setState("upgrade");
-          return;
-        }
-      }
-
-      setResult(pendingResult);
-      setPendingResult(null);
-      setPendingInputs(null);
-      queryClient.invalidateQueries({ queryKey: ["history"] });
-      setState("building");
-      return;
-    }
-
     if (pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
+      setPendingResult(null);
       setPendingInputs(null);
+      // Re-run analysis as authenticated user — this triggers progressive reveal
+      // with background enrichment (weekly/stories/hashtags).
+      // Apify scraping is cached so it's fast (~2s), bio+posts ~10-15s,
+      // then enrichment runs in background via EdgeRuntime.waitUntil.
       runAnalysis(handle, nicho, objetivo);
+      return;
     }
-  }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
+  }, [pendingInputs, runAnalysis]);
 
   const handleBuildingComplete = useCallback(() => {
     setState("result");
