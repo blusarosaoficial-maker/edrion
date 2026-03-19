@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef } from "react";
+import { useMemo, useCallback } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -95,23 +95,11 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
   const health = healthLabel(healthScore);
 
   const onUpgradeAction = useCallback(() => {
-    // During building, upgrade actions just scroll to top
     onReset();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [onReset]);
 
-  // Track when enrichment data arrives to set relative delays
-  const enrichmentArrivalRef = useRef<number | null>(null);
-  const hasEnrichment = !!(deliverables.weekly_content_plan || deliverables.stories_plan || deliverables.hashtag_strategy);
-  if (hasEnrichment && !enrichmentArrivalRef.current) {
-    enrichmentArrivalRef.current = Date.now();
-  }
-
-  // Track mount time for calculating absolute delays
-  const mountTimeRef = useRef(Date.now());
-
-  // Build sections list dynamically based on available data
-  // When enrichment data arrives later, new sections are added with short delays
+  // Build sections list — all data is available upfront
   const sections = useMemo<RevealSection[]>(() => {
     const s: RevealSection[] = [
       { id: "profileHeader", delay: 0 },
@@ -128,47 +116,29 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
       nextDelay += 1500;
     }
 
-    // Enrichment sections: if data arrived later via Realtime,
-    // use short staggered delays from current time
-    if (hasEnrichment) {
-      const elapsed = Date.now() - mountTimeRef.current;
-      // If enrichment arrived after initial render, start revealing from now
-      const enrichBase = elapsed > 6000 ? Math.max(nextDelay, elapsed + 500) : nextDelay;
-
-      if (deliverables.weekly_content_plan) {
-        s.push({ id: "weekly", delay: enrichBase });
-        nextDelay = enrichBase + 1500;
-      }
-      if (deliverables.stories_plan) {
-        s.push({ id: "stories", delay: nextDelay });
-        nextDelay += 1500;
-      }
-      if (deliverables.hashtag_strategy) {
-        s.push({ id: "hashtags", delay: nextDelay });
-        nextDelay += 1000;
-      }
+    if (deliverables.weekly_content_plan) {
+      s.push({ id: "weekly", delay: nextDelay });
+      nextDelay += 1500;
+    }
+    if (deliverables.stories_plan) {
+      s.push({ id: "stories", delay: nextDelay });
+      nextDelay += 1500;
+    }
+    if (deliverables.hashtag_strategy) {
+      s.push({ id: "hashtags", delay: nextDelay });
+      nextDelay += 1000;
     }
 
     if (!isPremium && !isShowcase) {
-      // Only add final CTA after enrichment sections are present
-      if (hasEnrichment) {
-        s.push({ id: "finalCta", delay: nextDelay });
-      }
+      s.push({ id: "finalCta", delay: nextDelay });
     }
 
     return s;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deliverables.weekly_content_plan, deliverables.stories_plan, deliverables.hashtag_strategy, isPremium, isShowcase, hasEnrichment]);
-
-  // Only fire onComplete after enrichment sections are also revealed
-  const isDeferred = result._deferred === true;
-  const stableOnComplete = useCallback(() => {
-    if (!isDeferred) onComplete();
-  }, [isDeferred, onComplete]);
+  }, [deliverables.weekly_content_plan, deliverables.stories_plan, deliverables.hashtag_strategy, isPremium, isShowcase]);
 
   const { revealState, isComplete } = useRevealSequence(sections, {
     enabled: true,
-    onComplete: stableOnComplete,
+    onComplete,
   });
 
   // Header building label
@@ -177,13 +147,11 @@ export default function BuildingReveal({ result, onComplete, onReset, isShowcase
     if (state("hashtags") !== "hidden") return "Finalizando diagnostico...";
     if (state("stories") !== "hidden") return "Montando stories...";
     if (state("weekly") !== "hidden") return "Criando roteiros semanais...";
-    // If posts revealed but enrichment not yet arrived, show generating label
-    if (state("posts") !== "hidden" && !hasEnrichment) return "Gerando roteiros e stories...";
     if (state("posts") !== "hidden") return "Analisando seus posts...";
     if (state("bio") !== "hidden") return "Analisando sua bio...";
     if (state("healthScore") !== "hidden") return "Calculando saude do perfil...";
     return "Montando seu diagnostico...";
-  }, [revealState, hasEnrichment]);
+  }, [revealState]);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">

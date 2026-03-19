@@ -17,7 +17,6 @@ import HistoryPanel from "@/components/HistoryPanel";
 import ShowcaseCarousel, { SHOWCASE_PROFILES } from "@/components/ShowcaseCarousel";
 import { fetchShowcaseResult } from "@/services/showcase";
 import BuildingReveal from "@/components/BuildingReveal";
-import { useProgressiveResult } from "@/hooks/useProgressiveResult";
 
 type AppState = "form" | "loading" | "building" | "result" | "upgrade" | "showcase";
 
@@ -53,16 +52,6 @@ const Index = () => {
   const [showcaseResult, setShowcaseResult] = useState<AnalysisResult | null>(null);
   const abortRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Progressive result: listen for deferred enrichment updates
-  useProgressiveResult(
-    user?.id,
-    state === "building" || state === "result",
-    useCallback((updatedResult: AnalysisResult) => {
-      setResult(updatedResult);
-      queryClient.invalidateQueries({ queryKey: ["history"] });
-    }, [queryClient]),
-  );
 
   // Close user menu on outside click
   useEffect(() => {
@@ -119,7 +108,6 @@ const Index = () => {
         return;
       }
       if (!creditCheck.canAnalyze) {
-        // Fetch last analysis to personalize upgrade screen
         if (!result) {
           const { data: lastRow } = await supabase
             .from("analysis_result")
@@ -137,13 +125,6 @@ const Index = () => {
       }
     }
 
-    // Block non-logged users who already have a pending analysis — force login first
-    if (!user && pendingResult) {
-      setPendingInputs({ handle, nicho, objetivo });
-      setShowAuthModal(true);
-      return;
-    }
-
     setState("loading");
     setIsDone(false);
     setProfileSnapshot(null);
@@ -158,17 +139,15 @@ const Index = () => {
 
       if (!response.success) {
         if (response.error === "auth_required" && response.pendingResult) {
+          // Full analysis complete — show BuildingReveal, then ask for login
           setPendingResult(response.pendingResult);
           setPendingInputs({ handle, nicho, objetivo });
           if (response.pendingResult.profile) {
             setProfileSnapshot(response.pendingResult.profile);
           }
+          setResult(response.pendingResult);
           setIsDone(true);
-          setTimeout(() => {
-            if (!abortRef.current) {
-              setShowAuthModal(true);
-            }
-          }, 2000);
+          setState("building");
           return;
         }
 
@@ -180,7 +159,6 @@ const Index = () => {
         }
 
         if (response.error === "free_limit") {
-          // Fetch last analysis to personalize upgrade screen
           if (!result && user) {
             const { data: lastRow } = await supabase
               .from("analysis_result")
@@ -208,13 +186,12 @@ const Index = () => {
       setResult(response.data!);
       setIsDone(true);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      // Transition directly to building reveal
       setState("building");
     } catch {
       setState("form");
       toast.error(ERROR_MESSAGES.timeout);
     }
-  }, [queryClient, user, pendingResult]);
+  }, [queryClient, user]);
 
   const handleSubmit = useCallback((handle: string, nicho: string, objetivo: string) => {
     runAnalysis(handle, nicho, objetivo);
@@ -226,7 +203,7 @@ const Index = () => {
     if (pendingResult && pendingInputs) {
       const { handle, nicho, objetivo } = pendingInputs;
 
-      // Save the partial result immediately so the user sees it right away
+      // Save the complete result to DB
       const saveResponse = await saveResult(handle, nicho, objetivo, pendingResult);
 
       if (!saveResponse.success) {
@@ -239,19 +216,12 @@ const Index = () => {
         }
       }
 
-      // Show partial result immediately (bio + posts)
-      // Mark as deferred so BuildingReveal waits for enrichment
-      setResult({ ...pendingResult, _deferred: true });
+      // Result already shown via BuildingReveal — just persist state
       setPendingResult(null);
       setPendingInputs(null);
       queryClient.invalidateQueries({ queryKey: ["history"] });
-      setState("building");
-
-      // Fire-and-forget: call analyzeProfile as authenticated user.
-      // edrion-analyze finds the cached partial result and runs enrichment
-      // in background via EdgeRuntime.waitUntil — no re-scraping, no credit charge.
-      // useProgressiveResult picks up the DB update via Realtime.
-      analyzeProfile(handle, nicho, objetivo).catch(() => {});
+      // Transition to final result view
+      setState("result");
       return;
     }
 
@@ -263,8 +233,13 @@ const Index = () => {
   }, [pendingResult, pendingInputs, runAnalysis, queryClient]);
 
   const handleBuildingComplete = useCallback(() => {
+    // If user is not logged in and we have a pending result, ask for login
+    if (!user && pendingResult) {
+      setShowAuthModal(true);
+      return;
+    }
     setState("result");
-  }, []);
+  }, [user, pendingResult]);
 
   const handleReset = useCallback(() => {
     abortRef.current = true;
@@ -396,7 +371,19 @@ const Index = () => {
       </header>
 
       <LoadingOverlay isOpen={state === "loading"} isDone={isDone} handle={currentHandle} profileSnapshot={profileSnapshot} />
-      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => { setShowAuthModal(false); setPendingInputs(null); setPendingResult(null); setState("form"); }} />
+      <AuthModal isOpen={showAuthModal} onSuccess={handleAuthSuccess} onClose={() => {
+        setShowAuthModal(false);
+        // If we have a result already shown (BuildingReveal completed), show it as result
+        if (result && pendingResult) {
+          setPendingResult(null);
+          setPendingInputs(null);
+          setState("result");
+          return;
+        }
+        setPendingInputs(null);
+        setPendingResult(null);
+        setState("form");
+      }} />
 
       <main className="container max-w-2xl px-4">
         {state === "form" && !showAuthModal && (
@@ -510,7 +497,7 @@ const Index = () => {
         {state === "building" && result && (
           <BuildingReveal
             result={result}
-            onComplete={() => setState("result")}
+            onComplete={handleBuildingComplete}
             onReset={handleReset}
           />
         )}

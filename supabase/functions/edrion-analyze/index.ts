@@ -2113,65 +2113,6 @@ async function buildFreeResult(
   return result;
 }
 
-// Run Phase 3 (stories/weekly/enrichment) in background and update DB record
-async function runDeferredEnrichment(
-  resultId: string,
-  profile: ReturnType<typeof normalizeProfile>,
-  nicho: string,
-  objetivo: string,
-  captions: string[],
-  topPostInsights: string,
-  worstPostInsights: string,
-  // deno-lint-ignore no-explicit-any
-  supabaseAdmin: any,
-) {
-  try {
-    console.log(`runDeferredEnrichment: starting for @${profile.handle}`);
-
-    const [weeklyContentResult, storiesResult, enrichmentResult] = await Promise.all([
-      generateWeeklyContent(profile, nicho, objetivo, captions, topPostInsights, worstPostInsights)
-        .catch((err) => { console.error("generateWeeklyContent crashed:", err); return null; }),
-      generateStories(profile, nicho, objetivo, captions, topPostInsights)
-        .catch((err) => { console.error("generateStories crashed:", err); return null; }),
-      generateEnrichment(profile, nicho, objetivo)
-        .catch((err) => { console.error("generateEnrichment crashed:", err); return null; }),
-    ]);
-
-    const weeklyResult = weeklyContentResult
-      ? applyWeeklyQualityGate(weeklyContentResult)
-      : null;
-    const storiesResultProcessed = storiesResult
-      ? applyStoriesQualityGate(storiesResult)
-      : null;
-
-    console.log(`runDeferredEnrichment: weekly=${weeklyResult ? "OK" : "NULL"}, stories=${storiesResultProcessed ? "OK" : "NULL"}, enrichment=${enrichmentResult ? "OK" : "NULL"}`);
-
-    // Fetch existing result_json, merge in Phase 3 data, update
-    const { data: existing } = await supabaseAdmin
-      .from("analysis_result")
-      .select("result_json")
-      .eq("id", resultId)
-      .single();
-
-    if (existing) {
-      // deno-lint-ignore no-explicit-any
-      const resultJson = existing.result_json as any;
-      resultJson.deliverables.weekly_content_plan = weeklyResult || null;
-      resultJson.deliverables.stories_plan = storiesResultProcessed || null;
-      resultJson.deliverables.hashtag_strategy = enrichmentResult?.hashtag_strategy || undefined;
-      delete resultJson._deferred;
-
-      await supabaseAdmin
-        .from("analysis_result")
-        .update({ result_json: resultJson })
-        .eq("id", resultId);
-
-      console.log(`runDeferredEnrichment: DB updated for result ${resultId}`);
-    }
-  } catch (err) {
-    console.error("runDeferredEnrichment error:", (err as Error).message);
-  }
-}
 
 function buildPremiumResult(
   profile: ReturnType<typeof normalizeProfile>,
@@ -2270,7 +2211,7 @@ Deno.serve(async (req) => {
     const { supabaseAdmin } = getAuth(req);
     const userId = await resolveUser(req);
 
-    // If authenticated, check cache first
+    // If authenticated, check cache first (only return complete results)
     if (userId) {
       const { data: cachedResults } = await supabaseAdmin
         .from("analysis_result")
@@ -2282,57 +2223,19 @@ Deno.serve(async (req) => {
       if (cachedResults && cachedResults.length > 0) {
         const cached = cachedResults[0].result_json as Record<string, unknown>;
         const deliverables = cached?.deliverables as Record<string, unknown> | undefined;
-        if (deliverables && !deliverables.weekly_content_plan) {
-          // Cache is partial (saved before enrichment) — return it immediately
-          // and run enrichment in background (no re-scraping, no credit charge)
-          console.log(`Cache partial for ${cleanHandle} (missing weekly_content_plan), running enrichment in background...`);
-          const cachedResultId = cachedResults[0].id;
-          // deno-lint-ignore no-explicit-any
-          const cachedProfile = (cached as any).profile;
-          const cachedPosts = (cached as any).deliverables?.top_post
-            ? [
-                (cached as any).deliverables.latest_post,
-                (cached as any).deliverables.top_post,
-                (cached as any).deliverables.worst_post,
-              ].filter(Boolean)
-            : [];
-          const cachedCaptions = cachedPosts.map((p: { caption_preview?: string }) => p.caption_preview).filter(Boolean).slice(0, 5);
-          const cachedTopInsights = (cached as any).deliverables?.top_post
-            ? `Top post tem engagement score de ${(cached as any).deliverables.top_post.metrics?.engagement_score}. Formato: ${(cached as any).deliverables.top_post.post_type}.`
-            : "";
-          const cachedWorstInsights = (cached as any).deliverables?.worst_post
-            ? `Worst post tem engagement score de ${(cached as any).deliverables.worst_post.metrics?.engagement_score}. Formato: ${(cached as any).deliverables.worst_post.post_type}.`
-            : "";
-
-          // Mark as deferred so frontend knows enrichment is coming
-          cached._deferred = true;
-
-          // Run enrichment in background
-          // deno-lint-ignore no-explicit-any
-          const runtime = (globalThis as any).EdgeRuntime;
-          if (runtime?.waitUntil) {
-            runtime.waitUntil(
-              runDeferredEnrichment(
-                cachedResultId, cachedProfile, nicho!, objetivo!, cachedCaptions,
-                cachedTopInsights, cachedWorstInsights, supabaseAdmin,
-              ).catch((err: Error) => console.error("Deferred enrichment (cache) failed:", err.message))
-            );
-          } else {
-            // Fallback: await inline
-            await runDeferredEnrichment(
-              cachedResultId, cachedProfile, nicho!, objetivo!, cachedCaptions,
-              cachedTopInsights, cachedWorstInsights, supabaseAdmin,
-            ).catch((err) => console.error("Deferred enrichment (cache) failed:", err));
-          }
-
-          return json({ success: true, data: cached }, 200);
-        } else {
+        // Only return cache if it's complete (has weekly_content_plan)
+        if (deliverables?.weekly_content_plan) {
           return json({ success: true, data: cached }, 200);
         }
+        // Partial cache — delete it and re-analyze fully
+        await supabaseAdmin
+          .from("analysis_result")
+          .delete()
+          .eq("id", cachedResults[0].id);
       }
     }
 
-    // ── [3] Call Apify (scraping BEFORE auth gate) ───────────
+    // ── [3] Call Apify (scraping — runs for everyone) ───────────
     let rawProfile: ApifyProfile;
     try {
       rawProfile = await callApify(cleanHandle);
@@ -2349,142 +2252,17 @@ Deno.serve(async (req) => {
     const posts = normalizePosts(rawProfile.latestPosts || [], profile.followers);
     const nichoKey = Object.keys(NICHO_BIOS).includes(nicho!) ? nicho! : "default";
 
-    // ── [5] If NOT authenticated → return FAST partial pending_result ─────
-    // Only run bio + posts analysis (~15s), skip weekly/stories/hashtags
-    // Enrichment will run after the user logs in and the analysis is persisted
+    // ── [5] Run FULL analysis (bio + posts + weekly + stories + hashtags) ─────
+    // Always runs everything in parallel — same for auth and non-auth users
+    const fullResult = await buildFreeResult(profile, posts, nichoKey, nicho!, objetivo!, supabaseAdmin);
+
+    // ── [6] If NOT authenticated → return result with AUTH_REQUIRED ─────
+    // Frontend shows BuildingReveal, then asks for login
     if (!userId) {
-      const captions_free = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
-      let topIdx_free = 0, worstIdx_free = 0;
-      for (let i = 1; i < posts.length; i++) {
-        if (posts[i].metrics.engagement_score > posts[topIdx_free].metrics.engagement_score) topIdx_free = i;
-        if (posts[i].metrics.engagement_score < posts[worstIdx_free].metrics.engagement_score) worstIdx_free = i;
-      }
-
-      // Phase 1 only: Bio + Posts in parallel (~10-15s)
-      const [aiResult_free, postsBundle_free] = await Promise.all([
-        analyzeBioWithAI(profile, nicho!, objetivo!, captions_free),
-        (async () => {
-          const [topTx, worstTx] = await Promise.all([
-            posts[topIdx_free].post_type === "Video"
-              ? transcribeVideo(posts[topIdx_free].video_url, posts[topIdx_free].uses_original_audio, posts[topIdx_free].music_info)
-              : Promise.resolve({ text: null, skipped_reason: null }),
-            posts[worstIdx_free].post_type === "Video"
-              ? transcribeVideo(posts[worstIdx_free].video_url, posts[worstIdx_free].uses_original_audio, posts[worstIdx_free].music_info)
-              : Promise.resolve({ text: null, skipped_reason: null }),
-          ]);
-          const postsAi = await analyzePostsWithAI(
-            profile, posts[topIdx_free], posts[worstIdx_free], posts, nicho!, objetivo!,
-            topTx.text, worstTx.text,
-          );
-          const topPD = {
-            ...posts[topIdx_free],
-            analysis: postsAi?.top_post_analysis || null,
-            tier: (postsAi?.top_post_analysis?.classificacao || posts[topIdx_free].tier) as "gold" | "silver" | "bronze",
-            transcript: topTx.text || undefined,
-            transcript_skipped_reason: topTx.skipped_reason || undefined,
-          };
-          const worstPD = {
-            ...posts[worstIdx_free],
-            analysis: postsAi?.worst_post_analysis || null,
-            tier: (postsAi?.worst_post_analysis?.classificacao || posts[worstIdx_free].tier) as "gold" | "silver" | "bronze",
-            transcript: worstTx.text || undefined,
-            transcript_skipped_reason: worstTx.skipped_reason || undefined,
-          };
-          const [tThumb, wThumb] = await Promise.all([
-            proxyPostThumbnail(profile.handle, topPD.post_id, topPD.thumb_url, supabaseAdmin).catch(() => topPD.thumb_url),
-            proxyPostThumbnail(profile.handle, worstPD.post_id, worstPD.thumb_url, supabaseAdmin).catch(() => worstPD.thumb_url),
-          ]);
-          topPD.thumb_url = tThumb;
-          worstPD.thumb_url = wThumb;
-          return { topPostData: topPD, worstPostData: worstPD };
-        })(),
-      ]);
-
-      const { topPostData: topPD_free, worstPostData: worstPD_free } = postsBundle_free || {
-        topPostData: { ...posts[topIdx_free], analysis: null, tier: posts[topIdx_free].tier },
-        worstPostData: { ...posts[worstIdx_free], analysis: null, tier: posts[worstIdx_free].tier },
-      };
-
-      const templateBio_free = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
-      const defaultRubric_free: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
-      const safeRubric_free = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric_free;
-      const sumRubric_free = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
-
-      const bio_free = aiResult_free
-        ? {
-            current_bio: profile.bio_text,
-            suggested_bio: aiResult_free.bio_sugerida,
-            rationale_short: aiResult_free.justificativa_bio,
-            cta_option: aiResult_free.cta_sugerido,
-            score: parseFloat(((sumRubric_free(safeRubric_free(aiResult_free.rubrica_bio_atual)) / 30) * 10).toFixed(1)),
-            score_new: parseFloat(((sumRubric_free(safeRubric_free(aiResult_free.rubrica_bio_nova)) / 30) * 10).toFixed(1)),
-            criteria: {
-              clarity: safeRubric_free(aiResult_free.rubrica_bio_atual).clareza,
-              authority: safeRubric_free(aiResult_free.rubrica_bio_atual).autoridade,
-              cta: safeRubric_free(aiResult_free.rubrica_bio_atual).forca_cta,
-              seo: safeRubric_free(aiResult_free.rubrica_bio_atual).seo_descoberta,
-              brand_voice: safeRubric_free(aiResult_free.rubrica_bio_atual).voz_da_marca,
-              specificity: safeRubric_free(aiResult_free.rubrica_bio_atual).especificidade,
-            },
-            criteria_new: {
-              clarity: safeRubric_free(aiResult_free.rubrica_bio_nova).clareza,
-              authority: safeRubric_free(aiResult_free.rubrica_bio_nova).autoridade,
-              cta: safeRubric_free(aiResult_free.rubrica_bio_nova).forca_cta,
-              seo: safeRubric_free(aiResult_free.rubrica_bio_nova).seo_descoberta,
-              brand_voice: safeRubric_free(aiResult_free.rubrica_bio_nova).voz_da_marca,
-              specificity: safeRubric_free(aiResult_free.rubrica_bio_nova).especificidade,
-            },
-            diagnostic: aiResult_free.analise_diagnostica || {},
-            strengths: aiResult_free.pontos_fortes,
-            improvements: aiResult_free.pontos_de_melhoria,
-            name_keyword: aiResult_free.sugestao_keyword_nome,
-            detected_tone: aiResult_free.analise_diagnostica?.tom_de_voz,
-            variations: aiResult_free.bio_variacao_autoridade ? [
-              { label: "Autoridade", bio: aiResult_free.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
-              { label: "Conexão", bio: aiResult_free.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
-              { label: "Ação", bio: aiResult_free.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
-            ] : undefined,
-          }
-        : {
-            current_bio: profile.bio_text,
-            suggested_bio: templateBio_free.suggested,
-            rationale_short: templateBio_free.rationale,
-            cta_option: templateBio_free.cta,
-          };
-
-      // Latest post thumbnail
-      let latestPost_free = posts.length > 0 ? { ...posts[0], analysis: null, tier: undefined } : null;
-      if (latestPost_free) {
-        if (latestPost_free.post_id === topPD_free?.post_id) {
-          latestPost_free.thumb_url = topPD_free.thumb_url;
-        } else if (latestPost_free.post_id === worstPD_free?.post_id) {
-          latestPost_free.thumb_url = worstPD_free.thumb_url;
-        } else {
-          latestPost_free.thumb_url = await proxyPostThumbnail(
-            profile.handle, latestPost_free.post_id, latestPost_free.thumb_url, supabaseAdmin,
-          ).catch(() => latestPost_free!.thumb_url);
-        }
-      }
-
-      const pendingResult = {
-        profile,
-        deliverables: {
-          bio_suggestion: bio_free,
-          latest_post: latestPost_free,
-          top_post: topPD_free || null,
-          worst_post: worstPD_free || null,
-          weekly_content_plan: null as null,
-          stories_plan: null as null,
-          hashtag_strategy: undefined as undefined,
-        },
-        limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
-        plan: "free" as const,
-      };
-
-      return json({ code: "AUTH_REQUIRED", pending_result: pendingResult }, 200);
+      return json({ code: "AUTH_REQUIRED", result: fullResult }, 200);
     }
 
-    // ── [6] Authenticated → check plan limits ────────────────
+    // ── [7] Authenticated → check plan limits ────────────────
     const { data: userProfile } = await supabaseAdmin
       .from("users_profiles")
       .select("plan, free_analysis_used, analysis_credits")
@@ -2492,7 +2270,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userProfile) {
-      // Auto-create profile if missing
       await supabaseAdmin.from("users_profiles").insert({
         id: userId,
         email: "",
@@ -2515,152 +2292,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── [7] Build fast partial result (bio + posts only) ─────
-    // Returns immediately with profile, bio, posts — no waiting for weekly/stories/hashtags
-    const captions = posts.map(p => p.caption_preview).filter(Boolean).slice(0, 5);
-    let topIdx = 0, worstIdx = 0;
-    for (let i = 1; i < posts.length; i++) {
-      if (posts[i].metrics.engagement_score > posts[topIdx].metrics.engagement_score) topIdx = i;
-      if (posts[i].metrics.engagement_score < posts[worstIdx].metrics.engagement_score) worstIdx = i;
-    }
-    const basicTopInsights = `Top post tem engagement score de ${posts[topIdx].metrics.engagement_score}. Formato: ${posts[topIdx].post_type}. Caption: "${posts[topIdx].caption_preview}".`;
-    const basicWorstInsights = `Worst post tem engagement score de ${posts[worstIdx].metrics.engagement_score}. Formato: ${posts[worstIdx].post_type}.`;
-
-    // Phase 1: Bio + Posts analysis in parallel (fast, ~10-15s)
-    const [aiResult, postsAnalysisBundle] = await Promise.all([
-      analyzeBioWithAI(profile, nicho!, objetivo!, captions),
-      (async () => {
-        const [topTranscript, worstTranscript] = await Promise.all([
-          posts[topIdx].post_type === "Video"
-            ? transcribeVideo(posts[topIdx].video_url, posts[topIdx].uses_original_audio, posts[topIdx].music_info)
-            : Promise.resolve({ text: null, skipped_reason: null }),
-          posts[worstIdx].post_type === "Video"
-            ? transcribeVideo(posts[worstIdx].video_url, posts[worstIdx].uses_original_audio, posts[worstIdx].music_info)
-            : Promise.resolve({ text: null, skipped_reason: null }),
-        ]);
-        const postsAiResult = await analyzePostsWithAI(
-          profile, posts[topIdx], posts[worstIdx], posts, nicho!, objetivo!,
-          topTranscript.text, worstTranscript.text,
-        );
-        const topPostData = {
-          ...posts[topIdx],
-          analysis: postsAiResult?.top_post_analysis || null,
-          tier: (postsAiResult?.top_post_analysis?.classificacao || posts[topIdx].tier) as "gold" | "silver" | "bronze",
-          transcript: topTranscript.text || undefined,
-          transcript_skipped_reason: topTranscript.skipped_reason || undefined,
-        };
-        const worstPostData = {
-          ...posts[worstIdx],
-          analysis: postsAiResult?.worst_post_analysis || null,
-          tier: (postsAiResult?.worst_post_analysis?.classificacao || posts[worstIdx].tier) as "gold" | "silver" | "bronze",
-          transcript: worstTranscript.text || undefined,
-          transcript_skipped_reason: worstTranscript.skipped_reason || undefined,
-        };
-        const [topThumb, worstThumb] = await Promise.all([
-          proxyPostThumbnail(profile.handle, topPostData.post_id, topPostData.thumb_url, supabaseAdmin)
-            .catch(() => topPostData.thumb_url),
-          proxyPostThumbnail(profile.handle, worstPostData.post_id, worstPostData.thumb_url, supabaseAdmin)
-            .catch(() => worstPostData.thumb_url),
-        ]);
-        topPostData.thumb_url = topThumb;
-        worstPostData.thumb_url = worstThumb;
-        return { topPostData, worstPostData };
-      })(),
-    ]);
-
-    const { topPostData, worstPostData } = postsAnalysisBundle || {
-      topPostData: { ...posts[topIdx], analysis: null, tier: posts[topIdx].tier },
-      worstPostData: { ...posts[worstIdx], analysis: null, tier: posts[worstIdx].tier },
-    };
-
-    // Build bio_suggestion from AI result
-    const templateBio = NICHO_BIOS[nichoKey] || NICHO_BIOS["default"];
-    const defaultRubric: AIBioRubric = { clareza: 1, autoridade: 1, forca_cta: 1, seo_descoberta: 1, voz_da_marca: 1, especificidade: 1 };
-    const safeRubric = (r: AIBioRubric | undefined): AIBioRubric => r && typeof r.clareza === "number" ? r : defaultRubric;
-    const sumRubric = (r: AIBioRubric) => r.clareza + r.autoridade + r.forca_cta + r.seo_descoberta + r.voz_da_marca + r.especificidade;
-
-    const bio_suggestion = aiResult
-      ? {
-          current_bio: profile.bio_text,
-          suggested_bio: aiResult.bio_sugerida,
-          rationale_short: aiResult.justificativa_bio,
-          cta_option: aiResult.cta_sugerido,
-          score: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_atual)) / 30) * 10).toFixed(1)),
-          score_new: parseFloat(((sumRubric(safeRubric(aiResult.rubrica_bio_nova)) / 30) * 10).toFixed(1)),
-          criteria: {
-            clarity: safeRubric(aiResult.rubrica_bio_atual).clareza,
-            authority: safeRubric(aiResult.rubrica_bio_atual).autoridade,
-            cta: safeRubric(aiResult.rubrica_bio_atual).forca_cta,
-            seo: safeRubric(aiResult.rubrica_bio_atual).seo_descoberta,
-            brand_voice: safeRubric(aiResult.rubrica_bio_atual).voz_da_marca,
-            specificity: safeRubric(aiResult.rubrica_bio_atual).especificidade,
-          },
-          criteria_new: {
-            clarity: safeRubric(aiResult.rubrica_bio_nova).clareza,
-            authority: safeRubric(aiResult.rubrica_bio_nova).autoridade,
-            cta: safeRubric(aiResult.rubrica_bio_nova).forca_cta,
-            seo: safeRubric(aiResult.rubrica_bio_nova).seo_descoberta,
-            brand_voice: safeRubric(aiResult.rubrica_bio_nova).voz_da_marca,
-            specificity: safeRubric(aiResult.rubrica_bio_nova).especificidade,
-          },
-          diagnostic: aiResult.analise_diagnostica || {},
-          strengths: aiResult.pontos_fortes,
-          improvements: aiResult.pontos_de_melhoria,
-          name_keyword: aiResult.sugestao_keyword_nome,
-          detected_tone: aiResult.analise_diagnostica?.tom_de_voz,
-          variations: aiResult.bio_variacao_autoridade ? [
-            { label: "Autoridade", bio: aiResult.bio_variacao_autoridade, rationale: "Foco em credenciais e prova social" },
-            { label: "Conexão", bio: aiResult.bio_variacao_conexao, rationale: "Foco em conexão com o público" },
-            { label: "Ação", bio: aiResult.bio_variacao_acao, rationale: "Foco em conversão e vendas" },
-          ] : undefined,
-        }
-      : {
-          current_bio: profile.bio_text,
-          suggested_bio: templateBio.suggested,
-          rationale_short: templateBio.rationale,
-          cta_option: templateBio.cta,
-        };
-
-    // Latest post thumbnail proxy
-    let latestPost = posts.length > 0 ? { ...posts[0], analysis: null, tier: undefined } : null;
-    if (latestPost) {
-      if (latestPost.post_id === topPostData?.post_id) {
-        latestPost.thumb_url = topPostData.thumb_url;
-      } else if (latestPost.post_id === worstPostData?.post_id) {
-        latestPost.thumb_url = worstPostData.thumb_url;
-      } else {
-        latestPost.thumb_url = await proxyPostThumbnail(
-          profile.handle, latestPost.post_id, latestPost.thumb_url, supabaseAdmin,
-        ).catch(() => latestPost!.thumb_url);
-      }
-    }
-
-    // Build partial result (no weekly/stories/hashtags yet)
+    // ── [8] Enrich result for premium users ──────────────────
     const isPremiumBuild = plan === "premium" || useCredit;
-    const partialResult = {
-      profile,
-      deliverables: {
-        bio_suggestion,
-        latest_post: latestPost,
-        top_post: topPostData || null,
-        worst_post: worstPostData || null,
-        weekly_content_plan: null as null,
-        stories_plan: null as null,
-        hashtag_strategy: undefined as undefined,
-        ...(isPremiumBuild ? {
-          posts_analysis: posts,
-          competitors_analysis: [],
-          strategic_score: null,
-          improvement_plan: null,
-          pdf_available: true,
-        } : {}),
-      },
-      limits: { posts_analyzed: posts.length, note: "Diagnóstico objetivo" },
-      plan: (isPremiumBuild ? "premium" : "free") as "free" | "premium",
-      _deferred: true,
-    };
+    const resultToSave = isPremiumBuild
+      ? {
+          ...fullResult,
+          plan: "premium" as const,
+          deliverables: {
+            ...fullResult.deliverables,
+            posts_analysis: posts,
+            competitors_analysis: [],
+            strategic_score: null,
+            improvement_plan: null,
+            pdf_available: true,
+          },
+        }
+      : fullResult;
 
-    // ── [8] Persist partial result ───────────────────────────
+    // ── [9] Persist result ───────────────────────────────────
     const { data: reqInsert } = await supabaseAdmin
       .from("analysis_request")
       .insert({
@@ -2673,19 +2322,17 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
 
-    let resultId: string | null = null;
     if (reqInsert) {
-      const { data: insertedResult } = await supabaseAdmin.from("analysis_result").insert({
+      await supabaseAdmin.from("analysis_result").insert({
         request_id: reqInsert.id,
         handle: cleanHandle,
-        result_json: partialResult,
+        result_json: resultToSave,
         user_id: userId,
         unlocked_at: useCredit ? new Date().toISOString() : null,
-      }).select("id").single();
-      resultId = insertedResult?.id || null;
+      });
     }
 
-    // ── [9] Update user profile ────────────────────────────
+    // ── [10] Update user profile ────────────────────────────
     if (useCredit) {
       await supabaseAdmin
         .from("users_profiles")
@@ -2698,30 +2345,7 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // ── [10] Return partial result immediately ───────────────
-    // Then run enrichment (weekly/stories/hashtags) in background
-    // The frontend listens for DB updates via Supabase Realtime
-    if (resultId) {
-      // Use EdgeRuntime.waitUntil to keep function alive after response
-      // deno-lint-ignore no-explicit-any
-      const runtime = (globalThis as any).EdgeRuntime;
-      if (runtime?.waitUntil) {
-        runtime.waitUntil(
-          runDeferredEnrichment(
-            resultId, profile, nicho!, objetivo!, captions,
-            basicTopInsights, basicWorstInsights, supabaseAdmin,
-          ).catch((err: Error) => console.error("Deferred enrichment failed:", err.message))
-        );
-      } else {
-        // Fallback: await inline (slower but guarantees completion)
-        await runDeferredEnrichment(
-          resultId, profile, nicho!, objetivo!, captions,
-          basicTopInsights, basicWorstInsights, supabaseAdmin,
-        ).catch((err) => console.error("Deferred enrichment failed:", err));
-      }
-    }
-
-    return json({ success: true, data: partialResult }, 200);
+    return json({ success: true, data: resultToSave }, 200);
   } catch (err) {
     console.error("edrion-analyze error:", err);
     return json({ code: "INTERNAL_ERROR", message: (err as Error).message }, 500);

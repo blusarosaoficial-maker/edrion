@@ -190,8 +190,6 @@ export interface AnalysisResult {
     note: string;
   };
   plan: "free" | "premium";
-  /** Set to true when result is partial — enrichment (weekly/stories/hashtags) still loading */
-  _deferred?: boolean;
 }
 
 export type AnalysisError =

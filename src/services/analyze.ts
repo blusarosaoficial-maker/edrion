@@ -41,16 +41,16 @@ export async function analyzeProfile(
 
     const responseData = await res.json();
 
-    // AUTH_REQUIRED with pending_result (scraping done, needs login)
-    if (responseData?.code === "AUTH_REQUIRED" && responseData?.pending_result) {
+    // AUTH_REQUIRED with full result (analysis done, needs login to save)
+    if (responseData?.code === "AUTH_REQUIRED" && responseData?.result) {
       return {
         success: false,
         error: "auth_required",
-        pendingResult: responseData.pending_result as AnalysisResult,
+        pendingResult: responseData.result as AnalysisResult,
       };
     }
 
-    // AUTH_REQUIRED without pending_result (old-style)
+    // AUTH_REQUIRED without result (fallback)
     if (responseData?.code === "AUTH_REQUIRED") {
       return { success: false, error: "auth_required" };
     }
