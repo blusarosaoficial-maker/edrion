@@ -140,78 +140,114 @@ const Index = () => {
     trackLead();
 
     try {
-      // ── Phase 1: Scrape profile (~15-20s) ──────────────────
-      const scrapeResult = await scrapeProfile(handle, nicho, objetivo);
+      // ── Try 2-phase flow first ─────────────────────────────
+      let usedTwoPhase = false;
 
-      if (abortRef.current) return;
+      try {
+        // Phase 1: Scrape profile (~15-20s)
+        const scrapeResult = await scrapeProfile(handle, nicho, objetivo);
 
-      if (!scrapeResult.success) {
-        setState("form");
-        toast.error(ERROR_MESSAGES[scrapeResult.error || "timeout"] || ERROR_MESSAGES.timeout);
-        return;
-      }
+        if (abortRef.current) return;
 
-      // Cache hit — full result already available
-      if (scrapeResult.cachedResult) {
-        setProfileSnapshot(scrapeResult.cachedResult.profile);
-        // For non-authenticated users, set pendingResult so auth modal shows after reveal
-        if (!user) {
-          setPendingResult(scrapeResult.cachedResult);
-        }
-        setResult(scrapeResult.cachedResult);
-        setAnalysisPhase("done");
-        return;
-      }
-
-      // Show profile immediately
-      if (scrapeResult.profile) {
-        setProfileSnapshot(scrapeResult.profile);
-      }
-
-      // Store scrape data for phase 2
-      scrapeDataRef.current = {
-        profile: scrapeResult.profile!,
-        posts: scrapeResult.posts || [],
-      };
-
-      // ── Phase 2: AI Analysis (~20-35s) ─────────────────────
-      setAnalysisPhase("analyzing");
-
-      const analyzeResult = await analyzeWithData(
-        handle, nicho, objetivo,
-        scrapeResult.profile!,
-        scrapeResult.posts || [],
-      );
-
-      if (abortRef.current) return;
-
-      if (!analyzeResult.success) {
-        // Auth required — analysis complete, needs login
-        if (analyzeResult.error === "auth_required" && analyzeResult.pendingResult) {
-          setPendingResult(analyzeResult.pendingResult);
-          setResult(analyzeResult.pendingResult);
-          setAnalysisPhase("done");
+        // Actual errors (private, not_found) — show to user
+        if (!scrapeResult.success && scrapeResult.error !== "timeout") {
+          setState("form");
+          toast.error(ERROR_MESSAGES[scrapeResult.error || "timeout"] || ERROR_MESSAGES.timeout);
           return;
         }
 
-        if (analyzeResult.error === "auth_required") {
+        if (scrapeResult.success) {
+          usedTwoPhase = true;
+
+          // Cache hit — full result already available
+          if (scrapeResult.cachedResult) {
+            setProfileSnapshot(scrapeResult.cachedResult.profile);
+            if (!user) {
+              setPendingResult(scrapeResult.cachedResult);
+            }
+            setResult(scrapeResult.cachedResult);
+            setAnalysisPhase("done");
+            return;
+          }
+
+          // Show profile immediately
+          if (scrapeResult.profile) {
+            setProfileSnapshot(scrapeResult.profile);
+          }
+
+          // Phase 2: AI Analysis (~20-35s)
+          setAnalysisPhase("analyzing");
+
+          const analyzeResult = await analyzeWithData(
+            handle, nicho, objetivo,
+            scrapeResult.profile!,
+            scrapeResult.posts || [],
+          );
+
+          if (abortRef.current) return;
+
+          if (!analyzeResult.success) {
+            if (analyzeResult.error === "auth_required" && analyzeResult.pendingResult) {
+              setPendingResult(analyzeResult.pendingResult);
+              setResult(analyzeResult.pendingResult);
+              setAnalysisPhase("done");
+              return;
+            }
+            if (analyzeResult.error === "auth_required") {
+              setState("form");
+              setShowAuthModal(true);
+              return;
+            }
+            if (analyzeResult.error === "free_limit") {
+              setState("upgrade");
+              return;
+            }
+            setState("form");
+            toast.error(ERROR_MESSAGES.timeout);
+            return;
+          }
+
+          setResult(analyzeResult.data!);
+          setAnalysisPhase("done");
+          queryClient.invalidateQueries({ queryKey: ["history"] });
+          return;
+        }
+      } catch {
+        // 2-phase scrape failed — fall through to legacy
+      }
+
+      if (usedTwoPhase) return;
+
+      // ── Fallback: Legacy single-call flow ─────────────────
+      // Edge function may not support step param yet
+      setAnalysisPhase("analyzing");
+
+      const legacyResult = await analyzeProfile(handle, nicho, objetivo);
+
+      if (abortRef.current) return;
+
+      if (!legacyResult.success) {
+        if (legacyResult.error === "auth_required" && legacyResult.pendingResult) {
+          setPendingResult(legacyResult.pendingResult);
+          setResult(legacyResult.pendingResult);
+          setAnalysisPhase("done");
+          return;
+        }
+        if (legacyResult.error === "auth_required") {
           setState("form");
           setShowAuthModal(true);
           return;
         }
-
-        if (analyzeResult.error === "free_limit") {
+        if (legacyResult.error === "free_limit") {
           setState("upgrade");
           return;
         }
-
         setState("form");
-        toast.error(ERROR_MESSAGES.timeout);
+        toast.error(ERROR_MESSAGES[legacyResult.error || "timeout"] || ERROR_MESSAGES.timeout);
         return;
       }
 
-      // Success — show full result
-      setResult(analyzeResult.data!);
+      setResult(legacyResult.data!);
       setAnalysisPhase("done");
       queryClient.invalidateQueries({ queryKey: ["history"] });
     } catch {
