@@ -270,6 +270,31 @@ export default function BuildingReveal({
 
   const showStatusBar = !(isComplete && analysisPhase === "done");
 
+  // Progress bar — advances gradually based on phase and time
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!showStatusBar) { setProgress(100); return; }
+
+    const targets: Record<AnalysisPhase, number> = {
+      scraping: 30,
+      analyzing: 85,
+      done: 100,
+    };
+    const target = targets[analysisPhase];
+
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= target) return prev;
+        // Slow down as it approaches target (easing effect)
+        const remaining = target - prev;
+        const step = Math.max(0.3, remaining * 0.04);
+        return Math.min(prev + step, target);
+      });
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [analysisPhase, showStatusBar]);
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
       {/* Back navigation */}
@@ -283,18 +308,30 @@ export default function BuildingReveal({
 
       {/* Building status bar */}
       {showStatusBar && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-primary/5 border border-primary/20">
-          {analysisPhase === "scraping" || analysisPhase === "analyzing" ? (
-            <Loader2 className="w-4 h-4 text-primary animate-spin" />
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          )}
-          <TypewriterText
-            text={buildingLabel}
-            enabled={true}
-            speed={30}
-            className="text-sm text-primary font-medium"
-          />
+        <div className="rounded-lg bg-primary/5 border border-primary/20 overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            {analysisPhase === "scraping" || analysisPhase === "analyzing" ? (
+              <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+            ) : (
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+            )}
+            <TypewriterText
+              text={buildingLabel}
+              enabled={true}
+              speed={30}
+              className="text-sm text-primary font-medium flex-1"
+            />
+            <span className="text-xs text-primary/60 tabular-nums shrink-0">
+              {Math.round(progress)}%
+            </span>
+          </div>
+          {/* Progress bar */}
+          <div className="h-1 bg-primary/10">
+            <div
+              className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
       )}
 
