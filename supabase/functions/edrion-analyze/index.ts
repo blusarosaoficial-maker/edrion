@@ -2296,7 +2296,7 @@ Deno.serve(async (req) => {
                 (cached as any).deliverables.worst_post,
               ].filter(Boolean)
             : [];
-          const cachedCaptions = cachedPosts.map((p: { caption_preview?: string }) => p.caption_preview).filter(Boolean).slice(0, 5);
+          const cachedCaptions = cachedPosts.map((p: { caption_preview?: string }) => p.caption_preview).filter(Boolean).slice(0, 5) as string[];
           const cachedTopInsights = (cached as any).deliverables?.top_post
             ? `Top post tem engagement score de ${(cached as any).deliverables.top_post.metrics?.engagement_score}. Formato: ${(cached as any).deliverables.top_post.post_type}.`
             : "";
