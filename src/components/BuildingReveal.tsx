@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect, useRef } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -227,8 +227,20 @@ export default function BuildingReveal({
 
   const { revealState, isComplete } = useRevealSequence(sections, {
     enabled: true,
-    onComplete,
+    // Don't pass onComplete here — we control it below based on analysisPhase
   });
+
+  // Only call onComplete when ALL sections are revealed AND analysis is done
+  // This prevents premature completion when only profileHeader is revealed
+  const onCompleteCalledRef = useRef(false);
+  useEffect(() => {
+    if (isComplete && analysisPhase === "done" && !onCompleteCalledRef.current) {
+      onCompleteCalledRef.current = true;
+      // Small delay to ensure last section animation is visible
+      const timer = setTimeout(() => onComplete(), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete, analysisPhase, onComplete]);
 
   // Building label based on current phase
   const buildingLabel = useMemo(() => {
@@ -253,7 +265,7 @@ export default function BuildingReveal({
     return "Diagnostico completo!";
   }, [analysisPhase, revealState, isComplete]);
 
-  const showStatusBar = !isComplete;
+  const showStatusBar = !(isComplete && analysisPhase === "done");
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-12">
@@ -287,7 +299,7 @@ export default function BuildingReveal({
       {!profile && analysisPhase === "scraping" && <ProfileSkeleton />}
 
       {/* Content skeletons — show until real content sections start appearing */}
-      {revealState("healthScore") === "hidden" && revealState("bio") === "hidden" && !isComplete && (
+      {revealState("healthScore") === "hidden" && revealState("bio") === "hidden" && analysisPhase !== "done" && (
         <ContentSkeleton />
       )}
 
