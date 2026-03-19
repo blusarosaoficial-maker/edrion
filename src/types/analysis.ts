@@ -170,6 +170,10 @@ export interface HashtagStrategy {
 }
 
 export interface AnalysisResult {
+  _deferred?: {
+    pending: string[];
+    request_id: string;
+  };
   profile: ProfileData;
   deliverables: {
     bio_suggestion: BioSuggestion;
